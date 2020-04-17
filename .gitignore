@@ -42,3 +42,4 @@ CMakeSettings.json
 /.vscode
 /.vs
 /out
+.history/
