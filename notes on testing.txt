@@ -1,0 +1,11 @@
+20-04-2020 --- SITL to Pi by FTDI working
+
+    Sitl with ftdi connected. The thing is SITL->FTDI ubuntu->FTDI Rpi->Rpi
+
+        sim_vehicle.py -v ArduPlane -f quadplane -A "--uartA=uart:/dev/ttyUSB0" -l 40.422790,-3.375190,10,130  --no-mavproxy
+
+    On this, the .conf file in the Rpi is 115200 baud:
+
+        serial=/dev/ttyUSB0
+        serial_speed=115200
+
