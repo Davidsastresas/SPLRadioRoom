@@ -26,7 +26,8 @@ MAVIO MAVLink I/O library.
 #include "CircularBuffer.h"
 #include "MAVLinkChannel.h"
 #include "MAVLinkLib.h"
-#include "MAVLinkTCP.h"
+// #include "MAVLinkTCP.h"
+#include "MAVLinkTCPServer.h"
 
 #include <atomic>
 #include <string>
@@ -113,7 +114,8 @@ class MAVLinkTCPChannel : public MAVLinkChannel {
   // Thread of receive_task
   std::thread receive_thread;
   // MAVLink TCP socket connection
-  MAVLinkTCP socket;
+  // MAVLinkTCP socket;
+  MAVLinkTCPServer socket;
   // Queue that buffers messages to be sent to the socket
   CircularBuffer<mavlink_message_t> send_queue;
   // Queue that buffers messages received from the socket
