@@ -30,6 +30,9 @@ Config config;
 constexpr char default_autopilot_serial[] = "/dev/ttyusb0";
 constexpr int autopilot_serial_baud_rate = 57600;
 
+constexpr char default_RFD900x_serial[] = "/dev/ttyusb1";
+constexpr int RFD900x_serial_baud_rate = 115200;
+
 constexpr bool default_isbd_enabled = true;
 constexpr char default_isbd_serial[] = "/dev/ttyusb1";
 constexpr int isbd_serial_baud_rate = 19200;
@@ -59,6 +62,10 @@ constexpr char tcp_config_section[] = "tcp";
 constexpr char tcp_enabled_property[] = "enabled";
 constexpr char tcp_host_property[] = "host";
 constexpr char tcp_port_property[] = "port";
+
+constexpr char RFD900x_config_section[] = "RFD900x";
+constexpr char RFD900x_serial_property[] = "serial";
+constexpr char RFD900x_serial_speed_property[] = "serial_speed";
 
 Config::Config()
     : autopilot_serial(default_autopilot_serial),
@@ -92,7 +99,15 @@ int Config::init(const std::string& config_file) {
   set_autopilot_serial_speed(conf.GetInteger(autopilot_config_section,
                                              autopilot_serial_speed_property,
                                              autopilot_serial_baud_rate));
+ /* [RFD900x] config section */
 
+  set_RFD900x_serial(conf.Get(RFD900x_config_section,
+                                RFD900x_serial_property,
+                                default_RFD900x_serial));
+
+  set_RFD900x_serial_speed(conf.GetInteger(RFD900x_config_section,
+                                             RFD900x_serial_speed_property,
+                                             RFD900x_serial_baud_rate));
   /* [radioroom] config section */
 
   set_auto_detect_serials(conf.GetBoolean(radioroom_config_section,
@@ -144,6 +159,20 @@ int Config::get_autopilot_serial_speed() const {
 
 void Config::set_autopilot_serial_speed(int speed) {
   autopilot_serial_speed = speed;
+}
+
+std::string Config::get_RFD900x_serial() const { return RFD900x_serial; }
+
+void Config::set_RFD900x_serial(const std::string& path) {
+  RFD900x_serial = path;
+}
+
+int Config::get_RFD900x_serial_speed() const {
+  return RFD900x_serial_speed;
+}
+
+void Config::set_RFD900x_serial_speed(int speed) {
+  RFD900x_serial_speed = speed;
 }
 
 bool Config::get_isbd_enabled() const { return isbd_enabled; }
