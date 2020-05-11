@@ -49,6 +49,7 @@ constexpr char hl_report_period_param[] = "HL_REPORT_PERIOD";
 
 MAVLinkHandler::MAVLinkHandler()
     : autopilot(),
+      rfd(),
       isbd_channel(),
       tcp_channel(),
       heartbeat_timer(),
@@ -86,13 +87,26 @@ bool MAVLinkHandler::init() {
     return false;
   }
 
-  request_data_streams();
-
-  // Exclude the serial device used by autopilot from the device list used
-  // for ISBD transceiver serial device auto-detection.
   for (vector<string>::iterator iter = devices.begin(); iter != devices.end();
        ++iter) {
     if (*iter == autopilot.get_path()) {
+      devices.erase(iter);
+      break;
+    }
+  }
+
+  request_data_streams();
+
+  if (!rfd.init(config.get_RFD900x_serial(),
+                      config.get_RFD900x_serial_speed(), devices)) {
+    log(LOG_ERR,
+        "UV Radio Room initialization failed: cannot innitialize RFD900x.");
+    return false;
+  }
+
+  for (vector<string>::iterator iter = devices.begin(); iter != devices.end();
+       ++iter) {
+    if (*iter == rfd.get_path()) {
       devices.erase(iter);
       break;
     }
@@ -164,6 +178,10 @@ void MAVLinkHandler::loop() {
     }
   }
 
+  if (rfd.receive_message(msg)) {
+    autopilot.send_message(msg);
+  }
+
   send_report();
 
   send_heartbeat();
@@ -199,6 +217,9 @@ MAVLinkChannel& MAVLinkHandler::active_channel() {
 // Pass all other messages to update_report_msg().
 void MAVLinkHandler::handle_mo_message(const mavlink_message_t& msg,
                                        MAVLinkChannel& channel) {
+  
+  rfd.send_message(msg);
+  
   switch (msg.msgid) {
     case MAVLINK_MSG_ID_COMMAND_ACK: {
       channel.send_message(msg);
