@@ -41,7 +41,7 @@ using std::endl;
 constexpr char log_identity[] = "radioroom";
 
 // maybe more frequency is needed?
-const std::chrono::milliseconds msg_handler_loop_period(10);
+const std::chrono::milliseconds msg_handler_loop_period(1);
 
 std::atomic<bool> running(false);
 

@@ -48,7 +48,7 @@ const std::chrono::milliseconds autopilot_send_retry_timeout(250);
 constexpr char hl_report_period_param[] = "HL_REPORT_PERIOD";
 
 MAVLinkHandler::MAVLinkHandler()
-    : autopilot(),
+    : rfd(),
       isbd_channel(),
       tcp_channel(),
       heartbeat_timer(),
@@ -79,20 +79,18 @@ bool MAVLinkHandler::init() {
     Serial::get_serial_devices(devices);
   }
 
-  if (!autopilot.init(config.get_autopilot_serial(),
+  if (!rfd.init(config.get_autopilot_serial(),
                       config.get_autopilot_serial_speed(), devices)) {
     log(LOG_ERR,
         "UV Radio Room initialization failed: cannot connect to autopilot.");
     return false;
   }
 
-  request_data_streams();
-
   // Exclude the serial device used by autopilot from the device list used
   // for ISBD transceiver serial device auto-detection.
   for (vector<string>::iterator iter = devices.begin(); iter != devices.end();
        ++iter) {
-    if (*iter == autopilot.get_path()) {
+    if (*iter == rfd.get_path()) {
       devices.erase(iter);
       break;
     }
@@ -109,11 +107,11 @@ bool MAVLinkHandler::init() {
   if (config.get_isbd_enabled()) {
     string isbd_serial = config.get_isbd_serial();
 
-    if (isbd_serial == autopilot.get_path() && devices.size() > 0) {
+    if (isbd_serial == rfd.get_path() && devices.size() > 0) {
       log(LOG_WARNING,
-          "Autopilot detected at serial device '%s' that was assigned "
+          "rfd detected at serial device '%s' that was assigned "
           "to ISBD transceiver by the configuration settings.",
-          autopilot.get_path().data());
+          rfd.get_path().data());
 
       isbd_serial = devices[0];
     }
@@ -136,7 +134,7 @@ bool MAVLinkHandler::init() {
 void MAVLinkHandler::close() {
   tcp_channel.close();
   isbd_channel.close();
-  autopilot.close();
+  rfd.close();
 }
 
 /**
@@ -147,7 +145,7 @@ void MAVLinkHandler::close() {
 void MAVLinkHandler::loop() {
   mavlink_message_t msg;
 
-  if (autopilot.receive_message(msg)) {
+  if (rfd.receive_message(msg)) {
     handle_mo_message(msg, active_channel());
   }
 
@@ -199,55 +197,58 @@ MAVLinkChannel& MAVLinkHandler::active_channel() {
 // Pass all other messages to update_report_msg().
 void MAVLinkHandler::handle_mo_message(const mavlink_message_t& msg,
                                        MAVLinkChannel& channel) {
-  switch (msg.msgid) {
-    case MAVLINK_MSG_ID_COMMAND_ACK: {
-      channel.send_message(msg);
-      break;
-    }
-    case MAVLINK_MSG_ID_PARAM_VALUE: {
-      char param_id[17];
-      mavlink_msg_param_value_get_param_id(&msg, param_id);
-      if (strncmp(param_id, "STAT_RUNTIME", 16) == 0) {
-        break;
-      }
 
-      channel.send_message(msg);
-      break;
-    }
-    case MAVLINK_MSG_ID_MISSION_REQUEST: {
-      uint16_t seq = mavlink_msg_mission_request_get_seq(&msg);
+tcp_channel.send_message(msg);
 
-      if (seq < missions_received) {
-        autopilot.send_message(missions[seq]);
-        set_retry_send_timer(missions[seq],
-                             autopilot_send_retry_timeout,
-                             autopilot_send_retries);
-      } else {
-        log(LOG_ERR, "Mission request seq=%d is out of bounds.", seq);
-      }
+  // switch (msg.msgid) {
+  //   case MAVLINK_MSG_ID_COMMAND_ACK: {
+  //     channel.send_message(msg);
+  //     break;
+  //   }
+  //   case MAVLINK_MSG_ID_PARAM_VALUE: {
+  //     char param_id[17];
+  //     mavlink_msg_param_value_get_param_id(&msg, param_id);
+  //     if (strncmp(param_id, "STAT_RUNTIME", 16) == 0) {
+  //       break;
+  //     }
 
-      break;
-    }
-    case MAVLINK_MSG_ID_MISSION_ACK: {
-      cancel_retry_send_timer(MAVLINK_MSG_ID_MISSION_ITEM);
+  //     channel.send_message(msg);
+  //     break;
+  //   }
+  //   case MAVLINK_MSG_ID_MISSION_REQUEST: {
+  //     uint16_t seq = mavlink_msg_mission_request_get_seq(&msg);
 
-      uint8_t mission_result = mavlink_msg_mission_ack_get_type(&msg);
+  //     if (seq < missions_received) {
+  //       rfd.send_message(missions[seq]);
+  //       set_retry_send_timer(missions[seq],
+  //                            autopilot_send_retry_timeout,
+  //                            autopilot_send_retries);
+  //     } else {
+  //       log(LOG_ERR, "Mission request seq=%d is out of bounds.", seq);
+  //     }
 
-      if (mission_result == MAV_MISSION_ACCEPTED) {
-        log(LOG_INFO, "Mission accepted by autopilot.");
-      } else {
-        log(LOG_WARNING, "Mission not accepted by autopilot (result=%d).",
-            mission_result);
-      }
+  //     break;
+  //   }
+  //   case MAVLINK_MSG_ID_MISSION_ACK: {
+  //     cancel_retry_send_timer(MAVLINK_MSG_ID_MISSION_ITEM);
 
-      channel.send_message(msg);
-      break;
-    }
-    default: {
-      report.update(msg);
-      break;
-    }
-  }  // switch
+  //     uint8_t mission_result = mavlink_msg_mission_ack_get_type(&msg);
+
+  //     if (mission_result == MAV_MISSION_ACCEPTED) {
+  //       log(LOG_INFO, "Mission accepted by autopilot.");
+  //     } else {
+  //       log(LOG_WARNING, "Mission not accepted by autopilot (result=%d).",
+  //           mission_result);
+  //     }
+
+  //     channel.send_message(msg);
+  //     break;
+  //   }
+  //   default: {
+  //     report.update(msg);
+  //     break;
+  //   }
+  // }  // switch
 }
 
 /**
@@ -261,89 +262,89 @@ void MAVLinkHandler::handle_mo_message(const mavlink_message_t& msg,
  */
 void MAVLinkHandler::handle_mt_message(const mavlink_message_t& msg,
                                        MAVLinkChannel& channel) {
-  switch (msg.msgid) {
-    case MAVLINK_MSG_ID_MISSION_COUNT: {
-      uint16_t mission_count = mavlink_msg_mission_count_get_count(&msg);
-      if (mission_count <= max_mission_count) {
-        mission_count_msg = msg;
-        // Set msgid of all mission items to 0 to flag non-initialized items
-        for (size_t i = 0; i < mission_count; i++) {
-          missions[i].msgid = 0;
-        }
-      } else {  // Too many mission items - reject the mission
-        mavlink_mission_ack_t mission_ack;
-        mission_ack.target_system = msg.sysid;
-        mission_ack.target_component = msg.compid;
-        mission_ack.type = MAV_MISSION_NO_SPACE;
+  // switch (msg.msgid) {
+    // case MAVLINK_MSG_ID_MISSION_COUNT: {
+    //   uint16_t mission_count = mavlink_msg_mission_count_get_count(&msg);
+    //   if (mission_count <= max_mission_count) {
+    //     mission_count_msg = msg;
+    //     // Set msgid of all mission items to 0 to flag non-initialized items
+    //     for (size_t i = 0; i < mission_count; i++) {
+    //       missions[i].msgid = 0;
+    //     }
+    //   } else {  // Too many mission items - reject the mission
+    //     mavlink_mission_ack_t mission_ack;
+    //     mission_ack.target_system = msg.sysid;
+    //     mission_ack.target_component = msg.compid;
+    //     mission_ack.type = MAV_MISSION_NO_SPACE;
 
-        mavlink_message_t ack_msg;
-        mavlink_msg_mission_ack_encode(autopilot.get_system_id(),
-                                       mavio::ardupilot_component_id, &ack_msg,
-                                       &mission_ack);
-        channel.send_message(ack_msg);
-      }
+    //     mavlink_message_t ack_msg;
+    //     mavlink_msg_mission_ack_encode(autopilot.get_system_id(),
+    //                                    mavio::ardupilot_component_id, &ack_msg,
+    //                                    &mission_ack);
+    //     channel.send_message(ack_msg);
+    //   }
 
-      missions_received = 0;
-      break;
-    }
-    case MAVLINK_MSG_ID_MISSION_ITEM: {
-      uint16_t mission_count =
-          mavlink_msg_mission_count_get_count(&mission_count_msg);
-      uint16_t seq = mavlink_msg_mission_item_get_seq(&msg);
-      if (seq < mission_count) {
-        if (missions[seq].msgid == 0) {  // new item
-          missions_received++;
-        }
+    //   missions_received = 0;
+    //   break;
+    // }
+    // case MAVLINK_MSG_ID_MISSION_ITEM: {
+    //   uint16_t mission_count =
+    //       mavlink_msg_mission_count_get_count(&mission_count_msg);
+    //   uint16_t seq = mavlink_msg_mission_item_get_seq(&msg);
+    //   if (seq < mission_count) {
+    //     if (missions[seq].msgid == 0) {  // new item
+    //       missions_received++;
+    //     }
 
-        missions[seq] = msg;
+    //     missions[seq] = msg;
 
-        log(LOG_INFO, "%d mission items received.", missions_received);
+    //     log(LOG_INFO, "%d mission items received.", missions_received);
 
-        if (missions_received == mission_count) {
-          // All mission items received
-          log(LOG_INFO, "Sending mission items to autopilot...");
-          autopilot.send_message(mission_count_msg);
-          set_retry_send_timer(mission_count_msg,
-                               autopilot_send_retry_timeout,
-                               autopilot_send_retries);
-        }
-      } else {
-        log(LOG_WARNING, "Ignored mission item from rejected mission.");
-      }
-      break;
-    }
-    case MAVLINK_MSG_ID_PARAM_SET: {
-      char param_id[17];
-      mavlink_msg_param_set_get_param_id(&msg, param_id);
+    //     if (missions_received == mission_count) {
+    //       // All mission items received
+    //       log(LOG_INFO, "Sending mission items to autopilot...");
+    //       autopilot.send_message(mission_count_msg);
+    //       set_retry_send_timer(mission_count_msg,
+    //                            autopilot_send_retry_timeout,
+    //                            autopilot_send_retries);
+    //     }
+    //   } else {
+    //     log(LOG_WARNING, "Ignored mission item from rejected mission.");
+    //   }
+    //   break;
+    // }
+    // case MAVLINK_MSG_ID_PARAM_SET: {
+    //   char param_id[17];
+    //   mavlink_msg_param_set_get_param_id(&msg, param_id);
 
-      if (strncmp(param_id, hl_report_period_param, 16) == 0) {
-        float value = mavlink_msg_param_set_get_param_value(&msg);
-        config.set_isbd_report_period(value);
+    //   if (strncmp(param_id, hl_report_period_param, 16) == 0) {
+    //     float value = mavlink_msg_param_set_get_param_value(&msg);
+    //     config.set_isbd_report_period(value);
 
-        mavlink_param_value_t paramValue;
-        paramValue.param_value = value;
-        paramValue.param_count = 0;
-        paramValue.param_index = 0;
-        mavlink_msg_param_set_get_param_id(&msg, paramValue.param_id);
-        paramValue.param_type = mavlink_msg_param_set_get_param_type(&msg);
+    //     mavlink_param_value_t paramValue;
+    //     paramValue.param_value = value;
+    //     paramValue.param_count = 0;
+    //     paramValue.param_index = 0;
+    //     mavlink_msg_param_set_get_param_id(&msg, paramValue.param_id);
+    //     paramValue.param_type = mavlink_msg_param_set_get_param_type(&msg);
 
-        mavlink_message_t param_value_msg;
-        mavlink_msg_param_value_encode(autopilot.get_system_id(),
-                                       mavio::ardupilot_component_id,
-                                       &param_value_msg, &paramValue);
-        channel.send_message(param_value_msg);
+    //     mavlink_message_t param_value_msg;
+    //     mavlink_msg_param_value_encode(autopilot.get_system_id(),
+    //                                    mavio::ardupilot_component_id,
+    //                                    &param_value_msg, &paramValue);
+    //     channel.send_message(param_value_msg);
 
-        log(LOG_INFO, "Report period changed to %f seconds.", value);
-      } else {
-        autopilot.send_message(msg);
-      }
-      break;
-    }
-    default: {
-      autopilot.send_message(msg);
-      break;
-    }
-  }
+    //     log(LOG_INFO, "Report period changed to %f seconds.", value);
+    //   } else {
+        rfd.send_message(msg);
+  //     }
+  //     break;
+  //   }
+  //   default: {
+  //     autopilot.send_message(msg);
+  //     break;
+  //   }
+  // }
 }
 
 bool MAVLinkHandler::send_report() {
@@ -431,51 +432,51 @@ bool MAVLinkHandler::send_heartbeat() {
       mavlink_msg_heartbeat_pack(mavio::gcs_system_id, mavio::gcs_component_id,
                                  &heartbeat_msg, MAV_TYPE_GCS,
                                  MAV_AUTOPILOT_INVALID, 0, 0, 0);
-      return autopilot.send_message(heartbeat_msg);
+      return rfd.send_message(heartbeat_msg);
     }
   }
 
   return false;
 }
 
-void MAVLinkHandler::request_data_streams() {
-  mavlink_message_t mt_msg;
+// void MAVLinkHandler::request_data_streams() {
+//   mavlink_message_t mt_msg;
 
-  /*
-   * Send a heartbeat first
-   */
-  mavlink_msg_heartbeat_pack(mavio::gcs_system_id, mavio::gcs_component_id,
-                             &mt_msg, MAV_TYPE_GCS, MAV_AUTOPILOT_INVALID, 0, 0,
-                             0);
-  autopilot.send_message(mt_msg);
+//   /*
+//    * Send a heartbeat first
+//    */
+//   mavlink_msg_heartbeat_pack(mavio::gcs_system_id, mavio::gcs_component_id,
+//                              &mt_msg, MAV_TYPE_GCS, MAV_AUTOPILOT_INVALID, 0, 0,
+//                              0);
+//   autopilot.send_message(mt_msg);
 
-  /*
-   * Request data streams from the autopilot.
-   */
-  uint8_t req_stream_ids[] = {
-      MAV_DATA_STREAM_EXTENDED_STATUS,  // SYS_STATUS, NAV_CONTROLLER_OUTPUT,
-                                        // GPS_RAW, MISSION_CURRENT
-      MAV_DATA_STREAM_POSITION,         // GLOBAL_POSITION_INT
-      // MAV_DATA_STREAM_RAW_CONTROLLER,
-      MAV_DATA_STREAM_RAW_SENSORS,  //
-      MAV_DATA_STREAM_EXTRA1,       // ATTITUDE
-      MAV_DATA_STREAM_EXTRA2,       // VFR_HUD
-      MAV_DATA_STREAM_EXTRA3        // MSG_BATTERY2
-  };
+//   /*
+//    * Request data streams from the autopilot.
+//    */
+//   uint8_t req_stream_ids[] = {
+//       MAV_DATA_STREAM_EXTENDED_STATUS,  // SYS_STATUS, NAV_CONTROLLER_OUTPUT,
+//                                         // GPS_RAW, MISSION_CURRENT
+//       MAV_DATA_STREAM_POSITION,         // GLOBAL_POSITION_INT
+//       // MAV_DATA_STREAM_RAW_CONTROLLER,
+//       MAV_DATA_STREAM_RAW_SENSORS,  //
+//       MAV_DATA_STREAM_EXTRA1,       // ATTITUDE
+//       MAV_DATA_STREAM_EXTRA2,       // VFR_HUD
+//       MAV_DATA_STREAM_EXTRA3        // MSG_BATTERY2
+//   };
 
-  size_t req_stream_count = sizeof(req_stream_ids) / sizeof(req_stream_ids[0]);
+//   size_t req_stream_count = sizeof(req_stream_ids) / sizeof(req_stream_ids[0]);
 
-  for (size_t i = 0; i < req_stream_count; ++i) {
-    mavlink_msg_request_data_stream_pack(
-        mavio::gcs_system_id, mavio::gcs_component_id, &mt_msg,
-        autopilot.get_system_id(), mavio::ardupilot_component_id,
-        req_stream_ids[i], data_stream_rate, 1);
+//   for (size_t i = 0; i < req_stream_count; ++i) {
+//     mavlink_msg_request_data_stream_pack(
+//         mavio::gcs_system_id, mavio::gcs_component_id, &mt_msg,
+//         autopilot.get_system_id(), mavio::ardupilot_component_id,
+//         req_stream_ids[i], data_stream_rate, 1);
 
-    autopilot.send_message(mt_msg);
+//     autopilot.send_message(mt_msg);
 
-    timelib::sleep(autopilot_send_interval);
-  }
-}
+//     timelib::sleep(autopilot_send_interval);
+//   }
+// }
 
 void MAVLinkHandler::set_retry_send_timer(const mavlink_message_t& msg,
                                        const std::chrono::milliseconds& timeout,
@@ -494,7 +495,7 @@ void MAVLinkHandler::cancel_retry_send_timer(int msgid) {
 
 void MAVLinkHandler::check_retry_send_timer() {
   if (retry_count > 0 && retry_timer.elapsed_time() >= retry_timeout) {
-    autopilot.send_message(retry_msg);
+    rfd.send_message(retry_msg);
     retry_count--;
     retry_timer.reset();
   }

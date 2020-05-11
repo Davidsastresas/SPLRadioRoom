@@ -60,6 +60,16 @@ constexpr char tcp_enabled_property[] = "enabled";
 constexpr char tcp_host_property[] = "host";
 constexpr char tcp_port_property[] = "port";
 
+constexpr char aircraft1_config_section[] = "aircraft1";
+constexpr char aircraft2_config_section[] = "aircraft2";
+constexpr char aircraft3_config_section[] = "aircraft3";
+constexpr char aircraft4_config_section[] = "aircraft4";
+constexpr char aircraft5_config_section[] = "aircraft5";
+
+constexpr char tlf_number[] = "tlf_number";
+constexpr char rock_address[] = "rock_address";
+constexpr char mav_id[] = "mav_id";
+
 Config::Config()
     : autopilot_serial(default_autopilot_serial),
       autopilot_serial_speed(autopilot_serial_baud_rate),

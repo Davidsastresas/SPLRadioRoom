@@ -1,5 +1,5 @@
 /*
- MAVLinkAutopilot.h
+ MAVLinkRFD900x.h
  
  MAVIO MAVLink I/O library.
  
@@ -21,8 +21,8 @@
  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#ifndef LIBS_MAVIO_INCLUDE_MAVLINKAUTOPILOT_H_
-#define LIBS_MAVIO_INCLUDE_MAVLINKAUTOPILOT_H_
+#ifndef LIBS_MAVIO_INCLUDE_MAVLINKAUTRFD900x
+#define LIBS_MAVIO_INCLUDE_MAVLINKAUTRFD900x
 
 #include "CircularBuffer.h"
 #include "MAVLinkChannel.h"
@@ -38,17 +38,16 @@ namespace mavio {
 constexpr uint8_t gcs_system_id = 255;   // GCS system Id
 constexpr uint8_t gcs_component_id = 1;  // GCS component Id
 constexpr uint8_t ardupilot_component_id = 0;
-
 /**
  * Asynchronously sends and receivs MAVLink messages to autopilot over serial
  * interface.
  */
-class MAVLinkAutopilot : public MAVLinkChannel {
+class MAVLinkRFD900x : public MAVLinkChannel {
  public:
   /**
    * Constructs MAVLinkSerial instance.
    */
-  MAVLinkAutopilot();
+  MAVLinkRFD900x();
 
   /**
    * Initializes connection to the serial device and starts send and receive
@@ -121,7 +120,7 @@ class MAVLinkAutopilot : public MAVLinkChannel {
    * If an autopilot was detected, returns the autopilot's system id,
    * otherwise returns 0.
    */
-  uint8_t detect_autopilot(const std::string device);
+ // uint8_t detect_autopilot(const std::string device);
 
   /**
    * Sends REQUEST_AUTOPILOT_CAPABILITIES message to the autopilot and
@@ -129,10 +128,10 @@ class MAVLinkAutopilot : public MAVLinkChannel {
    *
    * Returns true if AUTOPILOT_VERSION message was received.
    */
-  bool request_autopilot_version(
-      uint8_t& autopilot, uint8_t& mav_type, uint8_t& sys_id,
-      mavlink_autopilot_version_t& autopilot_version);
-
+ // bool request_autopilot_version(
+ //     uint8_t& autopilot, uint8_t& mav_type, uint8_t& sys_id,
+ //     mavlink_autopilot_version_t& autopilot_version);
+ 
   /**
    * Retrieves firmware version string from the specified AUTOPILOT_VERSION
    * message.
@@ -170,4 +169,4 @@ class MAVLinkAutopilot : public MAVLinkChannel {
 
 }  // namespace mavio
 
-#endif  // LIBS_MAVIO_INCLUDE_MAVLINKAUTOPILOT_H_
+#endif  // LIBS_MAVIO_INCLUDE_MAVLINKAUTRFD900x

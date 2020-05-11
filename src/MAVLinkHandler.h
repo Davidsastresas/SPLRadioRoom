@@ -103,7 +103,7 @@ class MAVLinkHandler {
   /*
    * Requests autopilot data streams required to compose report message.
    */
-  void request_data_streams();
+  // void request_data_streams();
 
   /*
    * Sets send retry timer in milliseconds for the specified message.
@@ -125,8 +125,8 @@ class MAVLinkHandler {
    */
   void check_retry_send_timer();
 
-  // mavio::MAVLinkAutopilot autopilot;
-  mavio::MAVLinkRFD900x rfd900x;
+  //mavio::MAVLinkAutopilot autopilot;
+  mavio::MAVLinkRFD900x rfd;
   mavio::MAVLinkISBDChannel isbd_channel;
   mavio::MAVLinkTCPChannel tcp_channel;
   timelib::Stopwatch heartbeat_timer;
