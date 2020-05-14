@@ -146,27 +146,29 @@ void MAVLinkHandler::loop() {
   mavlink_message_t msg;
 
   if (rfd.receive_message(msg)) {
-    handle_mo_message(msg, active_channel());
+    tcp_channel.send_message(msg);
+    // handle_mo_message(msg, active_channel());
   }
 
   // Handle messages received from the comm channels
-  if (config.get_tcp_enabled()) {
+  //if (config.get_tcp_enabled()) {
     if (tcp_channel.receive_message(msg)) {
-      handle_mt_message(msg, tcp_channel);
+      rfd.send_message(msg);
+      // handle_mt_message(msg, tcp_channel);
     }
-  }
+  //}
 
-  if (config.get_isbd_enabled()) {
-    if (isbd_channel.receive_message(msg)) {
-      handle_mt_message(msg, isbd_channel);
-    }
-  }
+  // if (config.get_isbd_enabled()) {
+  //   if (isbd_channel.receive_message(msg)) {
+  //     handle_mt_message(msg, isbd_channel);
+  //   }
+  // }
 
-  send_report();
+  // send_report();
 
-  send_heartbeat();
+  // send_heartbeat();
 
-  check_retry_send_timer();
+  // check_retry_send_timer();
 }
 
 MAVLinkChannel& MAVLinkHandler::active_channel() {

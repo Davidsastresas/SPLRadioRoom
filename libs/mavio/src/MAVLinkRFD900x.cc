@@ -35,7 +35,7 @@ constexpr int send_retries = 5;
 constexpr int receive_retries = 10;
 
 const std::chrono::milliseconds max_heartbeat_interval(2000);
-const std::chrono::milliseconds autopilot_send_interval(10);
+const std::chrono::milliseconds autopilot_send_interval(1);
 const std::chrono::milliseconds receive_retry_delay(10);
 
 constexpr size_t max_autopilot_queue_size = 1024;

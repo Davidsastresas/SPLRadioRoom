@@ -76,8 +76,8 @@ bool MAVLinkSerial::receive_message(mavlink_message_t& msg) {
   while (c >= 0) {
     // Serial.println(c);
 
-    if (mavlink_parse_char(MAVLINK_COMM_0, c, &msg, &mavlink_status)) {
-      MAVLinkLogger::log(LOG_DEBUG, "MAV >>", msg);
+    if (mavlink_parse_char(MAVLINK_COMM_1, c, &msg, &mavlink_status)) {
+      MAVLinkLogger::log(LOG_INFO, "MAV >>", msg);
       return true;
     }
 
