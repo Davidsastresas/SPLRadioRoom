@@ -96,6 +96,21 @@ bool MAVLinkHandler::init() {
     }
   }
 
+  if (!autopilot.init(config.get_isbd_serial(),
+                      config.get_isbd_serial_speed(), devices)) {
+    log(LOG_ERR,
+        "UV Radio Room initialization failed: cannot connect to autopilot.");
+    return false;
+  }
+
+  for (vector<string>::iterator iter = devices.begin(); iter != devices.end();
+       ++iter) {
+    if (*iter == autopilot.get_path()) {
+      devices.erase(iter);
+      break;
+    }
+  }
+
   if (config.get_tcp_enabled()) {
     if (tcp_channel.init(config.get_tcp_host(), config.get_tcp_port())) {
       log(LOG_INFO, "TCP channel initialized.");
@@ -146,13 +161,13 @@ void MAVLinkHandler::loop() {
   mavlink_message_t msg;
 
   if (rfd.receive_message(msg)) {
-    tcp_channel.send_message(msg);
+    autopilot.send_message(msg);
     // handle_mo_message(msg, active_channel());
   }
 
   // Handle messages received from the comm channels
   //if (config.get_tcp_enabled()) {
-    if (tcp_channel.receive_message(msg)) {
+    if (autopilot.receive_message(msg)) {
       rfd.send_message(msg);
       // handle_mt_message(msg, tcp_channel);
     }
