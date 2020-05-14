@@ -46,7 +46,7 @@ bool MAVLinkSerial::init(const string& path, int speed) {
 
 void MAVLinkSerial::close() { serial.close(); }
 
-bool MAVLinkSerial::send_message(const mavlink_message_t& msg) {
+bool MAVLinkSerial::send_message(const mavlink_message_t& msg, bool rfd) {
   if (msg.len == 0 && msg.msgid == 0) {
     return true;
   }
@@ -59,8 +59,13 @@ bool MAVLinkSerial::send_message(const mavlink_message_t& msg) {
   uint16_t n = serial.write(buf, len);
 
   if (n == len) {
-    MAVLinkLogger::log(msg.msgid == MAVLINK_MSG_ID_HEARTBEAT ?
-                       LOG_DEBUG : LOG_INFO, "MAV <<", msg);
+    if (!rfd) {
+      MAVLinkLogger::log(msg.msgid == MAVLINK_MSG_ID_HEARTBEAT ?
+                         LOG_DEBUG : LOG_INFO, "MAV <<", msg);
+    } else {
+      MAVLinkLogger::log(msg.msgid == MAVLINK_MSG_ID_HEARTBEAT ?
+                         LOG_DEBUG : LOG_INFO, "RFD <<", msg);
+    }  
   } else {
     MAVLinkLogger::log(LOG_WARNING, "MAV << FAILED", msg);
   }
@@ -68,16 +73,26 @@ bool MAVLinkSerial::send_message(const mavlink_message_t& msg) {
   return n == len;
 }
 
-bool MAVLinkSerial::receive_message(mavlink_message_t& msg) {
+bool MAVLinkSerial::receive_message(mavlink_message_t& msg, bool rfd) {
   mavlink_status_t mavlink_status;
 
   int c = serial.read();
+  mavlink_channel_t chan;
+  if (rfd) {
+    chan = MAVLINK_COMM_0;
+  } else {
+    chan = MAVLINK_COMM_1;
+  }
 
   while (c >= 0) {
     // Serial.println(c);
 
-    if (mavlink_parse_char(MAVLINK_COMM_0, c, &msg, &mavlink_status)) {
-      MAVLinkLogger::log(LOG_DEBUG, "MAV >>", msg);
+    if (mavlink_parse_char(chan, c, &msg, &mavlink_status)) {
+      if (!rfd) {
+        MAVLinkLogger::log(LOG_INFO, "MAV >>", msg);
+      } else {
+        MAVLinkLogger::log(LOG_INFO, "RFD >>", msg);
+      }
       return true;
     }
 

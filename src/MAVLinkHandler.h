@@ -126,7 +126,7 @@ class MAVLinkHandler {
    */
   void check_retry_send_timer();
 
-  mavio::MAVLinkAutopilot autopilot;
+  mavio::MAVLinkRFD900x autopilot;
   mavio::MAVLinkRFD900x rfd;
   mavio::MAVLinkISBDChannel isbd_channel;
   mavio::MAVLinkTCPChannel tcp_channel;

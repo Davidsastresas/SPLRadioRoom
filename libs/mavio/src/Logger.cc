@@ -33,7 +33,7 @@
 
 namespace mavio {
 
-std::atomic_int log_mask(LOG_UPTO(LOG_INFO));
+std::atomic_int log_mask(LOG_UPTO(LOG_DEBUG));
 std::atomic_bool log_to_stdout(true);
 
 const char* priority2str(int priority) {

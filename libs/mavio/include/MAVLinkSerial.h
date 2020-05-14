@@ -62,14 +62,14 @@ class MAVLinkSerial {
    *
    * Returns true on success.
    */
-  bool send_message(const mavlink_message_t& msg);
+  bool send_message(const mavlink_message_t& msg, bool rfd);
 
   /**
    * Receives MAVLink message from the serial interface.
    *
    * Returns true if MAVLink message was received.
    */
-  bool receive_message(mavlink_message_t& msg);
+  bool receive_message(mavlink_message_t& msg, bool rfd);
 
  private:
   Serial serial;

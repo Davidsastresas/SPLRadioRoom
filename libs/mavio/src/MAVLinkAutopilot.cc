@@ -35,7 +35,7 @@ constexpr int send_retries = 5;
 constexpr int receive_retries = 10;
 
 const std::chrono::milliseconds max_heartbeat_interval(2000);
-const std::chrono::milliseconds autopilot_send_interval(10);
+const std::chrono::milliseconds autopilot_send_interval(1);
 const std::chrono::milliseconds receive_retry_delay(10);
 
 constexpr size_t max_autopilot_queue_size = 1024;
@@ -90,7 +90,7 @@ bool MAVLinkAutopilot::request_autopilot_version(
   Stopwatch timer;
 
   while (timer.elapsed_time() < max_heartbeat_interval) {
-    if (serial.receive_message(msg)) {
+    if (serial.receive_message(msg, false)) {
       if (msg.msgid == MAVLINK_MSG_ID_HEARTBEAT) {
         autopilot = mavlink_msg_heartbeat_get_autopilot(&msg);
         mav_type = mavlink_msg_heartbeat_get_type(&msg);
@@ -116,9 +116,9 @@ bool MAVLinkAutopilot::request_autopilot_version(
         gcs_system_id, gcs_component_id, &msg_command_long, sys_id,
         ardupilot_component_id, MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES, i, 1.0,
         0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-    if (serial.send_message(msg_command_long)) {
+    if (serial.send_message(msg_command_long, false)) {
       for (int j = 0; j < receive_retries; j++) {
-        if (serial.receive_message(msg)) {
+        if (serial.receive_message(msg, false)) {
           // printf("**** msg.msgid = %d\n", msg.msgid);
           if (msg.msgid == MAVLINK_MSG_ID_AUTOPILOT_VERSION) {
             mavlink_msg_autopilot_version_decode(&msg, &autopilot_version);
@@ -183,49 +183,46 @@ bool MAVLinkAutopilot::connect(const string& path, int speed,
   mavio::log(LOG_NOTICE, "Connecting to autopilot (%s %d)...", path.data(),
              speed);
 
-  system_id = 0;
+  // system_id = 0;
 
   if (serial.init(path, speed)) {
-    system_id = detect_autopilot(path);
-
-    if (system_id) {
-      return true;
-    }
-
-    serial.close();
+    // system_id = detect_autopilot(path);
+    mavio::log(LOG_NOTICE, "autopilot serial port opened succesfully");
+    return true;
+    // serial.close();
   } else {
-    mavio::log(LOG_WARNING, "Failed to open serial device '%s'.", path.data());
+    mavio::log(LOG_WARNING, "Failed to open serial autopilot device '%s'.", path.data());
+    serial.close();
+    return false;
   }
 
-  if (devices.size() > 0) {
-    mavio::log(LOG_NOTICE,
-               "Attempting to detect autopilot at the serial devices...");
+  // if (devices.size() > 0) {
+  //   mavio::log(LOG_NOTICE,
+  //              "Attempting to detect autopilot at the serial devices...");
 
-    for (const std::string device : devices) {
-      if (device == path)
-        continue;
+  //   for (const std::string device : devices) {
+  //     if (device == path)
+  //       continue;
 
-      if (serial.init(device, speed)) {
-        system_id = detect_autopilot(device);
+  //     if (serial.init(device, speed)) {
+  //       system_id = detect_autopilot(device);
 
-        if (system_id)
-          return true;
+  //       if (system_id)
+  //         return true;
 
-        mavio::log(LOG_NOTICE, "Autopilot not detected at serial device '%s'.",
-                   device.data());
+  //       mavio::log(LOG_NOTICE, "Autopilot not detected at serial device '%s'.",
+  //                  device.data());
 
-        serial.close();
-      } else {
-        mavio::log(LOG_NOTICE, "Failed to open serial device '%s'.",
-                   device.data());
-      }
-    }
+  //       serial.close();
+  //     } else {
+  //       mavio::log(LOG_NOTICE, "Failed to open serial device '%s'.",
+  //                  device.data());
+  //     }
+  //   }
 
-    mavio::log(LOG_ERR,
-               "Autopilot was not detected on any of the serial devices.");
-  }
-
-  return false;
+  //   mavio::log(LOG_ERR,
+  //              "Autopilot was not detected on any of the serial devices.");
+  // }
 }
 
 uint8_t MAVLinkAutopilot::detect_autopilot(const string device) {
@@ -260,7 +257,7 @@ void MAVLinkAutopilot::send_task() {
     mavlink_message_t msg;
 
     if (send_queue.pop(msg)) {
-      if (serial.send_message(msg)) {
+      if (serial.send_message(msg, false)) {
         send_time = timelib::time_since_epoch();
       }
     }
@@ -273,7 +270,7 @@ void MAVLinkAutopilot::receive_task() {
   while (running) {
     mavlink_message_t msg;
 
-    if (serial.receive_message(msg)) {
+    if (serial.receive_message(msg, false)) {
       receive_time = timelib::time_since_epoch();
       receive_queue.push(msg);
     }
