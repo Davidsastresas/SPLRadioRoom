@@ -51,6 +51,12 @@ class Config {
   int get_autopilot_serial_speed() const;
   void set_autopilot_serial_speed(int speed);
 
+  std::string get_rfd_serial() const;
+  void set_rfd_serial(const std::string& path);
+
+  int get_rfd_serial_speed() const;
+  void set_rfd_serial_speed(int speed);
+
   /* RadioRoom configuration properties */
 
   bool get_auto_detect_serials() const;
@@ -90,6 +96,9 @@ class Config {
  private:
   std::string autopilot_serial;
   int autopilot_serial_speed;
+  
+  std::string rfd_serial;
+  int rfd_serial_speed;
 
   bool auto_detect_serials;
   bool debug_mode;

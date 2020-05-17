@@ -28,7 +28,10 @@ namespace radioroom {
 Config config;
 
 constexpr char default_autopilot_serial[] = "/dev/ttyusb0";
-constexpr int autopilot_serial_baud_rate = 57600;
+constexpr int autopilot_serial_baud_rate = 115200;
+
+constexpr char default_rfd_serial[] = "/dev/ttyusb1";
+constexpr int rfd_serial_baud_rate = 115200;
 
 constexpr bool default_isbd_enabled = true;
 constexpr char default_isbd_serial[] = "/dev/ttyusb1";
@@ -46,6 +49,10 @@ constexpr char autopilot_config_section[] = "autopilot";
 constexpr char autopilot_serial_property[] = "serial";
 constexpr char autopilot_serial_speed_property[] = "serial_speed";
 
+constexpr char rfd_config_section[] = "rfd";
+constexpr char rfd_serial_property[] = "serial";
+constexpr char rfd_serial_speed_property[] = "serial_speed";
+
 constexpr char radioroom_config_section[] = "radioroom";
 constexpr char auto_detect_serials_property[] = "auto_detect_serials";
 constexpr char report_period_property[] = "report_period";
@@ -59,6 +66,16 @@ constexpr char tcp_config_section[] = "tcp";
 constexpr char tcp_enabled_property[] = "enabled";
 constexpr char tcp_host_property[] = "host";
 constexpr char tcp_port_property[] = "port";
+
+constexpr char aircraft1_config_section[] = "aircraft1";
+constexpr char aircraft2_config_section[] = "aircraft2";
+constexpr char aircraft3_config_section[] = "aircraft3";
+constexpr char aircraft4_config_section[] = "aircraft4";
+constexpr char aircraft5_config_section[] = "aircraft5";
+
+constexpr char tlf_number[] = "tlf_number";
+constexpr char rock_address[] = "rock_address";
+constexpr char mav_id[] = "mav_id";
 
 Config::Config()
     : autopilot_serial(default_autopilot_serial),
@@ -89,9 +106,17 @@ int Config::init(const std::string& config_file) {
                                 autopilot_serial_property,
                                 default_autopilot_serial));
 
+  set_rfd_serial(conf.Get(rfd_config_section,
+                                rfd_serial_property,
+                                default_rfd_serial));
+
   set_autopilot_serial_speed(conf.GetInteger(autopilot_config_section,
                                              autopilot_serial_speed_property,
                                              autopilot_serial_baud_rate));
+
+  set_rfd_serial_speed(conf.GetInteger(rfd_config_section,
+                                             rfd_serial_speed_property,
+                                             rfd_serial_baud_rate));
 
   /* [radioroom] config section */
 
@@ -134,6 +159,8 @@ void Config::set_debug_mode(bool debug) { debug_mode = debug; }
 
 std::string Config::get_autopilot_serial() const { return autopilot_serial; }
 
+std::string Config::get_rfd_serial() const { return rfd_serial; }
+
 void Config::set_autopilot_serial(const std::string& path) {
   autopilot_serial = path;
 }
@@ -142,8 +169,20 @@ int Config::get_autopilot_serial_speed() const {
   return autopilot_serial_speed;
 }
 
+void Config::set_rfd_serial(const std::string& path) {
+  rfd_serial = path;
+}
+
+int Config::get_rfd_serial_speed() const {
+  return rfd_serial_speed;
+}
+
 void Config::set_autopilot_serial_speed(int speed) {
   autopilot_serial_speed = speed;
+}
+
+void Config::set_rfd_serial_speed(int speed) {
+  rfd_serial_speed = speed;
 }
 
 bool Config::get_isbd_enabled() const { return isbd_enabled; }
