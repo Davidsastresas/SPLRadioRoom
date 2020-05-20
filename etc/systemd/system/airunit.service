@@ -1,0 +1,14 @@
+[Unit]
+Description=Air Unit Service
+Documentation=http://envirover.com/docs/radioroom.html
+
+[Service]
+Type=simple
+ExecStart=/usr/sbin/airunit
+StandardOutput=null
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target
+Alias=airunit.service

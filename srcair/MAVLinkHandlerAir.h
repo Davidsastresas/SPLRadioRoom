@@ -121,8 +121,8 @@ class MAVLinkHandlerAir {
    */
   void check_retry_send_timer();
 
-  mavio::MAVLinkAutopilotAir autopilot;
   mavio::MAVLinkRFD900x rfd;
+  mavio::MAVLinkAutopilotAir autopilot;
   mavio::MAVLinkISBDChannel isbd_channel;
   // mavio::MAVLinkTCPChannel tcp_channel;
   timelib::Stopwatch heartbeat_timer;
