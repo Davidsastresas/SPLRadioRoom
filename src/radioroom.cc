@@ -28,13 +28,13 @@
 #include <iostream>
 
 #include "Config.h"
-#include "MAVLinkHandler.h"
+#include "MAVLinkHandlerGround.h"
 #include "MAVLinkLogger.h"
 #include "build.h"
 #include "timelib.h"
 
 using mavio::log;
-using radioroom::MAVLinkHandler;
+using radioroom::MAVLinkHandlerGround;
 using std::cout;
 using std::endl;
 
@@ -75,7 +75,7 @@ void handle_signal(int sig) {
 }
 
 int main(int argc, char** argv) {
-  MAVLinkHandler msg_handler;
+  MAVLinkHandlerGround msg_handler;
   std::string config_file = radioroom::default_config_file;
 
   int c;
@@ -129,8 +129,9 @@ int main(int argc, char** argv) {
   running = true;
 
   while (running) {
-    msg_handler.loop();
-    timelib::sleep(msg_handler_loop_period);
+    if (msg_handler.loop()) {
+      timelib::sleep(msg_handler_loop_period);
+    }
   }
 
   log(LOG_INFO, "Stopping %s.%s...", RADIO_ROOM_VERSION, BUILD_NUM);
