@@ -9,3 +9,16 @@
         serial=/dev/ttyUSB0
         serial_speed=115200
 
+20-05-2020 --- Major code architecture change
+
+    Now there are separate src files for air and ground, and the original src is left as it is. Install compiles and installs all
+    binaries with their respective .service. Then on each unit run groundunit.service or airunit.service
+
+    Right now it works on both units, with rfd connected to air as well. It works well, only some commands not arrive at first, like
+    change wp, sometimes go to guided wp, flight mode. Most time it works great. if rfd directly into ground it works perfectly fine.
+
+    The commands that do not arrive do not arrive to air unit ocassionally, so the trouble is in the receiving part of air unit
+
+    config files are mostly complete for the rest of the development, and all the code basis for the project are there.
+
+    The functionality right now only supports connection to autopilot and transmission by rfd, and then connect to GCS by TCP
