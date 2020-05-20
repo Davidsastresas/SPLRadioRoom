@@ -23,7 +23,7 @@
 #ifndef SRC_MAVLINKHANDLERAIR_H_
 #define SRC_MAVLINKHANDLERAIR_H_
 
-#include "MAVLinkAutopilot.h"
+#include "MAVLinkAutopilotAir.h"
 #include "MAVLinkRFD900x.h"
 #include "MAVLinkISBDChannel.h"
 // #include "MAVLinkTCPChannel.h"
@@ -121,7 +121,7 @@ class MAVLinkHandlerAir {
    */
   void check_retry_send_timer();
 
-  mavio::MAVLinkAutopilot autopilot;
+  mavio::MAVLinkAutopilotAir autopilot;
   mavio::MAVLinkRFD900x rfd;
   mavio::MAVLinkISBDChannel isbd_channel;
   // mavio::MAVLinkTCPChannel tcp_channel;
