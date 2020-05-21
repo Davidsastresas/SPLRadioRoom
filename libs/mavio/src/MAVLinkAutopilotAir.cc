@@ -286,7 +286,7 @@ void MAVLinkAutopilotAir::receive_task() {
   while (running) {
     mavlink_message_t msg;
 
-    if (serial.receive_message(msg)) {
+    if (serial.receive_message(msg, false)) {
       receive_time = timelib::time_since_epoch();
       receive_queue.push(msg);
 

@@ -68,15 +68,22 @@ bool MAVLinkSerial::send_message(const mavlink_message_t& msg) {
   return n == len;
 }
 
-bool MAVLinkSerial::receive_message(mavlink_message_t& msg) {
+bool MAVLinkSerial::receive_message(mavlink_message_t& msg, bool rfd) {
   mavlink_status_t mavlink_status;
+  mavlink_channel_t channel;
+
+  if (rfd) {
+    channel = MAVLINK_COMM_1;
+  } else {
+    channel = MAVLINK_COMM_0;
+  }
 
   int c = serial.read();
 
   while (c >= 0) {
     // Serial.println(c);
 
-    if (mavlink_parse_char(MAVLINK_COMM_0, c, &msg, &mavlink_status)) {
+    if (mavlink_parse_char(channel, c, &msg, &mavlink_status)) {
       MAVLinkLogger::log(LOG_DEBUG, "MAV >>", msg);
       return true;
     }

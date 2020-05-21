@@ -69,7 +69,7 @@ class MAVLinkSerial {
    *
    * Returns true if MAVLink message was received.
    */
-  bool receive_message(mavlink_message_t& msg);
+  bool receive_message(mavlink_message_t& msg, bool rfd);
 
  private:
   Serial serial;
