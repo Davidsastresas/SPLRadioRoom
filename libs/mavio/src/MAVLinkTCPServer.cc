@@ -76,6 +76,13 @@ bool MAVLinkTCPServer::connect() {
     return false;
   }
 
+  if (::setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &so_keepalive_value,
+                   sizeof(so_keepalive_value))) {
+    mavio::log(LOG_ERR, "Failed to enable TCP socket reuseadrr. %s",
+               strerror(errno));
+    return false;
+  }
+
   //Bind
   if( bind(socket_fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr) ) < 0 ) {
     mavio::log(LOG_ERR, "Failed to bind socket. %s", strerror(errno));
