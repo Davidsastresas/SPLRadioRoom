@@ -90,7 +90,7 @@ bool MAVLinkAutopilot::request_autopilot_version(
   Stopwatch timer;
 
   while (timer.elapsed_time() < max_heartbeat_interval) {
-    if (serial.receive_message(msg)) {
+    if (serial.receive_message(msg, false)) {
       if (msg.msgid == MAVLINK_MSG_ID_HEARTBEAT) {
         autopilot = mavlink_msg_heartbeat_get_autopilot(&msg);
         mav_type = mavlink_msg_heartbeat_get_type(&msg);
@@ -118,7 +118,7 @@ bool MAVLinkAutopilot::request_autopilot_version(
         0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
     if (serial.send_message(msg_command_long)) {
       for (int j = 0; j < receive_retries; j++) {
-        if (serial.receive_message(msg)) {
+        if (serial.receive_message(msg, false)) {
           // printf("**** msg.msgid = %d\n", msg.msgid);
           if (msg.msgid == MAVLINK_MSG_ID_AUTOPILOT_VERSION) {
             mavlink_msg_autopilot_version_decode(&msg, &autopilot_version);
@@ -273,7 +273,7 @@ void MAVLinkAutopilot::receive_task() {
   while (running) {
     mavlink_message_t msg;
 
-    if (serial.receive_message(msg)) {
+    if (serial.receive_message(msg, true)) {
       receive_time = timelib::time_since_epoch();
       receive_queue.push(msg);
     }

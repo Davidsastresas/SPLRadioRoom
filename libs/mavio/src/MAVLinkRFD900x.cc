@@ -228,6 +228,8 @@ void MAVLinkRFD900x::send_task() {
       if (serial.send_message(msg)) {
         send_time = timelib::time_since_epoch();
       }
+      
+      continue;
     }
 
     timelib::sleep(autopilot_send_interval);
@@ -241,7 +243,11 @@ void MAVLinkRFD900x::receive_task() {
     if (serial.receive_message(msg)) {
       receive_time = timelib::time_since_epoch();
       receive_queue.push(msg);
+      
+      continue;
     }
+
+    timelib::sleep(autopilot_send_interval);
   }
 }
 

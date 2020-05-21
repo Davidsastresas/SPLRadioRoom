@@ -101,6 +101,8 @@ void MAVLinkTCPChannelServer::send_task() {
       if (socket.send_message(msg)) {
         send_time = timelib::time_since_epoch();
       }
+
+      continue;
     }
 
     sleep(tcp_channel_send_interval);
@@ -114,6 +116,8 @@ void MAVLinkTCPChannelServer::receive_task() {
     if (socket.receive_message(msg)) {
       receive_time = timelib::time_since_epoch();
       receive_queue.push(msg);
+
+      continue;
     }
 
     sleep(tcp_channel_receive_interval);
