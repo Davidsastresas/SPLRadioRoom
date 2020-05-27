@@ -98,6 +98,8 @@ bool MAVLinkHandlerGround::init() {
     }
   }
 
+  sms_channel.init("whatever", config.get_isbd_serial_speed(), devices);
+
   if (config.get_tcp_enabled()) {
     if (tcp_channel.init(config.get_tcp_host(), config.get_tcp_port())) {
       log(LOG_INFO, "TCP channel initialized.");
