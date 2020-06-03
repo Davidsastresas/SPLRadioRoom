@@ -91,8 +91,8 @@ class SMS {
   bool waitForATResponse(char* response = NULL, int responseSize = 0,
                          const char* prompt = NULL,
                          const char* terminator = "OK\r\n");
-                         
-  bool waitForATResponseChar(char* response = NULL, int responseSize = 0,
+  
+  bool waitForATResponseCSQ(char* response = NULL, int responseSize = 0,
                          const char* prompt = NULL,
                          const char* terminator = "OK\r\n");
 

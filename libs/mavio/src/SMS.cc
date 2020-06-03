@@ -540,22 +540,25 @@ int SMS::internalGetSignalQuality(int& quality) {
     return GSM_IS_ASLEEP;
   }
 
-  char csqResponseBuf[256];
-
   send("AT+CSQ\r");
-  if (!waitForATResponse(csqResponseBuf, sizeof(csqResponseBuf), "AT+CSQ\r\r\n", "OK")) {
+
+  char Buffer[3];
+
+  if (!waitForATResponseCSQ(Buffer, sizeof(Buffer), "+CSQ:")) {
     return cancelled() ? GSM_CANCELLED : GSM_PROTOCOL_ERROR;
   }
 
-  mavio::log(LOG_INFO, "signal quality from internal: %s", quality);
-
-  if (isdigit(csqResponseBuf[0])) {
-    quality = atoi(csqResponseBuf);
+  if ( strlen(Buffer) == 2 ) {
+    quality = atoi(Buffer);
+    if ( quality == 99 ) {
+      quality = 0;
+    }
     return GSM_SUCCESS;
   }
-
+  
   return GSM_PROTOCOL_ERROR;
 }
+
 
 int SMS::internalMSSTMWorkaround(bool& okToProceed) {
   /*
@@ -682,6 +685,74 @@ bool SMS::waitForATResponse(char* response, int responseSize,
               } else {
                 *response++ = c;
                 responseSize--;
+                //  mavio::log(LOG_INFO, "response kept");
+              }
+            }
+            break;
+        }  // switch
+      }    // prompt
+
+      if (c == terminator[matchTerminatorPos]) {
+        ++matchTerminatorPos;
+        if (terminator[matchTerminatorPos] == '\0') {
+          return true;
+        }
+      } else {
+        matchTerminatorPos = c == terminator[0] ? 1 : 0;
+      }
+    }  // if (cc >= 0)
+  }    // timer loop
+
+  return false;
+}
+
+bool SMS::waitForATResponseCSQ(char* response, int responseSize,
+                                   const char* prompt, const char* terminator) {
+
+  if (response) {
+    memset(response, 0, responseSize);
+  }
+
+  int matchPromptPos = 0;      // Matches chars in prompt
+  int matchTerminatorPos = 0;  // Matches chars in terminator
+
+  enum { LOOKING_FOR_PROMPT, GATHERING_RESPONSE, LOOKING_FOR_TERMINATOR };
+
+  int promptState = prompt ? LOOKING_FOR_PROMPT : LOOKING_FOR_TERMINATOR;
+
+  Stopwatch timer;
+  while (timer.elapsed_time() < atTimeout) {
+    if (cancelled()) {
+      return false;
+    }
+
+    int cc = stream.read();
+    if (cc >= 0) {
+      char c = cc;
+
+      if (prompt) {
+        switch (promptState) {
+          case LOOKING_FOR_PROMPT:
+            if (c == prompt[matchPromptPos]) {
+              ++matchPromptPos;
+              if (prompt[matchPromptPos] == '\0') {
+                promptState = GATHERING_RESPONSE;
+              }
+            } else {
+              matchPromptPos = c == prompt[0] ? 1 : 0;
+            }
+
+            break;
+          case GATHERING_RESPONSE:  // gathering reponse from end of prompt
+                                    // to first \r
+            if (response) {
+              if (c == '\r' || responseSize < 2) {
+                promptState = LOOKING_FOR_TERMINATOR;
+              } else {
+                if ( c != ' ') {
+                  *response++ = c;
+                  responseSize--;
+                }
               }
             }
             break;
@@ -835,26 +906,6 @@ void SMS::send(uint16_t n) {
   snprintf(str, sizeof(str), "%u", n);
   // cons << str;
   stream.write(str, strlen(str));
-}
-
-bool SMS::waitForATResponseChar(char* response, int responseSize,
-                                      const char* prompt, const char* terminator) {
-
-  int matchPromptPos = 0;      // Matches chars in prompt
-  int matchTerminatorPos = 0;  // Matches chars in terminator
-
-  enum { LOOKING_FOR_PROMPT, GATHERING_RESPONSE, LOOKING_FOR_TERMINATOR };
-
-  int promptState = LOOKING_FOR_PROMPT;
-
-  Stopwatch timer;
-  while (timer.elapsed_time() < atTimeout) {
-    if (cancelled()) {
-      return false;
-    }
-
-
-  }
 }
 
 }  // namespace mavio

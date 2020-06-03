@@ -60,12 +60,10 @@ bool MAVLinkSMS::detect_transceiver(string device) {
   int ret = sms.begin();
 
   if (ret == GSM_SUCCESS || ret == GSM_ALREADY_AWAKE) {
-    mavio::log(LOG_INFO, "sms begin cool");
     char model[256], imea[256];
     imea[0] = model[0] = 0;
     ret = sms.getTransceiverModel(model, sizeof(model));
     if (ret == GSM_SUCCESS) {
-      mavio::log(LOG_INFO, "sms get transceivermodel cool");
       ret = sms.getTransceiverSerialNumber(imea, sizeof(imea));
       if (ret == GSM_SUCCESS) {
         mavio::log(LOG_NOTICE, "%s (IMEA %s) detected at serial device '%s'.",
@@ -143,6 +141,7 @@ bool MAVLinkSMS::message_available() {
     return true;
   }
 
+  return false;
   // uint16_t ra_flag = 0;
 
   // get_ring_alert_flag(ra_flag);

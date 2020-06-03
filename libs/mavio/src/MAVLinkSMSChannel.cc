@@ -53,14 +53,15 @@ bool MAVLinkSMSChannel::init(std::string path, int speed,
                               const vector<string>& devices) {
   bool ret = sms.init("/dev/ttyACM1", 19200, devices);
 
-  if (!running) {
-    running = true;
+  if (ret) {
+    if (!running) {
+      running = true;
 
-    std::thread send_receive_th(&MAVLinkSMSChannel::send_receive_task, this);
-    send_receive_thread.swap(send_receive_th);
+      std::thread send_receive_th(&MAVLinkSMSChannel::send_receive_task, this);
+      send_receive_thread.swap(send_receive_th);
+    }
   }
-
-  return ret;
+    return ret;
 }
 
 void MAVLinkSMSChannel::close() {
@@ -115,8 +116,6 @@ void MAVLinkSMSChannel::send_receive_task() {
     } else {
       signal_quality = 0;
     }
-
-    mavio::log(LOG_INFO, "signal quality: %s", quality);
 
     if (!send_queue.empty() || sms.message_available()) {
       mavlink_message_t mo_msg, mt_msg;
