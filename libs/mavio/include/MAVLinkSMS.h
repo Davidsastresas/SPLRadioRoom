@@ -84,6 +84,12 @@ class MAVLinkSMS {
   bool send_receive_message(const mavlink_message_t& mo_msg,
                             mavlink_message_t& mt_msg, bool& received);
 
+  bool send_message(const mavlink_message_t& mo_msg);
+
+  bool receive_message(const mavlink_message_t& mt_msg, bool& received);
+
+  void list_sms();
+
   /**
    * Returns true if gsm transceiver detected at the specified serial device.
    */

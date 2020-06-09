@@ -34,7 +34,7 @@ using timelib::sleep;
 
 constexpr size_t max_sms_channel_queue_size = 1024;
 
-const std::chrono::milliseconds sms_channel_poll_interval(10);
+const std::chrono::milliseconds sms_channel_poll_interval(1000);
 
 MAVLinkSMSChannel::MAVLinkSMSChannel()
     : MAVLinkChannel("sms"),
@@ -110,27 +110,34 @@ bool MAVLinkSMSChannel::get_signal_quality(int& quality) {
  */
 void MAVLinkSMSChannel::send_receive_task() {
   while (running) {
-    int quality = 0;
-    if (sms.get_signal_quality(quality)) {
-      signal_quality = quality;
-    } else {
-      signal_quality = 0;
+    // int quality = 0;
+    // if (sms.get_signal_quality(quality)) {
+    //   signal_quality = quality;
+    // } else {
+    //   signal_quality = 0;
+    // }
+
+    // sms.list_sms();
+
+    if ( !send_queue.empty() ) {
+      mavlink_message_t mo_msg;
+      if ( !send_queue.pop(mo_msg) ) {
+        mavio::log(LOG_INFO, "SMS: send_queue error!");
+      } else {
+        if ( sms.send_message(mo_msg) ) {
+          send_time = timelib::time_since_epoch();
+        } else {
+          mavio::log(LOG_INFO, "SMS: error sending sms");
+        }
+      }
     }
 
-    if (!send_queue.empty() || sms.message_available()) {
-      mavlink_message_t mo_msg, mt_msg;
-      if (!send_queue.pop(mo_msg)) {
-        mo_msg.len = 0;
-        mo_msg.msgid = 0;
-      }
-
-      bool received = false;
-      if (sms.send_receive_message(mo_msg, mt_msg, received)) {
-        send_time = timelib::time_since_epoch();
-        if (received) {
-          receive_time = send_time;
-          receive_queue.push(mt_msg);
-        }
+    bool received = false;
+    mavlink_message_t mt_msg;
+    if ( sms.receive_message(mt_msg, received) ) {
+      if ( received ) {
+        receive_time = timelib::time_since_epoch();
+        receive_queue.push(mt_msg);
       }
     }
 

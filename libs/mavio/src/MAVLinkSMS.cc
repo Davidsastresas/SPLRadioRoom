@@ -84,6 +84,10 @@ bool MAVLinkSMS::get_signal_quality(int& quality) {
   return sms.getSignalQuality(quality) == GSM_SUCCESS;
 }
 
+void MAVLinkSMS::list_sms() {
+  sms.readSMSlist();
+}
+
 bool MAVLinkSMS::init(string path, int speed, const vector<string>& devices) {
   mavio::log(LOG_NOTICE, "Connecting to sms transceiver (%s %d)...", path.data(),
              speed);
@@ -198,6 +202,34 @@ bool MAVLinkSMS::send_receive_message(const mavlink_message_t& mo_msg,
 
   MAVLinkLogger::log(LOG_INFO, "SBD <<", mo_msg);
 
+  return true;
+}
+
+bool MAVLinkSMS::send_message(const mavlink_message_t& mo_msg) {
+  uint8_t buf[GSM_MAX_MT_MGS_SIZE];
+  size_t buf_size = sizeof(buf);
+  uint16_t len = 0;
+
+  if (mo_msg.len != 0 && mo_msg.msgid != 0) {
+    len = mavlink_msg_to_send_buffer(buf, &mo_msg);
+  }
+
+  int ret = sms.sendSMSBinary(buf, len);
+
+  if (ret != GSM_SUCCESS) {
+    char prefix[32];
+    snprintf(prefix, sizeof(prefix), "SBD << FAILED(%d)", ret);
+    MAVLinkLogger::log(LOG_WARNING, prefix, mo_msg);
+    
+    return false;
+  }
+  mavio::log(LOG_INFO, "SMS sent!");
+
+  return true;
+}
+
+bool MAVLinkSMS::receive_message(const mavlink_message_t& mt_msg, bool& received) {
+  
   return true;
 }
 

@@ -64,6 +64,13 @@ class SMS {
                          size_t& rxBufferSize);
   int sendReceiveSBDBinary(const uint8_t* txData, size_t txDataSize,
                            uint8_t* rxBuffer, size_t& rxBufferSize);
+
+  int sendSMSBinary(const uint8_t* txData, size_t txDataSize);
+  
+  int receiveSMSBinary(uint8_t* rxBuffer, size_t& rxBufferSize);
+
+  int readSMSlist(void);
+  
   int getSignalQuality(int& quality);
   int queryRingIndicationStatus(int& sri);
 
@@ -85,6 +92,21 @@ class SMS {
   void useMSSTMWorkaround(
       bool useWorkAround);  // true to use workaround from Iridium Alert 5/7
 
+  struct sms_struct {
+    uint8_t smsc_size;
+    uint8_t type_address;
+    uint8_t service_center_number[16]; // for 15 digit numbers maximum as international format
+    uint8_t first_byte = 0x04;
+    uint8_t address_lenght;
+    uint8_t address_type;
+    uint8_t sender_number[16]; // 15 digits maximum international format
+    uint8_t TP_PID;
+    uint8_t TO_DCS;
+    uint8_t timestamp[15];
+    uint8_t data_lenght;
+    uint8_t data[160];
+  };
+
  private:
   // Internal utilities
   bool smartWait(std::chrono::milliseconds ms);
@@ -95,6 +117,8 @@ class SMS {
   bool waitForATResponseCSQ(char* response = NULL, int responseSize = 0,
                          const char* prompt = NULL,
                          const char* terminator = "OK\r\n");
+
+  bool waitforSMSlist(char* response, int responseSize);
 
   int internalBegin();
   int internalGetTransceiverModel(char* buffer, size_t bufferSize);
@@ -110,6 +134,13 @@ class SMS {
   int internalMSSTMWorkaround(bool& okToProceed);
   int internalSleep();
 
+  int internalsendSMSBinary(const uint8_t* txData, size_t txDataSize);
+  
+  int internalreceiveSMSBinary(uint8_t* rxBuffer, size_t& rxBufferSize);
+
+  int internalreadSMSlist(void);
+  
+
   int doSBDIX(uint16_t& moCode, uint16_t& moMSN, uint16_t& mtCode,
               uint16_t& mtMSN, uint16_t& mtLen, uint16_t& mtRemaining);
   int doSBDRB(uint8_t* rxBuffer, size_t* prxBufferSize);  // in/out
@@ -120,6 +151,10 @@ class SMS {
   void send(uint16_t n);
 
   bool cancelled();
+
+  int octet2bin(char* octet);    
+  int octet2bin_check(char* octet);  
+  void binary2pdu(char* binary, int lenght, char* pdu);
 
   Serial& stream;  // Communicating with the Iridium
 
@@ -137,6 +172,8 @@ class SMS {
   int minimumCSQ;
   bool useWorkaround;
   unsigned long lastPowerOnTime;
+
+  sms_struct buffersms;
 };
 
 }  // namespace mavio
