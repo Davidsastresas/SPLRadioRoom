@@ -67,7 +67,9 @@ class SMS {
 
   int sendSMSBinary(const uint8_t* txData, size_t txDataSize);
   
-  int receiveSMSBinary(uint8_t* rxBuffer, size_t& rxBufferSize);
+  int receiveSMSBinary(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_empty);
+
+  int deleteSMSlist(void);
 
   int readSMSlist(void);
   
@@ -118,7 +120,7 @@ class SMS {
                          const char* prompt = NULL,
                          const char* terminator = "OK\r\n");
 
-  bool waitforSMSlist(uint8_t* response, size_t responseSize);
+  bool waitforSMSlist(uint8_t* response, size_t& responseSize, bool& inbox_empty);
 
   int internalBegin();
   int internalGetTransceiverModel(char* buffer, size_t bufferSize);
@@ -136,10 +138,11 @@ class SMS {
 
   int internalsendSMSBinary(const uint8_t* txData, size_t txDataSize);
   
-  int internalreceiveSMSBinary(uint8_t* rxBuffer, size_t& rxBufferSize);
+  int internalreceiveSMSBinary(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_empty);
 
   int internalreadSMSlist(void);
-  
+
+  int internaldeleteSMSlist(void);
 
   int doSBDIX(uint16_t& moCode, uint16_t& moMSN, uint16_t& mtCode,
               uint16_t& mtMSN, uint16_t& mtLen, uint16_t& mtRemaining);

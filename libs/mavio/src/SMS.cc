@@ -153,18 +153,18 @@ int SMS::sendSMSBinary(const uint8_t* txData, size_t txDataSize) {
 }
 
 // Transmit and receive a binary message
-int SMS::receiveSMSBinary(uint8_t* rxBuffer, size_t& rxBufferSize) {
+int SMS::receiveSMSBinary(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_emtpy) {
   if (this->reentrant) {
     return GSM_REENTRANT;
   }
 
   this->reentrant = true;
-  int ret = internalreceiveSMSBinary(rxBuffer, rxBufferSize);
+  int ret = internalreceiveSMSBinary(rxBuffer, rxBufferSize, inbox_emtpy);
+  mavio::log(LOG_INFO, "rsponsesize from receiveSMSBinary: %d", rxBufferSize);
   this->reentrant = false;
   return ret;
 }
 
-// Transmit and receive a binary message
 int SMS::readSMSlist() {
   if (this->reentrant) {
     return GSM_REENTRANT;
@@ -176,7 +176,16 @@ int SMS::readSMSlist() {
   return ret;
 }
 
+int SMS::deleteSMSlist() {
+  if (this->reentrant) {
+    return GSM_REENTRANT;
+  }
 
+  this->reentrant = true;
+  int ret = internaldeleteSMSlist();
+  this->reentrant = false;
+  return ret;
+}
 
 // Transmit a text message
 int SMS::sendSBDText(const char* message) {
@@ -696,10 +705,7 @@ bool SMS::waitForATResponse(char* response, int responseSize,
     if (cc >= 0) {
       char c = cc;
 
-      char ca[1];
-      ca[0] = c; 
-
-      mavio::log(LOG_INFO, "rd: %s", ca);
+      // mavio::log(LOG_INFO, "rd: %c", c);
 
       if (prompt) {
         switch (promptState) {
@@ -708,7 +714,7 @@ bool SMS::waitForATResponse(char* response, int responseSize,
               ++matchPromptPos;
               if (prompt[matchPromptPos] == '\0') {
                 promptState = GATHERING_RESPONSE;
-                mavio::log(LOG_INFO, "gathering response");
+                // mavio::log(LOG_INFO, "gathering response");
               }
             } else {
               matchPromptPos = c == prompt[0] ? 1 : 0;
@@ -720,11 +726,11 @@ bool SMS::waitForATResponse(char* response, int responseSize,
             if (response) {
               if (c == '\r' || responseSize < 2) {
                 promptState = LOOKING_FOR_TERMINATOR;
-                mavio::log(LOG_INFO, "looking for terminator");
+                // mavio::log(LOG_INFO, "looking for terminator");
               } else {
                 *response++ = c;
                 responseSize--;
-                mavio::log(LOG_INFO, "response kept");
+                // mavio::log(LOG_INFO, "response kept");
               }
             }
             break;
@@ -732,10 +738,10 @@ bool SMS::waitForATResponse(char* response, int responseSize,
       }    // prompt
 
       if (c == terminator[matchTerminatorPos]) {
-        mavio::log(LOG_INFO, "terminator matches");
+        // mavio::log(LOG_INFO, "terminator matches");
         ++matchTerminatorPos;
         if (terminator[matchTerminatorPos] == '\0') {
-          mavio::log(LOG_INFO, "terminator finito");
+          // mavio::log(LOG_INFO, "terminator finished");
           return true;
         }
       } else {
@@ -772,9 +778,7 @@ bool SMS::waitForATResponseCSQ(char* response, int responseSize,
     if (cc >= 0) {
       char c = cc;
 
-      char ca[1];
-      ca[0] = c; 
-      mavio::log(LOG_INFO, "rd: %s", ca);
+      // mavio::log(LOG_INFO, "rd: %c", c);
 
       if (prompt) {
         switch (promptState) {
@@ -783,7 +787,7 @@ bool SMS::waitForATResponseCSQ(char* response, int responseSize,
               ++matchPromptPos;
               if (prompt[matchPromptPos] == '\0') {
                 promptState = GATHERING_RESPONSE;
-                mavio::log(LOG_INFO, "gathering response");
+                // mavio::log(LOG_INFO, "gathering response");
               }
             } else {
               matchPromptPos = c == prompt[0] ? 1 : 0;
@@ -795,7 +799,7 @@ bool SMS::waitForATResponseCSQ(char* response, int responseSize,
             if (response) {
               if (c == '\r' || responseSize < 2) {
                 promptState = LOOKING_FOR_TERMINATOR;
-                 mavio::log(LOG_INFO, "looking for terminator");
+                //mavio::log(LOG_INFO, "looking for terminator");
               } else {
                 if ( c != ' ') {
                   *response++ = c;
@@ -1065,10 +1069,13 @@ int SMS::internalsendSMSBinary(const uint8_t* txData, size_t txDataSize) {
   return GSM_SUCCESS;
 }
 
-int SMS::internalreceiveSMSBinary(uint8_t* rxBuffer, size_t& rxBufferSize) {
+int SMS::internalreceiveSMSBinary(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_empty) {
 
   send("AT+CMGL\r");
-  return waitforSMSlist(rxBuffer, rxBufferSize);
+  int ret;
+  ret = waitforSMSlist(rxBuffer, rxBufferSize, inbox_empty);
+  mavio::log(LOG_INFO, "rsponsesize from internalreceiveSMSBinary: %d", rxBufferSize);
+  return ret;
 }
 
 int SMS::internalreadSMSlist(void) {
@@ -1085,13 +1092,12 @@ int SMS::internalreadSMSlist(void) {
   return true;
 }
 
-bool SMS::waitforSMSlist(uint8_t* response, size_t responseSize) {
+bool SMS::waitforSMSlist(uint8_t* response, size_t& responseSize, bool& inbox_empty) {
 
   if (response) {
     memset(response, 0, responseSize);
   }
 
-  int matchPromptPos = 0;      // Matches chars in prompt
 
   sms_struct _buffer_sms;
 
@@ -1117,9 +1123,17 @@ bool SMS::waitforSMSlist(uint8_t* response, size_t responseSize) {
   int data_pos = 0;
 
   enum { LOOKING_FOR_PROMPT, GATHERING_RESPONSE, LOOKING_FOR_TERMINATOR };
+  int promptState = LOOKING_FOR_PROMPT;
 
   const char prompt[] = "+CMGL: ";
-  int promptState = LOOKING_FOR_PROMPT;
+  int matchPromptPos = 0;      // Matches chars in prompt
+  
+  const char prompt_no_msg[] = "OK\r\n";
+  int matchPromptPos_no_msg = 0; 
+
+  // parsing variables
+  int cc;
+  char c;
 
   Stopwatch timer;
   while (timer.elapsed_time() < atTimeout) {
@@ -1127,13 +1141,11 @@ bool SMS::waitforSMSlist(uint8_t* response, size_t responseSize) {
       return false;
     }
 
-    int cc = stream.read();
+    cc = stream.read();
     if (cc >= 0) {
-      char c = cc;
+      c = cc;
 
-      char ca[1];
-      ca[0] = c; 
-      mavio::log(LOG_INFO, "rd: %s", ca);
+      // mavio::log(LOG_INFO, "rd: %c", c);
 
       if (prompt) {
         switch (promptState) {
@@ -1142,11 +1154,24 @@ bool SMS::waitforSMSlist(uint8_t* response, size_t responseSize) {
               ++matchPromptPos;
               if (prompt[matchPromptPos] == '\0') {
                 promptState = GATHERING_RESPONSE;
-                mavio::log(LOG_INFO, "gathering response");
+                // mavio::log(LOG_INFO, "gathering response");
               }
             } else {
               matchPromptPos = c == prompt[0] ? 1 : 0;
             }
+
+            if (c == prompt_no_msg[matchPromptPos_no_msg]) {
+              // mavio::log(LOG_INFO, "prompt_no_msg matches");
+              ++matchPromptPos_no_msg;
+              if (prompt_no_msg[matchPromptPos_no_msg] == '\0') {
+                // mavio::log(LOG_INFO, "prompt_no_msg finished");
+                inbox_empty = true;
+                return false;
+              }
+            } else {
+              matchPromptPos_no_msg = c == prompt_no_msg[0] ? 1 : 0;
+            }
+
 
             break;
           case GATHERING_RESPONSE: 
@@ -1159,7 +1184,7 @@ bool SMS::waitforSMSlist(uint8_t* response, size_t responseSize) {
                         break;
                       } else {
                         index = atoi(indexresponse);
-                        mavio::log(LOG_INFO, "index: %d", index);
+                        // mavio::log(LOG_INFO, "index: %d", index);
                         indexresponse_pos = 0;
                         _step++;
                         [[fallthrough]];
@@ -1173,7 +1198,7 @@ bool SMS::waitforSMSlist(uint8_t* response, size_t responseSize) {
                       }
                       if ( c == '\r' ) {
                         pdu_size = atoi(pdu_size_response);
-                        mavio::log(LOG_INFO, "pdu size: %d", pdu_size);
+                        // mavio::log(LOG_INFO, "pdu size: %d", pdu_size);
                         pdu_size_response_pos = 0;
                         _step++;
                       }
@@ -1185,7 +1210,7 @@ bool SMS::waitforSMSlist(uint8_t* response, size_t responseSize) {
                       }
                       if ( smsc_size_response_pos >= 2 ) {
                         smsc_size = octet2bin(smsc_size_response);
-                        mavio::log(LOG_INFO, "smsc size: %d", smsc_size);
+                        // mavio::log(LOG_INFO, "smsc size: %d", smsc_size);
                         smsc_size_response_pos = 0;
                         _step++;
                       }
@@ -1198,7 +1223,7 @@ bool SMS::waitforSMSlist(uint8_t* response, size_t responseSize) {
                       if ( counter >= 2 ) {
                         counter = 0;
                         buffersms.type_address = octet2bin(bytechar);
-                        mavio::log(LOG_INFO, "type address: %x", buffersms.type_address);
+                        // mavio::log(LOG_INFO, "type address: %x", buffersms.type_address);
                         _step++;
 
                         memset(buffersms.service_center_number, 0, sizeof(buffersms.service_center_number));
@@ -1220,7 +1245,7 @@ bool SMS::waitforSMSlist(uint8_t* response, size_t responseSize) {
                           buffersms.service_center_number[counter] = '\0';
                         }
                         counter = 0;
-                        mavio::log(LOG_INFO, "service center number: %s", buffersms.service_center_number);
+                        // mavio::log(LOG_INFO, "service center number: %s", buffersms.service_center_number);
                         _step++;
                       }
                       break;
@@ -1230,7 +1255,7 @@ bool SMS::waitforSMSlist(uint8_t* response, size_t responseSize) {
                       if ( counter >= 2 ) {
                         counter = 0;
                         buffersms.first_byte = octet2bin(bytechar);
-                        mavio::log(LOG_INFO, "fist fyte: %x", buffersms.first_byte);
+                        // mavio::log(LOG_INFO, "fist fyte: %x", buffersms.first_byte);
                         _step++;\
                       }
                       break;
@@ -1242,7 +1267,7 @@ bool SMS::waitforSMSlist(uint8_t* response, size_t responseSize) {
                       if ( counter >= 2 ) {
                         counter = 0;
                         buffersms.address_lenght = octet2bin(bytechar);
-                        mavio::log(LOG_INFO, "address lenght: %d", buffersms.address_lenght);
+                        // mavio::log(LOG_INFO, "address lenght: %d", buffersms.address_lenght);
                         _step++;
 
                         memset(buffersms.sender_number, 0, sizeof(buffersms.sender_number));
@@ -1254,7 +1279,7 @@ bool SMS::waitforSMSlist(uint8_t* response, size_t responseSize) {
                       if ( counter >= 2 ) {
                         counter = 0;
                         buffersms.address_type = octet2bin(bytechar);
-                        mavio::log(LOG_INFO, "address type: %x", buffersms.address_type);
+                        // mavio::log(LOG_INFO, "address type: %x", buffersms.address_type);
                         _step++;
                       }
                       break;
@@ -1274,7 +1299,7 @@ bool SMS::waitforSMSlist(uint8_t* response, size_t responseSize) {
                           buffersms.sender_number[counter] = '\0';
                         }
                         counter = 0;
-                        mavio::log(LOG_INFO, "sender number: %s", buffersms.sender_number);
+                        // mavio::log(LOG_INFO, "sender number: %s", buffersms.sender_number);
                         _step++;
                       }
                       break;
@@ -1284,7 +1309,7 @@ bool SMS::waitforSMSlist(uint8_t* response, size_t responseSize) {
                       if ( counter >= 2 ) {
                         counter = 0;
                         buffersms.TP_PID = octet2bin(bytechar);
-                        mavio::log(LOG_INFO, "tc_pid: %x", buffersms.TP_PID);
+                        // mavio::log(LOG_INFO, "tc_pid: %x", buffersms.TP_PID);
                         _step++;
                       }
                       break;
@@ -1294,7 +1319,7 @@ bool SMS::waitforSMSlist(uint8_t* response, size_t responseSize) {
                       if ( counter >= 2 ) {
                         counter = 0;
                         buffersms.TO_DCS = octet2bin(bytechar);
-                        mavio::log(LOG_INFO, "to_dcs: %x", buffersms.TO_DCS);
+                        // mavio::log(LOG_INFO, "to_dcs: %x", buffersms.TO_DCS);
                         _step++;
                       }
                       break;
@@ -1310,7 +1335,7 @@ bool SMS::waitforSMSlist(uint8_t* response, size_t responseSize) {
                       if ( counter >= 14 /*timestamp format*/ ) {
                         buffersms.timestamp[counter] = '\0';
                         counter = 0;
-                        mavio::log(LOG_INFO, "timestamp: %s", buffersms.timestamp);
+                        // mavio::log(LOG_INFO, "timestamp: %s", buffersms.timestamp);
                         _step++;
                       }
                       break;
@@ -1320,7 +1345,7 @@ bool SMS::waitforSMSlist(uint8_t* response, size_t responseSize) {
                       if ( counter >= 2 ) {
                         counter = 0;
                         buffersms.data_lenght = octet2bin(bytechar);
-                        mavio::log(LOG_INFO, "data_lenght: %x", buffersms.data_lenght);
+                        // mavio::log(LOG_INFO, "data_lenght: %x", buffersms.data_lenght);
                         _step++;
 
                         memset(buffersms.data, 0, sizeof(buffersms.data));
@@ -1334,14 +1359,14 @@ bool SMS::waitforSMSlist(uint8_t* response, size_t responseSize) {
                       if ( counterbyte >=2 ) {
                         buffersms.data[counter] = octet2bin(bytechar);
                         counterbyte = 0;
-                        mavio::log(LOG_INFO, "byte[%d] = %x", counter, buffersms.data[counter]);
+                        // mavio::log(LOG_INFO, "byte[%d] = %x", counter, buffersms.data[counter]);
                         counter++;
                       }
                       if ( counter >= buffersms.data_lenght ) {
                         counter = 0;
-                        for ( int i=0 ; i < buffersms.data_lenght ; i++ ) { 
-                          mavio::log(LOG_INFO, "data: %x", buffersms.data[i]);
-                        }
+                        // for ( int i=0 ; i < buffersms.data_lenght ; i++ ) { 
+                        //   mavio::log(LOG_INFO, "data: %x", buffersms.data[i]);
+                        // }
                         _step = 0;
                         promptState = LOOKING_FOR_TERMINATOR;
                       }
@@ -1351,33 +1376,62 @@ bool SMS::waitforSMSlist(uint8_t* response, size_t responseSize) {
             break;
           case LOOKING_FOR_TERMINATOR:
             if (waitForATResponse()) {
-              mavio::log(LOG_INFO, "ok");
+              // mavio::log(LOG_INFO, "ok");
             }
 
-            mavio::log(LOG_INFO, "sender number: %s", buffersms.sender_number);
+            // mavio::log(LOG_INFO, "sender number: %s", buffersms.sender_number);
+            
             for ( int i=0 ; i < buffersms.data_lenght ; i++ ) { 
                           response[i] = buffersms.data[i];
                           mavio::log(LOG_INFO, "data: %x", response[i]);
-                        }
-            responseSize = buffersms.data_lenght;
-            mavio::log(LOG_INFO, "rsponsesize: %d", responseSize);
-            // READ only first message by the moment, then skip until ok
-            if (waitForATResponse()) {
-              mavio::log(LOG_INFO, "ok");
-            }
-            send("AT+CMGD=");
-            send(indexresponse);
-            send("\r");
-            if (waitForATResponse()) {
-              mavio::log(LOG_INFO, "ok");
             }
 
-            return true;
+            responseSize = buffersms.data_lenght;
+            mavio::log(LOG_INFO, "rsponsesize: %d", responseSize);
+
+            if ( index > 5 ) {
+              send("AT+CMGD=0,4\r");
+            } else {
+              send("AT+CMGD=");
+              
+              char index_char[3];
+              memset(index_char, 0, sizeof(index_char));
+              int index_char_int = 0;
+
+              index_char_int = index;
+              snprintf(index_char, 3, "%d",(unsigned char)index_char_int);
+              index_char[2] = '\0';
+
+              send(index_char);
+
+              send("\r");
+            }
+
+            if (waitForATResponse()) {
+              // mavio::log(LOG_INFO, "ok");
+            }
+            inbox_empty = false;
+            return GSM_SUCCESS;
         }
       }
     }  
   }
-  return false;
+  mavio::log(LOG_INFO, "read sms list timeout");
+  return GSM_PROTOCOL_ERROR;
+}
+
+int SMS::internaldeleteSMSlist(void) {
+  // index 0 ( does not matter ), flag 4, delete all messages
+  send("AT+CMGD=0,4\r");
+  
+  if (!waitForATResponse()) {
+      mavio::log(LOG_INFO, "SMS delete message went wrong");
+      return cancelled() ? GSM_CANCELLED : GSM_PROTOCOL_ERROR;
+    }
+  
+  mavio::log(LOG_INFO, "SMS delete message went right");
+  return GSM_SUCCESS;
+
 }
 
 int SMS::octet2bin(char* octet) /* converts an octet to a 8-Bit value */

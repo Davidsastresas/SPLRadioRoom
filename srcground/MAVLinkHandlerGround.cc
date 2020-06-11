@@ -156,10 +156,10 @@ bool MAVLinkHandlerGround::loop() {
     sleep = false; 
   }
 
-  if (sms_channel.receive_message(msg)) {
-    tcp_channel.send_message(msg);
-    sleep = false;
-  }
+  // if (sms_channel.receive_message(msg)) {
+  //   tcp_channel.send_message(msg);
+  //   sleep = false;
+  // }
 
   if (tcp_channel.receive_message(msg)) {
     rfd.send_message(msg);

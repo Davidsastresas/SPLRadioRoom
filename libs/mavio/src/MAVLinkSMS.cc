@@ -58,6 +58,7 @@ int MAVLinkSMS::get_waiting_wessage_count() {
 
 bool MAVLinkSMS::detect_transceiver(string device) {
   int ret = sms.begin();
+  sms.deleteSMSlist();
 
   if (ret == GSM_SUCCESS || ret == GSM_ALREADY_AWAKE) {
     char model[256], imea[256];
@@ -228,22 +229,35 @@ bool MAVLinkSMS::send_message(const mavlink_message_t& mo_msg) {
   return true;
 }
 
-bool MAVLinkSMS::receive_message(mavlink_message_t& mt_msg) {
+bool MAVLinkSMS::receive_message(mavlink_message_t& mt_msg, bool& inbox_empty) {
   uint8_t buf[160];
   size_t size;
   mavlink_status_t mavlink_status;
   bool received = false;
+  int ret;
 
-  if (sms.receiveSMSBinary(buf, size)) {
+  ret = sms.receiveSMSBinary(buf, size, inbox_empty);
+  mavio::log(LOG_INFO, "inbox ret %d" , ret);
+  mavio::log(LOG_INFO, "buf size %d" , size);
+
+  if ( ret == 0 ) {
     for (size_t i = 0; i < size; i++) {
       if (mavlink_parse_char(MAVLINK_COMM_2, buf[i], &mt_msg, 
                             &mavlink_status)) {
         MAVLinkLogger::log(LOG_INFO, "SMS >>", mt_msg);
         received = true;
+        break;
       }
-      break;
+      mavio::log(LOG_INFO, "sms parse(%d): %x", i, buf[i]);
+      mavio::log(LOG_INFO, "sms parse status: %d", mavlink_status.parse_state);
     }
   }
+  if ( received ) {
+    mavio::log(LOG_INFO, "parsing ok!");
+  } else {
+    mavio::log(LOG_INFO, "parsing not!");
+  }
+  mavio::log(LOG_INFO, "inbox empty %d" , inbox_empty);
   return received;
 }
 

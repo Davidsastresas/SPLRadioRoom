@@ -110,6 +110,7 @@ bool MAVLinkSMSChannel::get_signal_quality(int& quality) {
  */
 void MAVLinkSMSChannel::send_receive_task() {
   while (running) {
+    bool inbox_empty = true;
     // int quality = 0;
     // if (sms.get_signal_quality(quality)) {
     //   signal_quality = quality;
@@ -131,12 +132,14 @@ void MAVLinkSMSChannel::send_receive_task() {
     // }
 
     mavlink_message_t mt_msg;
-    if ( sms.receive_message(mt_msg) ) {
+    if ( sms.receive_message(mt_msg, inbox_empty) ) {
       receive_time = timelib::time_since_epoch();
       receive_queue.push(mt_msg);
     }
 
-    sleep(sms_channel_poll_interval);
+    if ( inbox_empty ) {
+      sleep(sms_channel_poll_interval);
+    }
   }
 }
 
