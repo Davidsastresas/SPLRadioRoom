@@ -1074,7 +1074,6 @@ int SMS::internalreceiveSMSBinary(uint8_t* rxBuffer, size_t& rxBufferSize, bool&
   send("AT+CMGL\r");
   int ret;
   ret = waitforSMSlist(rxBuffer, rxBufferSize, inbox_empty);
-  mavio::log(LOG_INFO, "rsponsesize from internalreceiveSMSBinary: %d", rxBufferSize);
   return ret;
 }
 
@@ -1166,7 +1165,7 @@ bool SMS::waitforSMSlist(uint8_t* response, size_t& responseSize, bool& inbox_em
               if (prompt_no_msg[matchPromptPos_no_msg] == '\0') {
                 // mavio::log(LOG_INFO, "prompt_no_msg finished");
                 inbox_empty = true;
-                return false;
+                return GSM_INBOX_EMPTY;
               }
             } else {
               matchPromptPos_no_msg = c == prompt_no_msg[0] ? 1 : 0;
@@ -1383,11 +1382,11 @@ bool SMS::waitforSMSlist(uint8_t* response, size_t& responseSize, bool& inbox_em
             
             for ( int i=0 ; i < buffersms.data_lenght ; i++ ) { 
                           response[i] = buffersms.data[i];
-                          mavio::log(LOG_INFO, "data: %x", response[i]);
+                          // mavio::log(LOG_INFO, "data: %x", response[i]);
             }
 
             responseSize = buffersms.data_lenght;
-            mavio::log(LOG_INFO, "rsponsesize: %d", responseSize);
+            // mavio::log(LOG_INFO, "rsponsesize: %d", responseSize);
 
             if ( index > 5 ) {
               send("AT+CMGD=0,4\r");

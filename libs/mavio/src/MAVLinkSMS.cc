@@ -231,14 +231,14 @@ bool MAVLinkSMS::send_message(const mavlink_message_t& mo_msg) {
 
 bool MAVLinkSMS::receive_message(mavlink_message_t& mt_msg, bool& inbox_empty) {
   uint8_t buf[160];
-  size_t size;
+  size_t size = sizeof(buf);
   mavlink_status_t mavlink_status;
   bool received = false;
   int ret;
 
   ret = sms.receiveSMSBinary(buf, size, inbox_empty);
-  mavio::log(LOG_INFO, "inbox ret %d" , ret);
-  mavio::log(LOG_INFO, "buf size %d" , size);
+  // mavio::log(LOG_INFO, "inbox ret %d" , ret);
+  // mavio::log(LOG_INFO, "buf size %d" , size);
 
   if ( ret == 0 ) {
     for (size_t i = 0; i < size; i++) {
@@ -248,8 +248,8 @@ bool MAVLinkSMS::receive_message(mavlink_message_t& mt_msg, bool& inbox_empty) {
         received = true;
         break;
       }
-      mavio::log(LOG_INFO, "sms parse(%d): %x", i, buf[i]);
-      mavio::log(LOG_INFO, "sms parse status: %d", mavlink_status.parse_state);
+      // mavio::log(LOG_INFO, "sms parse(%d): %x", i, buf[i]);
+      // mavio::log(LOG_INFO, "sms parse status: %d", mavlink_status.parse_state);
     }
   }
   if ( received ) {

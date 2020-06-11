@@ -42,6 +42,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define GSM_REENTRANT 9
 #define GSM_IS_ASLEEP 10
 #define GSM_NO_SLEEP_PIN 11
+#define GSM_INBOX_EMPTY 12
 
 #define GSM_MAX_MT_MGS_SIZE 270
 
