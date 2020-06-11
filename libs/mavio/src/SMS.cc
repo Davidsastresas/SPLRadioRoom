@@ -1365,6 +1365,13 @@ bool SMS::waitforSMSlist(uint8_t* response, size_t responseSize) {
             if (waitForATResponse()) {
               mavio::log(LOG_INFO, "ok");
             }
+            send("AT+CMGD=");
+            send(indexresponse);
+            send("\r");
+            if (waitForATResponse()) {
+              mavio::log(LOG_INFO, "ok");
+            }
+
             return true;
         }
       }
