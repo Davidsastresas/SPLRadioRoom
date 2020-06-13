@@ -156,10 +156,10 @@ bool MAVLinkHandlerGround::loop() {
     sleep = false; 
   }
 
-  // if (sms_channel.receive_message(msg)) {
-  //   tcp_channel.send_message(msg);
-  //   sleep = false;
-  // }
+  if (sms_channel.receive_message(msg)) {
+    tcp_channel.send_message(msg);
+    sleep = false;
+  }
 
   if (tcp_channel.receive_message(msg)) {
     rfd.send_message(msg);
@@ -193,32 +193,35 @@ bool MAVLinkHandlerGround::send_report() {
 }
 
 bool MAVLinkHandlerGround::send_heartbeat() {
-  // if (heartbeat_timer.elapsed_time() >= heartbeat_period) {
-  //   heartbeat_timer.reset();
+  if (heartbeat_timer.elapsed_time() >= heartbeat_period) {
+    heartbeat_timer.reset();
 
-  //   // Channel is healthy if it is enabled and succesfully sent report or
-  //   // another MO message within its report period times 2.
-  //   std::chrono::milliseconds time = timelib::time_since_epoch();
+    // Channel is healthy if it is enabled and succesfully sent report or
+    // another MO message within its report period times 2.
+    std::chrono::milliseconds time = timelib::time_since_epoch();
 
-  //   bool tcp_healthy = config.get_tcp_enabled() &&
-  //                      (time - tcp_channel.last_send_time()) <=
-  //                          2 * timelib::sec2ms(config.get_tcp_report_period());
+    // bool tcp_healthy = config.get_tcp_enabled() &&
+    //                    (time - tcp_channel.last_send_time()) <=
+    //                        2 * timelib::sec2ms(config.get_tcp_report_period());
 
-  //   bool isbd_healthy =
-  //       config.get_isbd_enabled() &&
-  //       (time - isbd_channel.last_send_time()) <=
-  //           2 * timelib::sec2ms(config.get_isbd_report_period());
+    // bool isbd_healthy =
+    //     config.get_isbd_enabled() &&
+    //     (time - isbd_channel.last_send_time()) <=
+    //         2 * timelib::sec2ms(config.get_isbd_report_period());
+    
+    bool sms_healthy = ( time - sms_channel.last_send_time() ) <=
+                          2 * timelib::sec2ms(20);
 
-  //   if (tcp_healthy || isbd_healthy) {
-  //     mavlink_message_t heartbeat_msg;
-  //     mavlink_msg_heartbeat_pack(mavio::gcs_system_id, mavio::gcs_component_id,
-  //                                &heartbeat_msg, MAV_TYPE_GCS,
-  //                                MAV_AUTOPILOT_INVALID, 0, 0, 0);
-  //     return rfd.send_message(heartbeat_msg);
-  //   }
-  // }
+    if ( sms_healthy ) {
+      mavlink_message_t heartbeat_msg;
+      mavlink_msg_heartbeat_pack(1, 0,
+                                 &heartbeat_msg, MAV_TYPE_FIXED_WING,
+                                 MAV_AUTOPILOT_ARDUPILOTMEGA, 0, 0, 0);
+      return tcp_channel.send_message(heartbeat_msg);
+    }
+  }
 
-  // return false;
+  return false;
 }
 
 void MAVLinkHandlerGround::set_retry_send_timer(const mavlink_message_t& msg,

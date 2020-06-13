@@ -59,8 +59,7 @@ bool MAVLinkSerial::send_message(const mavlink_message_t& msg) {
   uint16_t n = serial.write(buf, len);
 
   if (n == len) {
-    MAVLinkLogger::log(msg.msgid == MAVLINK_MSG_ID_HEARTBEAT ?
-                       LOG_DEBUG : LOG_INFO, "MAV <<", msg);
+    MAVLinkLogger::log(LOG_DEBUG, "MAV <<", msg);
   } else {
     MAVLinkLogger::log(LOG_WARNING, "MAV << FAILED", msg);
   }

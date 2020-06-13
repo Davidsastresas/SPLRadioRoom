@@ -160,7 +160,6 @@ int SMS::receiveSMSBinary(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_e
 
   this->reentrant = true;
   int ret = internalreceiveSMSBinary(rxBuffer, rxBufferSize, inbox_emtpy);
-  mavio::log(LOG_INFO, "rsponsesize from receiveSMSBinary: %d", rxBufferSize);
   this->reentrant = false;
   return ret;
 }

@@ -253,11 +253,11 @@ bool MAVLinkSMS::receive_message(mavlink_message_t& mt_msg, bool& inbox_empty) {
     }
   }
   if ( received ) {
-    mavio::log(LOG_INFO, "parsing ok!");
+    // mavio::log(LOG_INFO, "parsing ok!");
   } else {
-    mavio::log(LOG_INFO, "parsing not!");
+    // mavio::log(LOG_INFO, "parsing not!");
   }
-  mavio::log(LOG_INFO, "inbox empty %d" , inbox_empty);
+  // mavio::log(LOG_INFO, "inbox empty %d" , inbox_empty);
   return received;
 }
 
