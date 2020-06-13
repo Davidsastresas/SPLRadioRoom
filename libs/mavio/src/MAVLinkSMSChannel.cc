@@ -117,24 +117,24 @@ void MAVLinkSMSChannel::send_receive_task() {
     //   signal_quality = 0;
     // }
 
-    // if ( !send_queue.empty() ) {
-    //   mavlink_message_t mo_msg;
-    //   if ( !send_queue.pop(mo_msg) ) {
-    //     mavio::log(LOG_INFO, "SMS: send_queue error!");
-    //   } else {
-    //     if ( sms.send_message(mo_msg) ) {
-    //       send_time = timelib::time_since_epoch();
-    //     } else {
-    //       mavio::log(LOG_INFO, "SMS: error sending sms");
-    //     }
-    //   }
-    // }
-
-    mavlink_message_t mt_msg;
-    if ( sms.receive_message(mt_msg) ) {
-      receive_time = timelib::time_since_epoch();
-      receive_queue.push(mt_msg);
+    if ( !send_queue.empty() ) {
+      mavlink_message_t mo_msg;
+      if ( !send_queue.pop(mo_msg) ) {
+        mavio::log(LOG_INFO, "SMS: send_queue error!");
+      } else {
+        if ( sms.send_message(mo_msg) ) {
+          send_time = timelib::time_since_epoch();
+        } else {
+          mavio::log(LOG_INFO, "SMS: error sending sms");
+        }
+      }
     }
+
+    // mavlink_message_t mt_msg;
+    // if ( sms.receive_message(mt_msg) ) {
+    //   receive_time = timelib::time_since_epoch();
+    //   receive_queue.push(mt_msg);
+    // }
 
     sleep(sms_channel_poll_interval);
   }

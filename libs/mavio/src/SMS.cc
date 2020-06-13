@@ -699,7 +699,7 @@ bool SMS::waitForATResponse(char* response, int responseSize,
       char ca[1];
       ca[0] = c; 
 
-      mavio::log(LOG_INFO, "rd: %s", ca);
+      // mavio::log(LOG_INFO, "rd: %s", ca);
 
       if (prompt) {
         switch (promptState) {
@@ -708,7 +708,7 @@ bool SMS::waitForATResponse(char* response, int responseSize,
               ++matchPromptPos;
               if (prompt[matchPromptPos] == '\0') {
                 promptState = GATHERING_RESPONSE;
-                mavio::log(LOG_INFO, "gathering response");
+                // mavio::log(LOG_INFO, "gathering response");
               }
             } else {
               matchPromptPos = c == prompt[0] ? 1 : 0;
@@ -720,11 +720,11 @@ bool SMS::waitForATResponse(char* response, int responseSize,
             if (response) {
               if (c == '\r' || responseSize < 2) {
                 promptState = LOOKING_FOR_TERMINATOR;
-                mavio::log(LOG_INFO, "looking for terminator");
+                //mavio::log(LOG_INFO, "looking for terminator");
               } else {
                 *response++ = c;
                 responseSize--;
-                mavio::log(LOG_INFO, "response kept");
+                //mavio::log(LOG_INFO, "response kept");
               }
             }
             break;
@@ -732,10 +732,10 @@ bool SMS::waitForATResponse(char* response, int responseSize,
       }    // prompt
 
       if (c == terminator[matchTerminatorPos]) {
-        mavio::log(LOG_INFO, "terminator matches");
+        //mavio::log(LOG_INFO, "terminator matches");
         ++matchTerminatorPos;
         if (terminator[matchTerminatorPos] == '\0') {
-          mavio::log(LOG_INFO, "terminator finito");
+          //mavio::log(LOG_INFO, "terminator finito");
           return true;
         }
       } else {
@@ -743,7 +743,7 @@ bool SMS::waitForATResponse(char* response, int responseSize,
       }
     }  // if (cc >= 0)
   }    // timer loop
-  mavio::log(LOG_INFO, "timer out");
+   //mavio::log(LOG_INFO, "timer out");
 
   return false;
 }
@@ -774,7 +774,7 @@ bool SMS::waitForATResponseCSQ(char* response, int responseSize,
 
       char ca[1];
       ca[0] = c; 
-      mavio::log(LOG_INFO, "rd: %s", ca);
+      // mavio::log(LOG_INFO, "rd: %s", ca);
 
       if (prompt) {
         switch (promptState) {
@@ -1133,7 +1133,7 @@ bool SMS::waitforSMSlist(uint8_t* response, size_t responseSize) {
 
       char ca[1];
       ca[0] = c; 
-      mavio::log(LOG_INFO, "rd: %s", ca);
+      // mavio::log(LOG_INFO, "rd: %s", ca);
 
       if (prompt) {
         switch (promptState) {
