@@ -211,7 +211,7 @@ void MAVLinkHandlerAir::handle_mt_message(const mavlink_message_t& msg,
 }
 
 bool MAVLinkHandlerAir::send_report() {
-  std::chrono::milliseconds report_period = timelib::sec2ms(5);
+  std::chrono::milliseconds report_period = timelib::sec2ms(10);
 
   // if (config.get_tcp_enabled() && !config.get_isbd_enabled()) {
   //   report_period = timelib::sec2ms(config.get_tcp_report_period());

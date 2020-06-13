@@ -41,7 +41,7 @@ inline int16_t rad_to_centidegrees(float rad) {
   return rad * 18000.0 / 3.14159265358979323846;
 }
 
-MAVReport::MAVReport() : sysid(1), compid(0), mask(0) {}
+MAVReport::MAVReport() : sysid(1), compid(1), mask(0) {}
 
 /**
  * Integrates data from the specified MAVLink message into the HIGH_LATENCY

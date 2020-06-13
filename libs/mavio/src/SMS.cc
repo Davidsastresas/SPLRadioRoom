@@ -725,11 +725,11 @@ bool SMS::waitForATResponse(char* response, int responseSize,
             if (response) {
               if (c == '\r' || responseSize < 2) {
                 promptState = LOOKING_FOR_TERMINATOR;
-                // mavio::log(LOG_INFO, "looking for terminator");
+                //mavio::log(LOG_INFO, "looking for terminator");
               } else {
                 *response++ = c;
                 responseSize--;
-                // mavio::log(LOG_INFO, "response kept");
+                //mavio::log(LOG_INFO, "response kept");
               }
             }
             break;
@@ -748,7 +748,7 @@ bool SMS::waitForATResponse(char* response, int responseSize,
       }
     }  // if (cc >= 0)
   }    // timer loop
-  mavio::log(LOG_INFO, "timer out");
+   //mavio::log(LOG_INFO, "timer out");
 
   return false;
 }

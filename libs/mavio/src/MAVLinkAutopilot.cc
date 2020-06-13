@@ -116,7 +116,7 @@ bool MAVLinkAutopilot::request_autopilot_version(
         gcs_system_id, gcs_component_id, &msg_command_long, sys_id,
         ardupilot_component_id, MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES, i, 1.0,
         0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-    if (serial.send_message(msg_command_long)) {
+    if (serial.send_message(msg_command_long, false)) {
       for (int j = 0; j < receive_retries; j++) {
         if (serial.receive_message(msg, false)) {
           // printf("**** msg.msgid = %d\n", msg.msgid);
@@ -260,7 +260,7 @@ void MAVLinkAutopilot::send_task() {
     mavlink_message_t msg;
 
     if (send_queue.pop(msg)) {
-      if (serial.send_message(msg)) {
+      if (serial.send_message(msg, false)) {
         send_time = timelib::time_since_epoch();
       }
     }
@@ -273,7 +273,7 @@ void MAVLinkAutopilot::receive_task() {
   while (running) {
     mavlink_message_t msg;
 
-    if (serial.receive_message(msg, true)) {
+    if (serial.receive_message(msg, false)) {
       receive_time = timelib::time_since_epoch();
       receive_queue.push(msg);
     }

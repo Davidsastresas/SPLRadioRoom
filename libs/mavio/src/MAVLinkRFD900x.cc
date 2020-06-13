@@ -225,7 +225,7 @@ void MAVLinkRFD900x::send_task() {
     mavlink_message_t msg;
 
     if (send_queue.pop(msg)) {
-      if (serial.send_message(msg)) {
+      if (serial.send_message(msg, true)) {
         send_time = timelib::time_since_epoch();
       }
 
