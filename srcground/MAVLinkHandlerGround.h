@@ -26,6 +26,7 @@
 // #include "MAVLinkAutopilot.h"
 #include "MAVLinkRFD900x.h"
 #include "MAVLinkISBDChannel.h"
+#include "MAVLinkSMSChannel.h"
 #include "MAVLinkTCPChannelServer.h"
 #include "MAVReport.h"
 #include "timelib.h"
@@ -124,6 +125,7 @@ class MAVLinkHandlerGround {
   mavio::MAVLinkRFD900x rfd;
   mavio::MAVLinkISBDChannel isbd_channel;
   mavio::MAVLinkTCPChannelServer tcp_channel;
+  mavio::MAVLinkSMSChannel sms_channel;
   timelib::Stopwatch heartbeat_timer;
   timelib::Stopwatch primary_report_timer;
   timelib::Stopwatch secondary_report_timer;
