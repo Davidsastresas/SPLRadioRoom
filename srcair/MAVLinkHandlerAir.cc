@@ -51,6 +51,7 @@ MAVLinkHandlerAir::MAVLinkHandlerAir()
     : rfd(),
       autopilot(),
       isbd_channel(),
+      sms_channel(),
       // tcp_channel(),
       heartbeat_timer(),
       primary_report_timer(),
@@ -99,6 +100,8 @@ bool MAVLinkHandlerAir::init() {
       }
     }
   }
+
+  sms_channel.init("whatever", config.get_isbd_serial_speed(), devices);
 
   if (config.get_autopilot_enabled()) {
     if (!autopilot.init(config.get_autopilot_serial(),
@@ -158,6 +161,7 @@ void MAVLinkHandlerAir::close() {
   isbd_channel.close();
   autopilot.close();
   rfd.close();
+  sms_channel.close();
 }
 
 /**
@@ -175,9 +179,13 @@ bool MAVLinkHandlerAir::loop() {
   }
 
   if (autopilot.receive_message(msg)) {
+    handle_mo_message(msg, sms_channel);
     rfd.send_message(msg);
     sleep = false;
   }
+  
+  send_report();
+
   return sleep;
 }
 
@@ -186,6 +194,7 @@ bool MAVLinkHandlerAir::loop() {
 // Pass all other messages to update_report_msg().
 void MAVLinkHandlerAir::handle_mo_message(const mavlink_message_t& msg,
                                        MAVLinkChannel& channel) {
+  report.update(msg);
 }
 
 /**
@@ -202,16 +211,15 @@ void MAVLinkHandlerAir::handle_mt_message(const mavlink_message_t& msg,
 }
 
 bool MAVLinkHandlerAir::send_report() {
-  std::chrono::milliseconds report_period =
-      timelib::sec2ms(config.get_tcp_report_period());
+  std::chrono::milliseconds report_period = timelib::sec2ms(10);
 
-  if (config.get_tcp_enabled() && !config.get_isbd_enabled()) {
-    report_period = timelib::sec2ms(config.get_tcp_report_period());
-  } else if (!config.get_tcp_enabled() && config.get_isbd_enabled()) {
-    report_period = timelib::sec2ms(config.get_isbd_report_period());
-  } else if (config.get_tcp_report_period() > config.get_isbd_report_period()) {
-    report_period = timelib::sec2ms(config.get_isbd_report_period());
-  }
+  // if (config.get_tcp_enabled() && !config.get_isbd_enabled()) {
+  //   report_period = timelib::sec2ms(config.get_tcp_report_period());
+  // } else if (!config.get_tcp_enabled() && config.get_isbd_enabled()) {
+  //   report_period = timelib::sec2ms(config.get_isbd_report_period());
+  // } else if (config.get_tcp_report_period() > config.get_isbd_report_period()) {
+  //   report_period = timelib::sec2ms(config.get_isbd_report_period());
+  // }
 
   if (primary_report_timer.elapsed_time() >= report_period) {
     primary_report_timer.reset();
@@ -230,22 +238,20 @@ bool MAVLinkHandlerAir::send_report() {
     //   return tcp_channel.send_message(report_msg);
     // }
 
-    if (!config.get_tcp_enabled() && config.get_isbd_enabled()) {
-      return isbd_channel.send_message(report_msg);
-    }
+    return sms_channel.send_message(report_msg);
 
     // Both channels are enabled.
     // Select primary and secondary channels and secondary report period.
     // MAVLinkChannel& primary_channel = tcp_channel;
-    MAVLinkChannel& secondary_channel = isbd_channel;
-    std::chrono::milliseconds secondary_report_period =
-        timelib::sec2ms(config.get_isbd_report_period());
+    // MAVLinkChannel& secondary_channel = isbd_channel;
+    // std::chrono::milliseconds secondary_report_period =
+    //     timelib::sec2ms(config.get_isbd_report_period());
 
-    if (config.get_tcp_report_period() > config.get_isbd_report_period()) {
-      // primary_channel = isbd_channel;
-      // secondary_channel = tcp_channel;
-      secondary_report_period = timelib::sec2ms(config.get_tcp_report_period());
-    }
+    // if (config.get_tcp_report_period() > config.get_isbd_report_period()) {
+    //   // primary_channel = isbd_channel;
+    //   // secondary_channel = tcp_channel;
+    //   secondary_report_period = timelib::sec2ms(config.get_tcp_report_period());
+    // }
 
     // Send report to secondary channel if secondary report period elapsed
     // and messages were not successfully sent over the primary channel
