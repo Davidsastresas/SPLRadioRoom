@@ -106,9 +106,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  mavio::openlog(log_identity, radioroom::config.get_debug_mode()
-                                   ? LOG_UPTO(LOG_DEBUG)
-                                   : LOG_UPTO(LOG_INFO));
+  mavio::openlog(log_identity, LOG_UPTO(LOG_DEBUG));
 
   log(LOG_INFO, "Starting %s.%s...", RADIO_ROOM_VERSION, BUILD_NUM);
 
