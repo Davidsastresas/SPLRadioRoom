@@ -279,13 +279,7 @@ bool MAVLinkHandlerGround::send_heartbeat() {
     return false;
   }
 
-<<<<<<< HEAD
-    // Channel is healthy if it is enabled and succesfully sent report or
-    // another MO message within its report period times 2.
-    std::chrono::milliseconds time = timelib::time_since_epoch();
-=======
   bool ret = false;
->>>>>>> 4ed303b... mavlinkhandlerground: first switching loggic attempt
 
   // heartbeat from SMS system, for air not to change to ISBD
   if ( sms_active ) {
