@@ -43,6 +43,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define GSM_IS_ASLEEP 10
 #define GSM_NO_SLEEP_PIN 11
 #define GSM_INBOX_EMPTY 12
+#define GSM_MSG_TO_SEND_EMPTY 13
 
 #define GSM_MAX_MT_MGS_SIZE 270
 
@@ -114,6 +115,14 @@ class SMS {
   // Internal utilities
   bool smartWait(std::chrono::milliseconds ms);
   bool waitForATResponse(char* response = NULL, int responseSize = 0,
+                         const char* prompt = NULL,
+                         const char* terminator = "OK\r\n");
+
+  bool waitForATResponseDebug(char* response = NULL, int responseSize = 0,
+                         const char* prompt = NULL,
+                         const char* terminator = "OK\r\n");
+  
+  bool waitForATResponseDebug(char* response = NULL, int responseSize = 0,
                          const char* prompt = NULL,
                          const char* terminator = "OK\r\n");
   
