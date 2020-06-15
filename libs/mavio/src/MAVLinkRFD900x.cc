@@ -50,7 +50,10 @@ MAVLinkRFD900x::MAVLinkRFD900x()
       receive_queue(max_autopilot_queue_size),
       system_id(0),
       send_time(0),
-      receive_time(0) {}
+      receive_time(0) {
+
+      receive_time = timelib::time_since_epoch();
+}
 
 bool MAVLinkRFD900x::init(const string& path, int speed,
                             const vector<string>& devices) {
@@ -79,85 +82,6 @@ void MAVLinkRFD900x::close() {
 
   serial.close();
 }
-
-// bool MAVLinkRFD900x::request_autopilot_version(
-//     uint8_t& autopilot, uint8_t& mav_type, uint8_t& sys_id,
-//     mavlink_autopilot_version_t& autopilot_version) {
-//   mavlink_message_t msg, msg_command_long;
-//   autopilot = mav_type = sys_id = 0;
-//   memset(&autopilot_version, 0, sizeof(autopilot_version));
-
-//   Stopwatch timer;
-
-//   while (timer.elapsed_time() < max_heartbeat_interval) {
-//     if (serial.receive_message(msg)) {
-//       if (msg.msgid == MAVLINK_MSG_ID_HEARTBEAT) {
-//         autopilot = mavlink_msg_heartbeat_get_autopilot(&msg);
-//         mav_type = mavlink_msg_heartbeat_get_type(&msg);
-//         sys_id = msg.sysid;
-
-//         if (autopilot != MAV_AUTOPILOT_INVALID)  // Filter out heartbeat
-//                                                  // messages forwarded from GCS
-//           break;
-//       }
-//     }
-
-//     sleep(receive_retry_delay);
-//   }
-
-//   // Return false if heartbeat message was not received
-//   if (sys_id == 0) {
-//     mavio::log(LOG_DEBUG, "Heartbeat not received.\n");
-//     return false;
-//   }
-
-//   for (int i = 0; i < send_retries; i++) {
-//     mavlink_msg_command_long_pack(
-//         gcs_system_id, gcs_component_id, &msg_command_long, sys_id,
-//         ardupilot_component_id, MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES, i, 1.0,
-//         0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-//     if (serial.send_message(msg_command_long)) {
-//       for (int j = 0; j < receive_retries; j++) {
-//         if (serial.receive_message(msg)) {
-//           // printf("**** msg.msgid = %d\n", msg.msgid);
-//           if (msg.msgid == MAVLINK_MSG_ID_AUTOPILOT_VERSION) {
-//             mavlink_msg_autopilot_version_decode(&msg, &autopilot_version);
-//             sys_id = msg.sysid;
-//             return true;
-//           }
-//         }
-//       }
-//     } else {
-//       mavio::log(LOG_DEBUG, "Failed to send message to autopilot.\n");
-//     }
-
-//     sleep(receive_retry_delay);
-//   }
-
-//   return true;
-// // }
-
-// char* MAVLinkRFD900x::get_firmware_version(
-//     const mavlink_autopilot_version_t& autopilot_version, char* buff,
-//     size_t buff_size) {
-//   strncpy(buff, "unknown", buff_size);
-
-//   if (autopilot_version.flight_sw_version != 0) {
-//     int majorVersion, minorVersion, patchVersion;
-//     FIRMWARE_VERSION_TYPE versionType;
-
-//     majorVersion = (autopilot_version.flight_sw_version >> (8 * 3)) & 0xFF;
-//     minorVersion = (autopilot_version.flight_sw_version >> (8 * 2)) & 0xFF;
-//     patchVersion = (autopilot_version.flight_sw_version >> (8 * 1)) & 0xFF;
-//     versionType = (FIRMWARE_VERSION_TYPE)(
-//         (autopilot_version.flight_sw_version >> (8 * 0)) & 0xFF);
-
-//     snprintf(buff, buff_size, "%d.%d.%d/%d ", majorVersion, minorVersion,
-//              patchVersion, versionType);
-//   }
-
-//   return buff;
-// }
 
 bool MAVLinkRFD900x::send_message(const mavlink_message_t& msg) {
   send_queue.push(msg);
@@ -241,9 +165,11 @@ void MAVLinkRFD900x::receive_task() {
     mavlink_message_t msg;
 
     if (serial.receive_message(msg, true)) {
-      receive_time = timelib::time_since_epoch();
+      if ( msg.msgid != MAVLINK_MSG_ID_RADIO_STATUS ) {
+        receive_time = timelib::time_since_epoch();
+      }
       receive_queue.push(msg);
-      
+
       continue;
     }
 
