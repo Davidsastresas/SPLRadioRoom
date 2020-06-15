@@ -122,10 +122,6 @@ class SMS {
                          const char* prompt = NULL,
                          const char* terminator = "OK\r\n");
   
-  bool waitForATResponseDebug(char* response = NULL, int responseSize = 0,
-                         const char* prompt = NULL,
-                         const char* terminator = "OK\r\n");
-  
   bool waitForATResponseCSQ(char* response = NULL, int responseSize = 0,
                          const char* prompt = NULL,
                          const char* terminator = "OK\r\n");
