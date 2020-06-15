@@ -753,6 +753,81 @@ bool SMS::waitForATResponse(char* response, int responseSize,
   return false;
 }
 
+bool SMS::waitForATResponseDebug(char* response, int responseSize,
+                                   const char* prompt, const char* terminator) {
+  // diag << "Waiting for response " << terminator << "\n";
+
+  if (response) {
+    memset(response, 0, responseSize);
+  }
+
+  // bool done = false;
+  int matchPromptPos = 0;      // Matches chars in prompt
+  int matchTerminatorPos = 0;  // Matches chars in terminator
+
+  enum { LOOKING_FOR_PROMPT, GATHERING_RESPONSE, LOOKING_FOR_TERMINATOR };
+
+  int promptState = prompt ? LOOKING_FOR_PROMPT : LOOKING_FOR_TERMINATOR;
+
+  Stopwatch timer;
+  while (timer.elapsed_time() < atTimeout) {
+    if (cancelled()) {
+      return false;
+    }
+
+    int cc = stream.read();
+    if (cc >= 0) {
+      char c = cc;
+
+      mavio::log(LOG_INFO, "rd: %c", c);
+
+      if (prompt) {
+        switch (promptState) {
+          case LOOKING_FOR_PROMPT:
+            if (c == prompt[matchPromptPos]) {
+              ++matchPromptPos;
+              if (prompt[matchPromptPos] == '\0') {
+                promptState = GATHERING_RESPONSE;
+                mavio::log(LOG_INFO, "gathering response");
+              }
+            } else {
+              matchPromptPos = c == prompt[0] ? 1 : 0;
+            }
+
+            break;
+          case GATHERING_RESPONSE:  // gathering reponse from end of prompt
+                                    // to first \r
+            if (response) {
+              if (c == '\r' || responseSize < 2) {
+                promptState = LOOKING_FOR_TERMINATOR;
+                mavio::log(LOG_INFO, "looking for terminator");
+              } else {
+                *response++ = c;
+                responseSize--;
+                mavio::log(LOG_INFO, "response kept");
+              }
+            }
+            break;
+        }  // switch
+      }    // prompt
+
+      if (c == terminator[matchTerminatorPos]) {
+        mavio::log(LOG_INFO, "terminator matches");
+        ++matchTerminatorPos;
+        if (terminator[matchTerminatorPos] == '\0') {
+          mavio::log(LOG_INFO, "terminator finished");
+          return true;
+        }
+      } else {
+        matchTerminatorPos = c == terminator[0] ? 1 : 0;
+      }
+    }  // if (cc >= 0)
+  }    // timer loop
+   mavio::log(LOG_INFO, "timer out");
+
+  return false;
+}
+
 bool SMS::waitForATResponseCSQ(char* response, int responseSize,
                                    const char* prompt, const char* terminator) {
 
@@ -961,7 +1036,7 @@ void SMS::send(uint16_t n) {
 
 int SMS::internalsendSMSBinary(const uint8_t* txData, size_t txDataSize) {
 
-  mavio::log(LOG_INFO, "mav msg size: %d", txDataSize);
+  // mavio::log(LOG_INFO, "mav msg size: %d", txDataSize);
   
   uint data_size_int = txDataSize;
 
@@ -984,24 +1059,24 @@ int SMS::internalsendSMSBinary(const uint8_t* txData, size_t txDataSize) {
 
   pdu_size_int = data_size_int + 1 + 13;
 
-  mavio::log(LOG_INFO, "pdu size int: %d", pdu_size_int);
+  // mavio::log(LOG_INFO, "pdu size int: %d", pdu_size_int);
 
   snprintf(pdu_size, 3, "%d",(unsigned char)pdu_size_int);
 
-  mavio::log(LOG_INFO, "pdu size str: %s", pdu_size);
+  // mavio::log(LOG_INFO, "pdu size str: %s", pdu_size);
 
   pdu_size[2] = '\0';
 
 
-  mavio::log(LOG_INFO, "data size int: %d", data_size_int);
+  // mavio::log(LOG_INFO, "data size int: %d", data_size_int);
 
   snprintf(data_size, 3, "%d",(unsigned char)data_size_int);
   
   data_size[2] = '\0';
 
-  mavio::log(LOG_INFO, "data size str: %s", data_size);
+  // mavio::log(LOG_INFO, "data size str: %s", data_size);
 
-  mavio::log(LOG_INFO, "strlen %d", strlen(data_size));
+  // mavio::log(LOG_INFO, "strlen %d", strlen(data_size));
 
   char ca[1];
 
@@ -1020,20 +1095,20 @@ int SMS::internalsendSMSBinary(const uint8_t* txData, size_t txDataSize) {
     sprintf(octett,"%02X",(unsigned char) txData[character]);
     strcat(data,octett);
     ca[0] = data[character];
-    mavio::log(LOG_INFO, "data %d byte: %s", character, ca);
+    // mavio::log(LOG_INFO, "data %d byte: %s", character, ca);
   }
 
-    mavio::log(LOG_INFO, "strlen %d", strlen(data));
+    // mavio::log(LOG_INFO, "strlen %d", strlen(data));
 // --------------------------------
 
   // snprintf(pdu, sizeof(pdu), "%s%s%s%s", "0011000B914336575652F60002AA", "33", data, "\x1A");
 
   // for (int x = 0; x < sizeof(pdu); x++ ) {
   //   ca[0] = pdu[x];
-  //   mavio::log(LOG_INFO, "pdu byte: %s", ca);
+  //   // mavio::log(LOG_INFO, "pdu byte: %s", ca);
   // }
 
-  // mavio::log(LOG_INFO, "pdu size: %d", sizeof(pdu));
+  // // mavio::log(LOG_INFO, "pdu size: %d", sizeof(pdu));
   
   if (txData && txDataSize) {  
     
@@ -1045,9 +1120,9 @@ int SMS::internalsendSMSBinary(const uint8_t* txData, size_t txDataSize) {
 
 
     if(waitForATResponse(NULL, 0, NULL, "> ")) {
-      mavio::log(LOG_INFO, "at > ok");
+      // mavio::log(LOG_INFO, "at > ok");
     } else {
-      mavio::log(LOG_INFO, "at > NOT ok");
+      // mavio::log(LOG_INFO, "at > NOT ok");
     }
     send("0011000B914336575652F60004AA");
     send(fuckthefuck);
@@ -1064,8 +1139,9 @@ int SMS::internalsendSMSBinary(const uint8_t* txData, size_t txDataSize) {
     if (!waitForATResponse(NULL, 0, NULL, "OK\r\n")) {
       return cancelled() ? GSM_CANCELLED : GSM_PROTOCOL_ERROR;
     }
-  }
-  return GSM_SUCCESS;
+    return GSM_SUCCESS;
+  } 
+  return GSM_MSG_TO_SEND_EMPTY;
 }
 
 int SMS::internalreceiveSMSBinary(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_empty) {
