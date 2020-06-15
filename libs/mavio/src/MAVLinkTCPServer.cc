@@ -131,7 +131,7 @@ bool MAVLinkTCPServer::send_message(const mavlink_message_t& msg) {
   uint16_t n = ::send(newsocket_fd, buf, len, 0);
 
   if (n == len) {
-    MAVLinkLogger::log(LOG_INFO, "TCP <<", msg);
+    MAVLinkLogger::log(LOG_DEBUG, "TCP <<", msg);
     return true;
   }
 
@@ -174,7 +174,7 @@ bool MAVLinkTCPServer::receive_message(mavlink_message_t& msg) {
             for (int i = 0; i < rc; i++) {
               if (mavlink_parse_char(MAVLINK_COMM_0, buffer[i], &msg,
                                    &mavlink_status)) {
-                MAVLinkLogger::log(LOG_INFO, "TCP >>", msg);
+                MAVLinkLogger::log(LOG_DEBUG, "TCP >>", msg);
                 return true;
               }
             }
@@ -199,7 +199,7 @@ bool MAVLinkTCPServer::receive_message(mavlink_message_t& msg) {
             for (int i = 0; i < rc; i++) {
               if (mavlink_parse_char(MAVLINK_COMM_0, buffer[i], &msg,
                                    &mavlink_status)) {
-                MAVLinkLogger::log(LOG_INFO, "TCP >>", msg);
+                MAVLinkLogger::log(LOG_DEBUG, "TCP >>", msg);
                 return true;
               }
             }
