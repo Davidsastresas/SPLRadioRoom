@@ -46,9 +46,9 @@ const std::chrono::milliseconds heartbeat_period(1000);
 
 const std::chrono::milliseconds active_update_interval(100);
 const std::chrono::milliseconds rfd_timeout(2000);
-const std::chrono::milliseconds sms_timeout(120000);
+const std::chrono::milliseconds sms_timeout(30000);
 
-const std::chrono::milliseconds sms_alive_period(15000);
+const std::chrono::milliseconds sms_alive_period(30000);
 
 constexpr char hl_report_period_param[] = "HL_REPORT_PERIOD";
 
@@ -281,7 +281,7 @@ bool MAVLinkHandlerGround::send_heartbeat() {
 
   bool ret = false;
 
-  // heartbeat from SMS system, for air not to change to ISBD
+  // heartbeat from SMS system, for air not to change to
   if ( sms_active ) {
     if ( sms_alive_timer.elapsed_time() >= sms_alive_period ) {
       sms_alive_timer.reset();
