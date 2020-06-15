@@ -211,7 +211,7 @@ bool MAVLinkSMS::send_message(const mavlink_message_t& mo_msg) {
   size_t buf_size = sizeof(buf);
   uint16_t len = 0;
 
-  if (mo_msg.len != 0 && mo_msg.msgid != 0) {
+  if (mo_msg.len != 0) {
     len = mavlink_msg_to_send_buffer(buf, &mo_msg);
   }
 
@@ -224,7 +224,7 @@ bool MAVLinkSMS::send_message(const mavlink_message_t& mo_msg) {
     
     return false;
   }
-  mavio::log(LOG_INFO, "SMS sent!");
+  MAVLinkLogger::log(LOG_INFO, "SMS <<", mo_msg);
 
   return true;
 }
