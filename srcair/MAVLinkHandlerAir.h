@@ -70,14 +70,12 @@ class MAVLinkHandlerAir {
   /*
    * Hanlde mobile-originated message received from autopilot.
    */
-  void handle_mo_message(const mavlink_message_t& msg,
-                         mavio::MAVLinkChannel& channel);
+  void handle_mo_message(const mavlink_message_t& msg);
 
   /*
    * Handle mobile-terminated message received from a comm channel.
    */
-  void handle_mt_message(const mavlink_message_t& msg,
-                         mavio::MAVLinkChannel& channel);
+  void handle_mt_message(const mavlink_message_t& msg);
 
   /**
    * Sends report message to one of the comm channels if the channel report
@@ -122,12 +120,19 @@ class MAVLinkHandlerAir {
    */
   void check_retry_send_timer();
 
+  void update_active_channel();
+
   mavio::MAVLinkRFD900x rfd;
   mavio::MAVLinkAutopilotAir autopilot;
   mavio::MAVLinkISBDChannel isbd_channel;
   mavio::MAVLinkSMSChannel sms_channel;
 
+  //
+  std::chrono::milliseconds current_time;
+
   // mavio::MAVLinkTCPChannel tcp_channel;
+  timelib::Stopwatch update_active_timer;
+  timelib::Stopwatch update_report_timer;
   timelib::Stopwatch heartbeat_timer;
   timelib::Stopwatch primary_report_timer;
   timelib::Stopwatch secondary_report_timer;
@@ -136,10 +141,16 @@ class MAVLinkHandlerAir {
   // mavlink_message_t missions[max_mission_count];
   size_t missions_received;
 
+  //
+  bool rfd_active;
+  bool sms_active;
+  bool isbd_active;
+
   timelib::Stopwatch retry_timer;
   mavlink_message_t retry_msg;
   std::chrono::milliseconds retry_timeout;
   int retry_count;
+  bool _sleep;
 };
 
 }  // namespace radioroom
