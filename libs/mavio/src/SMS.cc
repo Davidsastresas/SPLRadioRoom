@@ -1131,8 +1131,9 @@ int SMS::internalsendSMSBinary(const uint8_t* txData, size_t txDataSize) {
    // 06 48 04 13 F0
 
     //send("0011000B9143 36575652F6 0004AA");
+    //send("0011000B9143 06480413F0 0004AA");
 
-    send("0011000B914306480413F00004AA");
+    send("0011000B914336575652F60004AA");
     send(fuckthefuck);
     stream.write(data, data_size_int*2);
     send("\x1A");
@@ -1183,20 +1184,24 @@ bool SMS::waitforSMSlist(uint8_t* response, size_t& responseSize, bool& inbox_em
 
   sms_struct _buffer_sms;
 
-  char indexresponse[3];  // allow for 3 digits indexes
+  char indexresponse[3]; 
+  memset(indexresponse, 0, sizeof(indexresponse));  // allow for 3 digits indexes
   int indexresponse_pos = 0;
   uint8_t index;
   
   uint8_t pdu_size;
   char pdu_size_response[3]; // allow for 3 digits size, we need more than 100
+  memset(pdu_size_response, 0, sizeof(pdu_size_response));  
   int pdu_size_response_pos = 0;
 
   char bytechar[2];
+  memset(bytechar, 0, sizeof(bytechar));  
   int counterbyte = 0;
   int counter = 0;
 
   uint8_t smsc_size;
   char smsc_size_response[2]; // allow for 3 digits size, we need more than 100
+  memset(smsc_size_response, 0, sizeof(smsc_size_response));  
   int smsc_size_response_pos = 0;
 
   int _step = 0;
@@ -1227,7 +1232,7 @@ bool SMS::waitforSMSlist(uint8_t* response, size_t& responseSize, bool& inbox_em
     if (cc >= 0) {
       c = cc;
 
-      // mavio::log(LOG_INFO, "rd: %c", c);
+      // mavio::log(LOG_INFO, "SMS rd: %c", c);
 
       if (prompt) {
         switch (promptState) {
@@ -1266,7 +1271,7 @@ bool SMS::waitforSMSlist(uint8_t* response, size_t& responseSize, bool& inbox_em
                         break;
                       } else {
                         index = atoi(indexresponse);
-                        // mavio::log(LOG_INFO, "index: %d", index);
+                        mavio::log(LOG_INFO, "SMS index: %d", index);
                         indexresponse_pos = 0;
                         _step++;
                         [[fallthrough]];
