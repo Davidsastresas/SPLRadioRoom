@@ -56,34 +56,6 @@ class MAVLinkSMS {
    */
   void close();
 
-  /**
-   * Checks if data is available in gsm.
-   *
-   * Returns true if data is available.
-   */
-  bool message_available();
-
-  /**
-   * Retrieves ring alert flag.
-   *
-   * Returns true is the operation was successful.
-   */
-  bool get_ring_alert_flag(uint16_t& raFlag);
-
-  /**
-   * Returns the number of mobile terminated messages left in the queue.
-   */
-  int get_waiting_wessage_count();
-
-  /**
-   * Sends MT message to gsm and receives MO message from the in-bound
-   * message queue if any.
-   *
-   * Returns true if the gsm session succeeded.
-   */
-  bool send_receive_message(const mavlink_message_t& mo_msg,
-                            mavlink_message_t& mt_msg, bool& received);
-
   bool send_message(const mavlink_message_t& mo_msg);
 
   bool receive_message(mavlink_message_t& mt_msg, bool& inbox_empty);

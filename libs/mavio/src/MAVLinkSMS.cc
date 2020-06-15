@@ -35,27 +35,6 @@ MAVLinkSMS::MAVLinkSMS() : stream(), sms(stream) {}
 
 MAVLinkSMS::~MAVLinkSMS() {}
 
-bool MAVLinkSMS::get_ring_alert_flag(uint16_t& ra_flag) {
-  uint16_t mo_flag = 0, mo_msn = 0, mt_flag = 0, mt_msn = 0, msg_waiting = 0;
-
-  ra_flag = 0;
-
-  int err = sms.getStatusExtended(mo_flag, mo_msn, mt_flag, mt_msn, ra_flag,
-                                   msg_waiting);
-
-  if (err != GSM_SUCCESS) {
-    mavio::log(LOG_WARNING, "Failed to get sms status. Error  = %d", err);
-  } else if (ra_flag) {
-    mavio::log(LOG_INFO, "Ring alert received.");
-  }
-
-  return err == GSM_SUCCESS;
-}
-
-int MAVLinkSMS::get_waiting_wessage_count() {
-  return sms.getWaitingMessageCount();
-}
-
 bool MAVLinkSMS::detect_transceiver(string device) {
   int ret = sms.begin();
   sms.deleteSMSlist();
@@ -134,76 +113,6 @@ bool MAVLinkSMS::init(string path, int speed, const vector<string>& devices) {
 void MAVLinkSMS::close() {
   stream.close();
   mavio::log(LOG_DEBUG, "sms connection closed.");
-}
-
-/**
- * Checks if data is available in gsm modem.
- *
- * Returns true if data is available.
- */
-bool MAVLinkSMS::message_available() {
-  if (sms.getWaitingMessageCount() > 0) {
-    return true;
-  }
-
-  return false;
-  // uint16_t ra_flag = 0;
-
-  // get_ring_alert_flag(ra_flag);
-
-  // return ra_flag != 0;
-}
-
-bool MAVLinkSMS::send_receive_message(const mavlink_message_t& mo_msg,
-                                       mavlink_message_t& mt_msg,
-                                       bool& received) {
-  uint8_t buf[GSM_MAX_MT_MGS_SIZE];
-  size_t buf_size = sizeof(buf);
-  uint16_t len = 0;
-
-  if (mo_msg.len != 0 && mo_msg.msgid != 0) {
-    len = mavlink_msg_to_send_buffer(buf, &mo_msg);
-  }
-
-  received = false;
-
-  int ret = sms.sendReceiveSBDBinary(buf, len, buf, buf_size);
-
-  if (ret != GSM_SUCCESS) {
-    if (mo_msg.len != 0 && mo_msg.msgid != 0) {
-      char prefix[32];
-      snprintf(prefix, sizeof(prefix), "SBD << FAILED(%d)", ret);
-      MAVLinkLogger::log(LOG_WARNING, prefix, mo_msg);
-    } else {
-      mavio::log(LOG_WARNING, "SBD >> FAILED(%d)",
-                 ret);  // Failed to receive MT message from sms
-    }
-
-    return false;
-  }
-
-  if (buf_size > 0) {
-    mavlink_status_t mavlink_status;
-
-    for (size_t i = 0; i < buf_size; i++) {
-      if (mavlink_parse_char(MAVLINK_COMM_0, buf[i], &mt_msg,
-                             &mavlink_status)) {
-        received = true;
-
-        MAVLinkLogger::log(LOG_INFO, "SBD >>", mt_msg);
-        break;
-      }
-    }
-
-    if (!received) {
-      mavio::log(LOG_WARNING,
-                 "Failed to parse MAVLink message received from sms.");
-    }
-  }
-
-  MAVLinkLogger::log(LOG_INFO, "SBD <<", mo_msg);
-
-  return true;
 }
 
 bool MAVLinkSMS::send_message(const mavlink_message_t& mo_msg) {

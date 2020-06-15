@@ -60,12 +60,6 @@ class SMS {
 
   int getTransceiverModel(char* buffer, size_t bufferSize);
   int getTransceiverSerialNumber(char* buffer, size_t bufferSize);
-  int sendSBDText(const char* message);
-  int sendSBDBinary(const uint8_t* txData, size_t txDataSize);
-  int sendReceiveSBDText(const char* message, uint8_t* rxBuffer,
-                         size_t& rxBufferSize);
-  int sendReceiveSBDBinary(const uint8_t* txData, size_t txDataSize,
-                           uint8_t* rxBuffer, size_t& rxBufferSize);
 
   int sendSMSBinary(const uint8_t* txData, size_t txDataSize);
   
@@ -76,25 +70,6 @@ class SMS {
   int readSMSlist(void);
   
   int getSignalQuality(int& quality);
-  int queryRingIndicationStatus(int& sri);
-
-  // This command returns current state of the mobile originated and mobile
-  // terminated buffers, and the SBD ring alert status.
-  int getStatusExtended(uint16_t& moFlag, uint16_t& moMSN, uint16_t& mtFlag,
-                        uint16_t& mtMSN, uint16_t& raFlag,
-                        uint16_t& msgWaiting);
-
-  int getWaitingMessageCount();
-  int sleep();
-  bool isAsleep();
-
-  void adjustATTimeout(std::chrono::milliseconds ms);  // default value = 20 seconds
-  void adjustSendReceiveTimeout(std::chrono::milliseconds ms);  // default value = 300 seconds
-  void setMinimumSignalQuality(
-      int quality);  // a number between 1 and 5, default
-                     // ISBD_DEFAULT_CSQ_MINIMUM
-  void useMSSTMWorkaround(
-      bool useWorkAround);  // true to use workaround from Iridium Alert 5/7
 
   struct sms_struct {
     uint8_t smsc_size;
@@ -112,8 +87,6 @@ class SMS {
   };
 
  private:
-  // Internal utilities
-  bool smartWait(std::chrono::milliseconds ms);
   bool waitForATResponse(char* response = NULL, int responseSize = 0,
                          const char* prompt = NULL,
                          const char* terminator = "OK\r\n");
@@ -129,18 +102,11 @@ class SMS {
   bool waitforSMSlist(uint8_t* response, size_t& responseSize, bool& inbox_empty);
 
   int internalBegin();
+
   int internalGetTransceiverModel(char* buffer, size_t bufferSize);
   int internalGetTransceiverSerialNumber(char* buffer, size_t bufferSize);
-  int internalSendReceiveSBD(const char* txTxtMessage, const uint8_t* txData,
-                             size_t txDataSize, uint8_t* rxBuffer,
-                             size_t* prxBufferSize);
-  int internalQueryRingIndicationStatus(int& sri);
-  int internalGetStatusExtended(uint16_t& moFlag, uint16_t& moMSN,
-                                uint16_t& mtFlag, uint16_t& mtMSN,
-                                uint16_t& raFlag, uint16_t& msgWaiting);
+
   int internalGetSignalQuality(int& quality);
-  int internalMSSTMWorkaround(bool& okToProceed);
-  int internalSleep();
 
   int internalsendSMSBinary(const uint8_t* txData, size_t txDataSize);
   
@@ -149,12 +115,6 @@ class SMS {
   int internalreadSMSlist(void);
 
   int internaldeleteSMSlist(void);
-
-  int doSBDIX(uint16_t& moCode, uint16_t& moMSN, uint16_t& mtCode,
-              uint16_t& mtMSN, uint16_t& mtLen, uint16_t& mtRemaining);
-  int doSBDRB(uint8_t* rxBuffer, size_t* prxBufferSize);  // in/out
-  int readUInt(uint16_t& u);
-  void power(bool on);
 
   void send(const char* str);
   void send(uint16_t n);
@@ -168,19 +128,10 @@ class SMS {
   Serial& stream;  // Communicating with the Iridium
 
   // Timings milliseconds
-  std::chrono::milliseconds csqInterval;
-  std::chrono::milliseconds sbdixInterval;
   std::chrono::milliseconds atTimeout;
-  std::chrono::milliseconds sendReceiveTimeout;
 
   // State variables
-  int remainingMessages;
-  int sleepPin;
-  bool asleep;
   bool reentrant;
-  int minimumCSQ;
-  bool useWorkaround;
-  unsigned long lastPowerOnTime;
 
   sms_struct buffersms;
 };
