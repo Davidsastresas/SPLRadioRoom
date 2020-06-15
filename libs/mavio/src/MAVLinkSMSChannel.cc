@@ -45,7 +45,10 @@ MAVLinkSMSChannel::MAVLinkSMSChannel()
       receive_queue(max_sms_channel_queue_size),
       send_time(0),
       receive_time(0),
-      signal_quality(0) {}
+      signal_quality(0) {
+
+      receive_time = timelib::time_since_epoch();
+}
 
 MAVLinkSMSChannel::~MAVLinkSMSChannel() {}
 
@@ -111,12 +114,12 @@ bool MAVLinkSMSChannel::get_signal_quality(int& quality) {
 void MAVLinkSMSChannel::send_receive_task() {
   while (running) {
     bool inbox_empty = true;
-    // int quality = 0;
-    // if (sms.get_signal_quality(quality)) {
-    //   signal_quality = quality;
-    // } else {
-    //   signal_quality = 0;
-    // }
+    int quality = 0;
+    if (sms.get_signal_quality(quality)) {
+      signal_quality = quality;
+    } else {
+      signal_quality = 0;
+    }
 
     if ( !send_queue.empty() ) {
       mavlink_message_t mo_msg;
