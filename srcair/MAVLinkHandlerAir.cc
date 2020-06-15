@@ -45,10 +45,10 @@ const std::chrono::milliseconds heartbeat_period(1000);
 // const std::chrono::milliseconds autopilot_send_retry_timeout(250);
 
 const std::chrono::milliseconds active_update_interval(100);
-const std::chrono::milliseconds rfd_timeout(4000);
+const std::chrono::milliseconds rfd_timeout(2000);
 const std::chrono::milliseconds sms_timeout(120000);
 
-const std::chrono::milliseconds report_period(13000);
+const std::chrono::milliseconds report_period(18000);
 
 constexpr char hl_report_period_param[] = "HL_REPORT_PERIOD";
 
