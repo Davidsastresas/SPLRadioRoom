@@ -44,6 +44,12 @@ constexpr uint16_t data_stream_rate = 2;  // Hz
 const std::chrono::milliseconds heartbeat_period(1000);
 // const std::chrono::milliseconds autopilot_send_retry_timeout(250);
 
+const std::chrono::milliseconds active_update_interval(100);
+const std::chrono::milliseconds rfd_timeout(2000);
+const std::chrono::milliseconds sms_timeout(120000);
+
+const std::chrono::milliseconds sms_alive_period(15000);
+
 constexpr char hl_report_period_param[] = "HL_REPORT_PERIOD";
 
 MAVLinkHandlerGround::MAVLinkHandlerGround()
@@ -51,14 +57,22 @@ MAVLinkHandlerGround::MAVLinkHandlerGround()
       isbd_channel(),
       tcp_channel(),
       sms_channel(),
+      current_time(0),
+      sms_alive_timer(),
+      update_active_timer(),
+      update_report_timer(),
       heartbeat_timer(),
       primary_report_timer(),
       secondary_report_timer(),
       missions_received(0),
+      rfd_active(true),
+      sms_active(false),
+      isbd_active(false),
       retry_timer(),
       retry_msg(),
       retry_timeout(0),
-      retry_count(0) {}
+      retry_count(0),
+      _sleep(false) {}
 
 /**
  * Initializes autopilot and comm channels.
@@ -148,31 +162,93 @@ void MAVLinkHandlerGround::close() {
  * NOTE: Must not use blocking calls.
  */
 bool MAVLinkHandlerGround::loop() {
-  mavlink_message_t msg;
+  mavlink_message_t mo_msg;
+  mavlink_message_t mt_msg;
   bool sleep = true;
 
-  if (rfd.receive_message(msg)) {
-    tcp_channel.send_message(msg);
+  if (rfd.receive_message(mo_msg)) {
+    handle_mo_message(mo_msg);
     sleep = false; 
   }
 
-  if (sms_channel.receive_message(msg)) {
-    tcp_channel.send_message(msg);
+  if (sms_channel.receive_message(mo_msg)) {
+    handle_mo_message(mo_msg);
     sleep = false;
   }
 
-  if (tcp_channel.receive_message(msg)) {
-    rfd.send_message(msg);
+  if (tcp_channel.receive_message(mt_msg)) {
+    handle_mt_message(mt_msg);
     sleep = false;
   }
+
+  update_active_channel();
+
+  send_heartbeat();
+
   return sleep;
+}
+
+void MAVLinkHandlerGround::update_active_channel() {
+
+  if (update_active_timer.elapsed_time() < active_update_interval) {
+    return;
+  }
+  
+  update_active_timer.reset();
+  current_time = timelib::time_since_epoch();
+
+  if ( rfd_active ) {
+    if ( current_time - rfd.last_receive_time() > rfd_timeout ) {
+      rfd_active = false;
+      sms_active = true;
+      isbd_active = false;
+      log(LOG_INFO, "time since last rfd %d", current_time - rfd.last_receive_time());
+      log(LOG_INFO, "change to sms");
+    }
+    return;
+
+  } else if ( sms_active ) {
+    if ( current_time - rfd.last_receive_time() <= rfd_timeout ) {
+      rfd_active = true;
+      sms_active = false;
+      isbd_active = false;
+      log(LOG_INFO, "time since last rfd %d", current_time - rfd.last_receive_time());
+      log(LOG_INFO, "change to rfd");
+
+    } else if ( current_time - sms_channel.last_receive_time() >= sms_timeout ) {
+      rfd_active = false;
+      sms_active = false;
+      isbd_active = true;
+      log(LOG_INFO, "time since last rfd %d", current_time - rfd.last_receive_time());
+      log(LOG_INFO, "change to isbd");
+    }
+    return;
+
+  } else { // isbd active 
+    if ( current_time - rfd.last_receive_time() <= rfd_timeout ) {
+      rfd_active = true;
+      sms_active = false;
+      isbd_active = false;
+      log(LOG_INFO, "time since last rfd %d", current_time - rfd.last_receive_time());
+      log(LOG_INFO, "change to rfd");
+
+    } else if ( current_time - sms_channel.last_receive_time() <= sms_timeout ) {
+      rfd_active = false;
+      sms_active = true;
+      isbd_active = false;
+      log(LOG_INFO, "time since last rfd %d", current_time - rfd.last_receive_time());
+      log(LOG_INFO, "change to sms");
+    }
+    return;
+  }
 }
 
 // Forward ACK messages to the specified channel.
 // Use missions array to get mission items on MISSION_REQUEST.
 // Pass all other messages to update_report_msg().
-void MAVLinkHandlerGround::handle_mo_message(const mavlink_message_t& msg,
-                                       MAVLinkChannel& channel) {
+void MAVLinkHandlerGround::handle_mo_message(const mavlink_message_t& msg) {
+  
+  tcp_channel.send_message(msg);
 }
 
 /**
@@ -184,44 +260,60 @@ void MAVLinkHandlerGround::handle_mo_message(const mavlink_message_t& msg,
  * to the autopilot, and sends MISSION_ACK to the channel. Otherwise the
  * method does nothing and just returns false.
  */
-void MAVLinkHandlerGround::handle_mt_message(const mavlink_message_t& msg,
-                                       MAVLinkChannel& channel) {
+void MAVLinkHandlerGround::handle_mt_message(const mavlink_message_t& msg) {
+
+  rfd.send_message(msg);
+  if ( rfd_active ) {
+    return;
+  }
 }
 
 bool MAVLinkHandlerGround::send_report() {
+
   return false;
 }
 
 bool MAVLinkHandlerGround::send_heartbeat() {
-  if (heartbeat_timer.elapsed_time() >= heartbeat_period) {
-    heartbeat_timer.reset();
+  
+  if ( rfd_active ) {
+    return false;
+  }
 
-    // Channel is healthy if it is enabled and succesfully sent report or
-    // another MO message within its report period times 2.
-    //std::chrono::milliseconds time = timelib::time_since_epoch();
+  bool ret = false;
 
-    // bool tcp_healthy = config.get_tcp_enabled() &&
-    //                    (time - tcp_channel.last_send_time()) <=
-    //                        2 * timelib::sec2ms(config.get_tcp_report_period());
+  // heartbeat from SMS system, for air not to change to ISBD
+  if ( sms_active ) {
+    if ( sms_alive_timer.elapsed_time() >= sms_alive_period ) {
+      sms_alive_timer.reset();
 
-    // bool isbd_healthy =
-    //     config.get_isbd_enabled() &&
-    //     (time - isbd_channel.last_send_time()) <=
-    //         2 * timelib::sec2ms(config.get_isbd_report_period());
-    
-    bool sms_healthy = ( time - sms_channel.last_send_time() ) <=
-                          2 * timelib::sec2ms(20);
+      mavlink_message_t sms_heartbeat_msg;
 
-    if ( sms_healthy ) {
-      mavlink_message_t heartbeat_msg;
-      mavlink_msg_heartbeat_pack(1, 0,
-                                 &heartbeat_msg, MAV_TYPE_FIXED_WING,
-                                 MAV_AUTOPILOT_ARDUPILOTMEGA, 0, 0, 0);
-      return tcp_channel.send_message(heartbeat_msg);
+      mavlink_msg_heartbeat_pack(255, 0,
+                               &sms_heartbeat_msg, MAV_TYPE_GCS,
+                               MAV_AUTOPILOT_INVALID, 0, 0, 0);
+
+      sms_channel.send_message(sms_heartbeat_msg);
+
+      ret = true;
     }
   }
 
-  return false;
+  
+  if (heartbeat_timer.elapsed_time() >= heartbeat_period) {
+    heartbeat_timer.reset();
+
+
+    mavlink_message_t heartbeat_msg;
+    mavlink_msg_heartbeat_pack(1, 1,
+                               &heartbeat_msg, MAV_TYPE_FIXED_WING,
+                               MAV_AUTOPILOT_ARDUPILOTMEGA, 0, 0, 0);
+    
+    tcp_channel.send_message(heartbeat_msg);
+  
+    ret = true;
+  }
+  
+  return ret;
 }
 
 void MAVLinkHandlerGround::set_retry_send_timer(const mavlink_message_t& msg,
