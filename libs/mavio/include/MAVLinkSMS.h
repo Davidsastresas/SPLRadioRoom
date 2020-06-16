@@ -56,7 +56,7 @@ class MAVLinkSMS {
    */
   void close();
 
-  bool send_message(const mavlink_message_t& mo_msg);
+  bool send_message(const mavlink_message_t& mo_msg, std::string tlf);
 
   bool receive_message(mavlink_message_t& mt_msg, bool& inbox_empty);
 

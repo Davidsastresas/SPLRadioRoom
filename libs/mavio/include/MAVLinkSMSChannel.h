@@ -53,7 +53,7 @@ class MAVLinkSMSChannel : public MAVLinkChannel {
    * Returns true if connection was successful.
    */
   bool init(std::string path, int speed,
-            const std::vector<std::string>& devices, std::string pin);
+            const std::vector<std::string>& devices, std::string pin, std::string numb1);
 
   /*
    * Closes the serial device used to connect to gsm.
@@ -104,17 +104,33 @@ class MAVLinkSMSChannel : public MAVLinkChannel {
    */
   void send_receive_task();
 
+  /**
+   * Prepare number to the format used by gsm backend.
+   * suport international format 11 digits
+   */
+  std::string prepare_number_gsm(std::string number);
+
+  // variables
+
   MAVLinkSMS sms;
+  
   std::atomic<bool> running;
+  
   // Thread of send_receive_task
   std::thread send_receive_thread;
+  
   // Queue that buffers messages to be sent to the socket
   CircularBuffer<mavlink_message_t> send_queue;
+  
   // Queue that buffers messages received from the socket
   CircularBuffer<mavlink_message_t> receive_queue;
+  
   std::chrono::milliseconds send_time;  // Last send epoch time
   std::chrono::milliseconds receive_time;  // Last receive epoch time
+  
   std::atomic<int> signal_quality;
+
+  std::string tlf1 = "000000000000";
 };
 
 }  // namespace mavio

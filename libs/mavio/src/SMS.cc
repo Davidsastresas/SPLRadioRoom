@@ -92,13 +92,13 @@ int SMS::getTransceiverSerialNumber(char* buffer, size_t bufferSize) {
 }
 
 // Transmit and receive a binary message
-int SMS::sendSMSBinary(const uint8_t* txData, size_t txDataSize) {
+int SMS::sendSMSBinary(const uint8_t* txData, size_t txDataSize, std::string tlf) {
   if (this->reentrant) {
     return GSM_REENTRANT;
   }
 
   this->reentrant = true;
-  int ret = internalsendSMSBinary(txData, txDataSize);
+  int ret = internalsendSMSBinary(txData, txDataSize, tlf);
   this->reentrant = false;
   return ret;
 }
@@ -178,11 +178,14 @@ int SMS::internalBegin(std::string pin) {
     return GSM_NO_MODEM_DETECTED;
   }
 
+  // question
   const char* askpinstr = "AT+CPIN?\r";
 
+  // answers
   const char* pinready = "+CPIN: READY";
   const char* pinneeded = "+CPIN: SIM PIN";
   
+  // prepare to ask pin
   const char* pinstrpref = "AT+CPIN=\"";
   const char* pinstrsuf = "\"\r";
   const char* pinstr = pin.c_str();
@@ -527,9 +530,11 @@ void SMS::send(uint16_t n) {
   stream.write(str, strlen(str));
 }
 
-int SMS::internalsendSMSBinary(const uint8_t* txData, size_t txDataSize) {
+int SMS::internalsendSMSBinary(const uint8_t* txData, size_t txDataSize, std::string tlf) {
 
   // mavio::log(LOG_INFO, "mav msg size: %d", txDataSize);
+  const char* tlfstr = tlf.c_str();
+  mavio::log(LOG_INFO, "tlf str: %s", tlfstr);
   
   uint data_size_int = txDataSize;
 
@@ -560,7 +565,6 @@ int SMS::internalsendSMSBinary(const uint8_t* txData, size_t txDataSize) {
 
   pdu_size[2] = '\0';
 
-
   // mavio::log(LOG_INFO, "data size int: %d", data_size_int);
 
   snprintf(data_size, 3, "%d",(unsigned char)data_size_int);
@@ -573,11 +577,10 @@ int SMS::internalsendSMSBinary(const uint8_t* txData, size_t txDataSize) {
 
   char ca[1];
 
-  char fuckthefuck[2];
+  char data_size_str[2];
 
-  snprintf(fuckthefuck, 3, "%x", data_size_int);
-// nos hemos quedado aqui: tras 0002AA, lo siguiente deberia ser size of data, size del actual data to send
-// el int no nos corresponde con el hex en character enviado. ahi estamos
+  snprintf(data_size_str, 3, "%x", data_size_int);
+
 // -----------------------------------
 
   int character;
@@ -605,40 +608,24 @@ int SMS::internalsendSMSBinary(const uint8_t* txData, size_t txDataSize) {
   
   if (txData && txDataSize) {  
     
-    // snprintf(command, sizeof(command), "%s%s%s", "AT+CMGS=", pdu_size, "\r");
-    // send(command);
     send("AT+CMGS=");
     send(pdu_size);
     send("\r");
-
 
     if(waitForATResponse(NULL, 0, NULL, "> ")) {
       // mavio::log(LOG_INFO, "at > ok");
     } else {
       // mavio::log(LOG_INFO, "at > NOT ok");
     }
-   // 63 75 65 25 6
-   // 36 57 56 52 F6
-//
-   // 60 84 40 31 0
-   // 06 48 04 13 F0
 
-    //send("0011000B9143 36575652F6 0004AA");
-    //send("0011000B9143 06480413F0 0004AA");
-
-    send("0011000B914336575652F60004AA");
-    send(fuckthefuck);
+    send("0011000B91");
+    send(tlfstr);    
+    send("0004AA");
+    send(data_size_str);
     stream.write(data, data_size_int*2);
     send("\x1A");
 
-    // send("0011000B914336575652F60002AA0AE8329BFD4697D9BC47");
-    // send("\x1A");
-
-    // for (size_t i = 0; i < txDataSize; ++i) {
-    //   stream.write(txData[i]);
-    // }
-
-    if (!waitForATResponse(NULL, 0, NULL, "OK\r\n")) {
+    if (!waitForATResponseDebug(NULL, 0, NULL, "OK\r\n")) {
       return cancelled() ? GSM_CANCELLED : GSM_PROTOCOL_ERROR;
     }
     return GSM_SUCCESS;

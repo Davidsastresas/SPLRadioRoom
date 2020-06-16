@@ -105,7 +105,7 @@ bool MAVLinkHandlerGround::init() {
   // }
 
   if (sms_channel.init(config.get_gsm_serial(), config.get_gsm_serial_speed(),
-                        devices, config.get_gsm_pin1())) {
+                        devices, config.get_gsm_pin1(), config.get_aircraft1_tlf_number1())) {
     log(LOG_INFO, "SMS channel initialized.");
   } else {
     log(LOG_WARNING, "SMS channel initialization failed.");

@@ -115,7 +115,7 @@ void MAVLinkSMS::close() {
   mavio::log(LOG_DEBUG, "sms connection closed.");
 }
 
-bool MAVLinkSMS::send_message(const mavlink_message_t& mo_msg) {
+bool MAVLinkSMS::send_message(const mavlink_message_t& mo_msg, std::string tlf) {
   uint8_t buf[GSM_MAX_MT_MGS_SIZE];
   size_t buf_size = sizeof(buf);
   uint16_t len = 0;
@@ -124,7 +124,7 @@ bool MAVLinkSMS::send_message(const mavlink_message_t& mo_msg) {
     len = mavlink_msg_to_send_buffer(buf, &mo_msg);
   }
 
-  int ret = sms.sendSMSBinary(buf, len);
+  int ret = sms.sendSMSBinary(buf, len, tlf);
 
   if (ret != GSM_SUCCESS) {
     char prefix[32];

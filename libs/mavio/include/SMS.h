@@ -61,7 +61,7 @@ class SMS {
   int getTransceiverModel(char* buffer, size_t bufferSize);
   int getTransceiverSerialNumber(char* buffer, size_t bufferSize);
 
-  int sendSMSBinary(const uint8_t* txData, size_t txDataSize);
+  int sendSMSBinary(const uint8_t* txData, size_t txDataSize, std::string tlf);
   
   int receiveSMSBinary(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_empty);
 
@@ -108,7 +108,7 @@ class SMS {
 
   int internalGetSignalQuality(int& quality);
 
-  int internalsendSMSBinary(const uint8_t* txData, size_t txDataSize);
+  int internalsendSMSBinary(const uint8_t* txData, size_t txDataSize, std::string tlf);
   
   int internalreceiveSMSBinary(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_empty);
 

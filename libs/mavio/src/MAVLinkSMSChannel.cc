@@ -53,10 +53,12 @@ MAVLinkSMSChannel::MAVLinkSMSChannel()
 MAVLinkSMSChannel::~MAVLinkSMSChannel() {}
 
 bool MAVLinkSMSChannel::init(std::string path, int speed,
-                              const vector<string>& devices, std::string pin) {
+                              const vector<string>& devices, std::string pin, std::string numb1) {
   bool ret = sms.init(path, speed, devices, pin);
 
   if (ret) {
+    tlf1 = prepare_number_gsm(numb1);
+    
     if (!running) {
       running = true;
 
@@ -65,6 +67,24 @@ bool MAVLinkSMSChannel::init(std::string path, int speed,
     }
   }
     return ret;
+}
+
+// we need this function to present the tlf number to gsm backend the way it is used by PDU mode
+// it supports standard 11 digit international number
+std::string MAVLinkSMSChannel::prepare_number_gsm(std::string number) {
+
+  std::string str = "000000000000";
+
+  for ( uint i = 0; i < number.size(); i++ ) {
+    if ( !( i % 2 ) ) { // even
+      str[i + 1] = number[i];
+    } else { // odd
+      str[i - 1] = number[i];
+    }
+  }
+  str[10] = 'F';
+
+  return str;
 }
 
 void MAVLinkSMSChannel::close() {
@@ -126,7 +146,7 @@ void MAVLinkSMSChannel::send_receive_task() {
       if ( !send_queue.pop(mo_msg) ) {
         mavio::log(LOG_INFO, "SMS: send_queue error!");
       } else {
-        if ( sms.send_message(mo_msg) ) {
+        if ( sms.send_message(mo_msg, tlf1) ) {
           send_time = timelib::time_since_epoch();
         } else {
           mavio::log(LOG_INFO, "SMS: error sending sms");
