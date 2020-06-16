@@ -224,6 +224,13 @@ void MAVLinkHandlerGround::update_active_channel() {
 void MAVLinkHandlerGround::handle_mo_message(const mavlink_message_t& msg) {
   
   tcp_channel.send_message(msg);
+
+  if (!rfd_active) {
+    if (msg.msgid == MAVLINK_MSG_ID_HIGH_LATENCY) {
+      last_base_mode = mavlink_msg_high_latency_get_base_mode(&msg);
+      last_custom_mode = mavlink_msg_high_latency_get_custom_mode(&msg);
+    }
+  }
 }
 
 /**
@@ -281,7 +288,7 @@ bool MAVLinkHandlerGround::send_heartbeat() {
     mavlink_message_t heartbeat_msg;
     mavlink_msg_heartbeat_pack(1, 1,
                                &heartbeat_msg, MAV_TYPE_FIXED_WING,
-                               MAV_AUTOPILOT_ARDUPILOTMEGA, 0, 0, 0);
+                               MAV_AUTOPILOT_ARDUPILOTMEGA, last_base_mode, last_custom_mode, 0);
     
     tcp_channel.send_message(heartbeat_msg);
   

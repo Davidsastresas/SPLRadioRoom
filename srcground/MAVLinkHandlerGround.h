@@ -151,6 +151,10 @@ class MAVLinkHandlerGround {
   std::chrono::milliseconds retry_timeout;
   int retry_count;
   bool _sleep;
+
+  // save state of vehicle for heartbeat
+  uint8_t last_base_mode;
+  uint32_t last_custom_mode;
 };
 
 }  // namespace radioroom
