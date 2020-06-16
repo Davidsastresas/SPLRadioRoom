@@ -102,6 +102,8 @@ bool MAVLinkHandlerAir::init() {
   string rfd_serial_string;
   if ( autopilot.get_path() == config.get_rfd_serial() ) {
     rfd_serial_string = config.get_autopilot_serial();
+  } else {
+    rfd_serial_string = config.get_rfd_serial();
   }
   if (!rfd.init(rfd_serial_string, config.get_rfd_serial_speed(), devices, config.get_rfd_id())) {
     log(LOG_ERR, "UV Radio Room initialization failed: cannot connect to rfd900x.");
