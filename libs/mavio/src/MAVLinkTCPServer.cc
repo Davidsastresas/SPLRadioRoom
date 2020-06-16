@@ -44,7 +44,7 @@ MAVLinkTCPServer::MAVLinkTCPServer() : socket_fd(0) {}
 
 MAVLinkTCPServer::~MAVLinkTCPServer() { close(); }
 
-bool MAVLinkTCPServer::init(const std::string address, uint16_t port) {
+bool MAVLinkTCPServer::init(uint16_t port) {
   memset(&serv_addr, 0, sizeof(serv_addr));
   
   serv_addr.sin_family = AF_INET;

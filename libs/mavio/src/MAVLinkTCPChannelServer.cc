@@ -46,8 +46,8 @@ MAVLinkTCPChannelServer::MAVLinkTCPChannelServer()
 
 MAVLinkTCPChannelServer::~MAVLinkTCPChannelServer() { close(); }
 
-bool MAVLinkTCPChannelServer::init(const std::string address, uint16_t port) {
-  bool ret = socket.init(address, port);
+bool MAVLinkTCPChannelServer::init(uint16_t port) {
+  bool ret = socket.init(port);
 
   if (!running) {
     running = true;

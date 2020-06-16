@@ -56,7 +56,7 @@ class MAVLinkTCPChannelServer : public MAVLinkChannel {
    *
    * Returns true if the connection was successful.
    */
-  bool init(const std::string address, uint16_t port);
+  bool init(uint16_t port);
 
   /**
    * Closes the connection if it was open.
