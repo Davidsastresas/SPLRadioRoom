@@ -195,13 +195,13 @@ int SMS::internalBegin(std::string pin) {
   // Ask if pin is already inserted
   send(askpinstr);
   if (!waitForATResponse(buffer, sizeof(buffer), "AT+CPIN?\r\r\n", "OK")) {
-    return false;
+    return GSM_PROTOCOL_ERROR;
   }
 
   // Check if pin was already inserted or not. If not, insert it
   if ( !strcmp(buffer, pinready) ) {
 
-    mavio::log(LOG_NOTICE, "GSM: pin already inserted");
+    mavio::log(LOG_NOTICE, "SMS: pin already inserted");
 
   } else if ( !strcmp(buffer, pinneeded ) ) {
 
@@ -216,14 +216,15 @@ int SMS::internalBegin(std::string pin) {
     // for some reason this is needed for proper init
     send(askpinstr);
     if (!waitForATResponse(buffer, sizeof(buffer), "AT+CPIN?\r\r\n", "OK")) {
-      return false;
+      return GSM_PROTOCOL_ERROR;
     }
 
-    mavio::log(LOG_NOTICE, "GSM: pin setup succesfully");
+    mavio::log(LOG_NOTICE, "SMS: pin setup succesful");
 
   } else {
 
-    mavio::log(LOG_NOTICE, "GSM: problem initializing gsm pin");
+    mavio::log(LOG_WARNING, "SMS: problem introducing gsm pin!");
+    return GSM_PROTOCOL_ERROR;
   }
 
   // maybe we need here bin instead
@@ -534,7 +535,7 @@ int SMS::internalsendSMSBinary(const uint8_t* txData, size_t txDataSize, std::st
 
   // mavio::log(LOG_INFO, "mav msg size: %d", txDataSize);
   const char* tlfstr = tlf.c_str();
-  mavio::log(LOG_INFO, "tlf str: %s", tlfstr);
+  // mavio::log(LOG_INFO, "tlf str: %s", tlfstr);
   
   uint data_size_int = txDataSize;
 
@@ -625,7 +626,7 @@ int SMS::internalsendSMSBinary(const uint8_t* txData, size_t txDataSize, std::st
     stream.write(data, data_size_int*2);
     send("\x1A");
 
-    if (!waitForATResponseDebug(NULL, 0, NULL, "OK\r\n")) {
+    if (!waitForATResponse(NULL, 0, NULL, "OK\r\n")) {
       return cancelled() ? GSM_CANCELLED : GSM_PROTOCOL_ERROR;
     }
     return GSM_SUCCESS;
@@ -741,7 +742,7 @@ bool SMS::waitforSMSlist(uint8_t* response, size_t& responseSize, bool& inbox_em
                         break;
                       } else {
                         index = atoi(indexresponse);
-                        mavio::log(LOG_INFO, "SMS index: %d", index);
+                        // mavio::log(LOG_INFO, "SMS index: %d", index);
                         indexresponse_pos = 0;
                         _step++;
                         [[fallthrough]];
@@ -947,7 +948,7 @@ bool SMS::waitforSMSlist(uint8_t* response, size_t& responseSize, bool& inbox_em
             // mavio::log(LOG_INFO, "rsponsesize: %d", responseSize);
 
             if ( index > 5 ) {
-              mavio::log(LOG_WARNING, "More than 5 SMS in inbox!");
+              mavio::log(LOG_WARNING, "SMS: More than 5 SMS in inbox! Deleting ...");
               send("AT+CMGD=0,4\r");
             } else {
               send("AT+CMGD=");
@@ -974,7 +975,7 @@ bool SMS::waitforSMSlist(uint8_t* response, size_t& responseSize, bool& inbox_em
       }
     }  
   }
-  mavio::log(LOG_INFO, "read sms list timeout");
+  mavio::log(LOG_WARNING, "SMS: Read sms list timeout");
   return GSM_PROTOCOL_ERROR;
 }
 
@@ -983,11 +984,11 @@ int SMS::internaldeleteSMSlist(void) {
   send("AT+CMGD=0,4\r");
   
   if (!waitForATResponse()) {
-      mavio::log(LOG_INFO, "SMS delete message went wrong");
+      mavio::log(LOG_WARNING, "SMS: Delete message list failed!");
       return cancelled() ? GSM_CANCELLED : GSM_PROTOCOL_ERROR;
     }
-  
-  mavio::log(LOG_INFO, "SMS delete message went right");
+
+  // mavio::log(LOG_DEBUG, "SMS delete message went right");
   return GSM_SUCCESS;
 
 }
