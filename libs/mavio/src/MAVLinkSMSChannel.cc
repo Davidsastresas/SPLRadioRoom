@@ -54,7 +54,7 @@ MAVLinkSMSChannel::~MAVLinkSMSChannel() {}
 
 bool MAVLinkSMSChannel::init(std::string path, int speed,
                               const vector<string>& devices) {
-  bool ret = sms.init("/dev/ttyACM1", 19200, devices);
+  bool ret = sms.init(path, speed, devices);
 
   if (ret) {
     if (!running) {
