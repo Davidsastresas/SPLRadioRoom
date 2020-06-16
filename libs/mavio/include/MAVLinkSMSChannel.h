@@ -53,7 +53,7 @@ class MAVLinkSMSChannel : public MAVLinkChannel {
    * Returns true if connection was successful.
    */
   bool init(std::string path, int speed,
-            const std::vector<std::string>& devices);
+            const std::vector<std::string>& devices, std::string pin);
 
   /*
    * Closes the serial device used to connect to gsm.

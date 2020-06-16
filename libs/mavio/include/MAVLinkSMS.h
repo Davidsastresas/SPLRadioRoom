@@ -49,7 +49,7 @@ class MAVLinkSMS {
    * Returns true if connection was successful.
    */
   bool init(std::string path, int speed,
-            const std::vector<std::string>& devices);
+            const std::vector<std::string>& devices, std::string pin);
 
   /*
    * Closes the serial device used to connect to gsm.
@@ -65,7 +65,7 @@ class MAVLinkSMS {
   /**
    * Returns true if gsm transceiver detected at the specified serial device.
    */
-  bool detect_transceiver(std::string device);
+  bool detect_transceiver(std::string device, std::string pin);
 
   /**
    * Queries gsm signal quality.

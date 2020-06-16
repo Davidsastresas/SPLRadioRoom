@@ -35,8 +35,8 @@ MAVLinkSMS::MAVLinkSMS() : stream(), sms(stream) {}
 
 MAVLinkSMS::~MAVLinkSMS() {}
 
-bool MAVLinkSMS::detect_transceiver(string device) {
-  int ret = sms.begin();
+bool MAVLinkSMS::detect_transceiver(string device, string pin) {
+  int ret = sms.begin(pin);
   sms.deleteSMSlist();
 
   if (ret == GSM_SUCCESS || ret == GSM_ALREADY_AWAKE) {
@@ -68,12 +68,12 @@ void MAVLinkSMS::list_sms() {
   sms.readSMSlist();
 }
 
-bool MAVLinkSMS::init(string path, int speed, const vector<string>& devices) {
+bool MAVLinkSMS::init(string path, int speed, const vector<string>& devices, string pin) {
   mavio::log(LOG_NOTICE, "Connecting to sms transceiver (%s %d)...", path.data(),
              speed);
 
   if (stream.open(path, speed) == 0) {
-    if (detect_transceiver(path)) {
+    if (detect_transceiver(path, pin)) {
       return true;
     }
 
@@ -91,7 +91,7 @@ bool MAVLinkSMS::init(string path, int speed, const vector<string>& devices) {
       if (devices[i] == path) continue;
 
       if (stream.open(devices[i].data(), speed) == 0) {
-        if (detect_transceiver(devices[i])) {
+        if (detect_transceiver(devices[i], pin)) {
           return true;
         } else {
           stream.close();

@@ -55,13 +55,13 @@ SMS::SMS(Serial& serial)
       reentrant(false) {}
 
 // Power on the RockBLOCK or return from sleep
-int SMS::begin() {
+int SMS::begin(std::string pin) {
   if (this->reentrant) {
     return GSM_REENTRANT;
   }
 
   this->reentrant = true;
-  int ret = internalBegin();
+  int ret = internalBegin(pin);
   this->reentrant = false;
 
   return ret;
@@ -153,7 +153,7 @@ int SMS::getSignalQuality(int& quality) {
 Private interface
 */
 
-int SMS::internalBegin() {
+int SMS::internalBegin(std::string pin) {
 
   bool modemAlive = false;
 
@@ -178,10 +178,14 @@ int SMS::internalBegin() {
     return GSM_NO_MODEM_DETECTED;
   }
 
-  const char* pinstr = "AT+CPIN=\"3621\"\r";
   const char* askpinstr = "AT+CPIN?\r";
+
   const char* pinready = "+CPIN: READY";
   const char* pinneeded = "+CPIN: SIM PIN";
+  
+  const char* pinstrpref = "AT+CPIN=\"";
+  const char* pinstrsuf = "\"\r";
+  const char* pinstr = pin.c_str();
   
   char buffer[256];
 
@@ -198,9 +202,18 @@ int SMS::internalBegin() {
 
   } else if ( !strcmp(buffer, pinneeded ) ) {
 
+    // send(pinstr);
+    send(pinstrpref);
     send(pinstr);
+    send(pinstrsuf);
     if (!waitForATResponse()) {
       return cancelled() ? GSM_CANCELLED : GSM_PROTOCOL_ERROR;
+    }
+
+    // for some reason this is needed for proper init
+    send(askpinstr);
+    if (!waitForATResponse(buffer, sizeof(buffer), "AT+CPIN?\r\r\n", "OK")) {
+      return false;
     }
 
     mavio::log(LOG_NOTICE, "GSM: pin setup succesfully");
@@ -366,6 +379,7 @@ bool SMS::waitForATResponseDebug(char* response, int responseSize,
   Stopwatch timer;
   while (timer.elapsed_time() < atTimeout) {
     if (cancelled()) {
+      mavio::log(LOG_INFO, "cancelled");
       return false;
     }
 

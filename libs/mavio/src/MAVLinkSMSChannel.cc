@@ -53,8 +53,8 @@ MAVLinkSMSChannel::MAVLinkSMSChannel()
 MAVLinkSMSChannel::~MAVLinkSMSChannel() {}
 
 bool MAVLinkSMSChannel::init(std::string path, int speed,
-                              const vector<string>& devices) {
-  bool ret = sms.init(path, speed, devices);
+                              const vector<string>& devices, std::string pin) {
+  bool ret = sms.init(path, speed, devices, pin);
 
   if (ret) {
     if (!running) {

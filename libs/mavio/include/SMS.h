@@ -56,7 +56,7 @@ class SMS {
  public:
   SMS(Serial& serial);
 
-  int begin();
+  int begin(std::string pin);
 
   int getTransceiverModel(char* buffer, size_t bufferSize);
   int getTransceiverSerialNumber(char* buffer, size_t bufferSize);
@@ -101,7 +101,7 @@ class SMS {
 
   bool waitforSMSlist(uint8_t* response, size_t& responseSize, bool& inbox_empty);
 
-  int internalBegin();
+  int internalBegin(std::string pin);
 
   int internalGetTransceiverModel(char* buffer, size_t bufferSize);
   int internalGetTransceiverSerialNumber(char* buffer, size_t bufferSize);
