@@ -75,6 +75,15 @@ class Config {
   int get_gsm_serial_speed() const;
   void set_gsm_serial_speed(int speed);
 
+  std::string get_gsm_pin1() const;
+  void set_gsm_pin1(const std::string& pin);
+
+  std::string get_gsm_pin2() const;
+  void set_gsm_pin2(const std::string& pin);
+
+  std::string get_gsm_pin3() const;
+  void set_gsm_pin3(const std::string& pin);
+
   /* TCP/IP comm link configuration properties */
 
   int get_tcp_port() const;
@@ -221,6 +230,9 @@ class Config {
   // gsm
   std::string gsm_serial = "0";
   int gsm_serial_speed = 0;
+  std::string gsm_pin1 = "0";
+  std::string gsm_pin2 = "0";
+  std::string gsm_pin3 = "0";
 
   // tcp
   int tcp_port = 0;

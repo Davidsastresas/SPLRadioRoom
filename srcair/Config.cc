@@ -49,6 +49,9 @@ constexpr char isbd_serial_speed_property[] = "serial_speed";
 constexpr char gsm_config_section[] = "gsm";
 constexpr char gsm_serial_property[] = "serial";
 constexpr char gsm_serial_speed_property[] = "serial_speed";
+constexpr char gsm_pin1_property[] = "pin1";
+constexpr char gsm_pin2_property[] = "pin2";
+constexpr char gsm_pin3_property[] = "pin3";
 
 constexpr char tcp_config_section[] = "tcp";
 constexpr char tcp_port_property[] = "port";
@@ -112,6 +115,12 @@ int Config::init(const std::string& config_file) {
 
   set_gsm_serial_speed(conf.GetInteger(
       gsm_config_section, gsm_serial_speed_property, default_int));
+
+  set_gsm_pin1(conf.Get(gsm_config_section, gsm_pin1_property, default_string));
+
+  set_gsm_pin2(conf.Get(gsm_config_section, gsm_pin2_property, default_string));
+
+  set_gsm_pin3(conf.Get(gsm_config_section, gsm_pin3_property, default_string));
 
   /* [tcp] config section */
 
@@ -294,6 +303,15 @@ void Config::set_gsm_serial_speed(int speed) { gsm_serial_speed = speed; }
 
 std::string Config::get_gsm_serial() const { return gsm_serial; }
 void Config::set_gsm_serial(const std::string& path) { gsm_serial = path; }
+
+std::string Config::get_gsm_pin1() const { return gsm_pin1; }
+void Config::set_gsm_pin1(const std::string& path) { gsm_pin1 = path; }
+
+std::string Config::get_gsm_pin2() const { return gsm_pin2; }
+void Config::set_gsm_pin2(const std::string& path) { gsm_pin2 = path; }
+
+std::string Config::get_gsm_pin3() const { return gsm_pin3; }
+void Config::set_gsm_pin3(const std::string& path) { gsm_pin3 = path; }
 
 /* TCP */
 
