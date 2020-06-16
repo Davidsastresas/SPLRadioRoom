@@ -26,7 +26,7 @@
 
 namespace radioroom {
 
-constexpr char default_config_file[] = "/etc/radioroomground.conf";
+constexpr char default_config_file[] = "/boot/radioroomground.conf";
 
 /**
  * RadioRoom configuration properties.
