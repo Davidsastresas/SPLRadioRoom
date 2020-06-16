@@ -75,93 +75,56 @@ MAVLinkHandlerAir::MAVLinkHandlerAir()
 
 /**
  * Initializes autopilot and comm channels.
- *
- * Automatically detects the correct serial devices if autopilot and ISBD
- * transceiver do not respond on the devices specified by the configuration
- * properties.
  */
 bool MAVLinkHandlerAir::init() {
-  // if (!config.get_tcp_enabled() && !config.get_isbd_enabled()) {
-  //   log(LOG_ERR, "Invalid configuration: no enabled comm channels.");
-  //   return false;
-  // }
 
   vector<string> devices;
+  Serial::get_serial_devices(devices);
 
-  // maybe out??
-  if (config.get_auto_detect_serials()) {
-    Serial::get_serial_devices(devices);
+  // ----------------- RFD ------------------
+  if (!rfd.init(config.get_rfd_serial(), config.get_rfd_serial_speed(), devices)) {
+    log(LOG_ERR, "UV Radio Room initialization failed: cannot connect to rfd900x.");
+    return false;
   }
-
-  if (config.get_rfd_enabled()) {
-    if (!rfd.init(config.get_rfd_serial(),
-                        config.get_rfd_serial_speed(), devices)) {
-      log(LOG_ERR,
-          "UV Radio Room initialization failed: cannot connect to rfd900x.");
-      return false;
-    }
-
-    // Exclude the serial device used by autopilot from the device list used
-    // for ISBD transceiver serial device auto-detection.
-    for (vector<string>::iterator iter = devices.begin(); iter != devices.end();
-         ++iter) {
-      if (*iter == rfd.get_path()) {
-        devices.erase(iter);
-        break;
-      }
+  // Exclude the serial device used by rfd 
+  for (vector<string>::iterator iter = devices.begin(); iter != devices.end();
+       ++iter) {
+    if (*iter == rfd.get_path()) {
+      devices.erase(iter);
+      break;
     }
   }
 
-  sms_channel.init("whatever", config.get_isbd_serial_speed(), devices);
-
-  if (config.get_autopilot_enabled()) {
-    if (!autopilot.init(config.get_autopilot_serial(),
-                        config.get_autopilot_serial_speed(), devices)) {
-      log(LOG_ERR,
-          "UV Radio Room initialization failed: cannot connect to autopilot.");
-      return false;
-    }
-
-    // Exclude the serial device used by autopilot from the device list used
-    // for ISBD transceiver serial device auto-detection.
-    for (vector<string>::iterator iter = devices.begin(); iter != devices.end();
-         ++iter) {
-      if (*iter == autopilot.get_path()) {
-        devices.erase(iter);
-        break;
-      }
+  // ----------------- Autopilot ------------------
+  if (!autopilot.init(config.get_autopilot_serial(), config.get_autopilot_serial_speed(), devices)) {
+    log(LOG_ERR,"UV Radio Room initialization failed: cannot connect to autopilot.");
+    return false;
+  }
+  // Exclude the serial device used by autopilot 
+  for (vector<string>::iterator iter = devices.begin(); iter != devices.end();
+       ++iter) {
+    if (*iter == autopilot.get_path()) {
+      devices.erase(iter);
+      break;
     }
   }
 
-  // if (config.get_tcp_enabled()) {
-  //   if (tcp_channel.init(config.get_tcp_host(), config.get_tcp_port())) {
-  //     log(LOG_INFO, "TCP channel initialized.");
-  //   } else {
-  //     log(LOG_WARNING, "TCP channel initialization failed.");
-  //   }
-  // }
+  // ----------------- ISBD ------------------
+  if (isbd_channel.init(config.get_isbd_serial(), config.get_isbd_serial_speed(), devices)) {
+    log(LOG_INFO, "ISBD channel initialized.");
+  } else {
+    log(LOG_WARNING, "ISBD channel initialization failed.");
+  }
 
-  if (config.get_isbd_enabled()) {
-    string isbd_serial = config.get_isbd_serial();
-
-    if (isbd_serial == rfd.get_path() && devices.size() > 0) {
-      log(LOG_WARNING,
-          "rfd detected at serial device '%s' that was assigned "
-          "to ISBD transceiver by the configuration settings.",
-          rfd.get_path().data());
-
-      isbd_serial = devices[0];
-    }
-
-    if (isbd_channel.init(isbd_serial, config.get_isbd_serial_speed(),
-                          devices)) {
-      log(LOG_INFO, "ISBD channel initialized.");
-    } else {
-      log(LOG_WARNING, "ISBD channel initialization failed.");
-    }
+  // ------------------- GSM -------------------
+  if (sms_channel.init(config.get_gsm_serial(), config.get_gsm_serial_speed(), devices)) {
+    log(LOG_INFO, "GSM channel initialized.");
+  } else {
+    log(LOG_WARNING, "GSM channel initialization failed.");
   }
 
   log(LOG_INFO, "UV Radio Room initialization succeeded.");
+  
   return true;
 }
 
