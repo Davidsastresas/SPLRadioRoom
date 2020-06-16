@@ -51,9 +51,6 @@ class Config {
   int get_autopilot_serial_speed() const;
   void set_autopilot_serial_speed(int speed);
 
-  bool get_autopilot_enabled() const;
-  void set_autopilot_enabled(bool enabled);
-
   /* rfd configuration properties */
 
   std::string get_rfd_serial() const;
@@ -62,24 +59,7 @@ class Config {
   int get_rfd_serial_speed() const;
   void set_rfd_serial_speed(int speed);
 
-  bool get_rfd_enabled() const;
-  void set_rfd_enabled(bool enabled);
-
-  /* RadioRoom configuration properties */
-
-  bool get_auto_detect_serials() const;
-  void set_auto_detect_serials(bool a);
-  
-  bool get_air_unit() const;
-  void set_air_unit(bool a);
-
-  bool get_debug_mode() const;
-  void set_debug_mode(bool debug);
-
   /* ISBD comm link configuration properties */
-
-  bool get_isbd_enabled() const;
-  void set_isbd_enabled(bool enabled);
 
   std::string get_isbd_serial() const;
   void set_isbd_serial(const std::string& path);
@@ -87,22 +67,23 @@ class Config {
   int get_isbd_serial_speed() const;
   void set_isbd_serial_speed(int speed);
 
-  double get_isbd_report_period() const;
-  void set_isbd_report_period(double period);
+  /* gsm comm link configuration properties */
+
+  std::string get_gsm_serial() const;
+  void set_gsm_serial(const std::string& path);
+
+  int get_gsm_serial_speed() const;
+  void set_gsm_serial_speed(int speed);
 
   /* TCP/IP comm link configuration properties */
-
-  bool get_tcp_enabled() const;
-  void set_tcp_enabled(bool enabled);
-
-  std::string get_tcp_host() const;
-  void set_tcp_host(const std::string& host);
 
   int get_tcp_port() const;
   void set_tcp_port(int port);
 
-  double get_tcp_report_period() const;
-  void set_tcp_report_period(double period);
+  /* misc configuration properties */
+
+  bool get_debug_mode() const;
+  void set_debug_mode(bool deb);
 
   /* groundstation configuration properties */
 
@@ -225,69 +206,75 @@ class Config {
 
  private:
 
-  bool autopilot_enabled;
-  std::string autopilot_serial;
-  int autopilot_serial_speed;
+  // autopilot
+  std::string autopilot_serial = "0";
+  int autopilot_serial_speed = 0;
   
-  bool rfd_enabled;
-  std::string rfd_serial;
-  int rfd_serial_speed;
+  // rfd
+  std::string rfd_serial = "0";
+  int rfd_serial_speed = 0;
 
-  bool auto_detect_serials;
-  bool air_unit;
-  bool debug_mode;
+  // isbd
+  std::string isbd_serial = "0";
+  int isbd_serial_speed = 0;
 
-  bool isbd_enabled;
-  std::string isbd_serial;
-  int isbd_serial_speed;
-  double isbd_report_period;
+  // gsm
+  std::string gsm_serial = "0";
+  int gsm_serial_speed = 0;
 
-  bool tcp_enabled;
-  std::string tcp_host;
-  int tcp_port;
-  double tcp_report_period;
+  // tcp
+  int tcp_port = 0;
 
-  bool groundstation_enabled;
-  std::string groundstation_tlf_number1;
-  std::string groundstation_tlf_number2;
-  std::string groundstation_tlf_number3;
-  std::string groundstation_rock_address;
-  int groundstation_mav_id;
+  // misc
+  bool debug = false;
+
+  // groundstation
+  bool groundstation_enabled = false;
+  std::string groundstation_tlf_number1 = "0";
+  std::string groundstation_tlf_number2 = "0";
+  std::string groundstation_tlf_number3 = "0";
+  std::string groundstation_rock_address = "0";
+  int groundstation_mav_id = 0;
   
-  bool aircraft1_enabled;
-  std::string aircraft1_tlf_number1;
-  std::string aircraft1_tlf_number2;
-  std::string aircraft1_tlf_number3;
-  std::string aircraft1_rock_address;
-  int aircraft1_mav_id;
+  // aircraft 1
+  bool aircraft1_enabled = false;
+  std::string aircraft1_tlf_number1 = "0";
+  std::string aircraft1_tlf_number2 = "0";
+  std::string aircraft1_tlf_number3 = "0";
+  std::string aircraft1_rock_address = "0";
+  int aircraft1_mav_id = 0;
 
-  bool aircraft2_enabled;
-  std::string aircraft2_tlf_number1;
-  std::string aircraft2_tlf_number2;
-  std::string aircraft2_tlf_number3;
-  std::string aircraft2_rock_address;
-  int aircraft2_mav_id;
+  // aircraft 2
+  bool aircraft2_enabled = false;
+  std::string aircraft2_tlf_number1 = "0";
+  std::string aircraft2_tlf_number2 = "0";
+  std::string aircraft2_tlf_number3 = "0";
+  std::string aircraft2_rock_address = "0";
+  int aircraft2_mav_id = 0;
 
-  bool aircraft3_enabled;
-  std::string aircraft3_tlf_number1;
-  std::string aircraft3_tlf_number2;
-  std::string aircraft3_tlf_number3;
-  std::string aircraft3_rock_address;
-  int aircraft3_mav_id;
+  // aircraft 3
+  bool aircraft3_enabled = false;
+  std::string aircraft3_tlf_number1 = "0";
+  std::string aircraft3_tlf_number2 = "0";
+  std::string aircraft3_tlf_number3 = "0";
+  std::string aircraft3_rock_address = "0";
+  int aircraft3_mav_id = 0;
 
-  bool aircraft4_enabled;
-  std::string aircraft4_tlf_number1;
-  std::string aircraft4_tlf_number2;
-  std::string aircraft4_tlf_number3;
-  std::string aircraft4_rock_address;
-  int aircraft4_mav_id;
+  // aircraft 4
+  bool aircraft4_enabled = false;
+  std::string aircraft4_tlf_number1 = "0";
+  std::string aircraft4_tlf_number2 = "0";
+  std::string aircraft4_tlf_number3 = "0";
+  std::string aircraft4_rock_address = "0";
+  int aircraft4_mav_id = 0;
 
-  bool aircraft5_enabled;
-  std::string aircraft5_tlf_number1;
-  std::string aircraft5_tlf_number2;
-  std::string aircraft5_tlf_number3;
-  std::string aircraft5_rock_address;
-  int aircraft5_mav_id;
+  // aircraft 5
+  bool aircraft5_enabled = false;
+  std::string aircraft5_tlf_number1 = "0";
+  std::string aircraft5_tlf_number2 = "0";
+  std::string aircraft5_tlf_number3 = "0";
+  std::string aircraft5_rock_address = "0";
+  int aircraft5_mav_id = 0;
 };
 
 extern Config config;
