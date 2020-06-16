@@ -81,29 +81,38 @@ bool MAVLinkHandlerAir::init() {
   vector<string> devices;
   Serial::get_serial_devices(devices);
 
-  // ----------------- RFD ------------------
-  if (!rfd.init(config.get_rfd_serial(), config.get_rfd_serial_speed(), devices)) {
-    log(LOG_ERR, "UV Radio Room initialization failed: cannot connect to rfd900x.");
+    // ----------------- Autopilot ------------------
+  if (!autopilot.init(config.get_autopilot_serial(), config.get_autopilot_serial_speed(), devices, config.get_autopilot_id())) {
+    log(LOG_ERR,"UV Radio Room initialization failed: cannot connect to autopilot.");
     return false;
   }
-  // Exclude the serial device used by rfd 
+
+  log(LOG_INFO,"Autopilot initialization succesful.");
+  // Exclude the serial device used by autopilot 
   for (vector<string>::iterator iter = devices.begin(); iter != devices.end();
        ++iter) {
-    if (*iter == rfd.get_path()) {
+    if (*iter == autopilot.get_path()) {
       devices.erase(iter);
       break;
     }
   }
 
-  // ----------------- Autopilot ------------------
-  if (!autopilot.init(config.get_autopilot_serial(), config.get_autopilot_serial_speed(), devices)) {
-    log(LOG_ERR,"UV Radio Room initialization failed: cannot connect to autopilot.");
+  // ----------------- RFD ------------------
+  // if autopilot serial was switched, switch back now
+  string rfd_serial_string;
+  if ( autopilot.get_path() == config.get_rfd_serial() ) {
+    rfd_serial_string = config.get_autopilot_serial();
+  }
+  if (!rfd.init(rfd_serial_string, config.get_rfd_serial_speed(), devices, config.get_rfd_id())) {
+    log(LOG_ERR, "UV Radio Room initialization failed: cannot connect to rfd900x.");
     return false;
   }
-  // Exclude the serial device used by autopilot 
+
+  log(LOG_INFO,"Radio initialization succesful.");
+  // Exclude the serial device used by rfd 
   for (vector<string>::iterator iter = devices.begin(); iter != devices.end();
        ++iter) {
-    if (*iter == autopilot.get_path()) {
+    if (*iter == rfd.get_path()) {
       devices.erase(iter);
       break;
     }

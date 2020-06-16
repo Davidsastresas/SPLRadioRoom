@@ -34,7 +34,7 @@ using timelib::Stopwatch;
 constexpr int send_retries = 5;
 constexpr int receive_retries = 10;
 
-const std::chrono::milliseconds max_heartbeat_interval(2000);
+const std::chrono::milliseconds max_radio_heartbeat_interval(2000);
 const std::chrono::milliseconds autopilot_send_interval(1);
 const std::chrono::milliseconds receive_retry_delay(10);
 
@@ -48,7 +48,7 @@ MAVLinkRFD900x::MAVLinkRFD900x()
       serial(),
       send_queue(max_autopilot_queue_size),
       receive_queue(max_autopilot_queue_size),
-      system_id(0),
+      radio_id(0),
       send_time(0),
       receive_time(0) {
 
@@ -56,8 +56,8 @@ MAVLinkRFD900x::MAVLinkRFD900x()
 }
 
 bool MAVLinkRFD900x::init(const string& path, int speed,
-                            const vector<string>& devices) {
-  bool ret = connect(path, speed, devices);
+                            const vector<string>& devices, int id) {
+  bool ret = connect(path, speed, devices, id);
 
   if (!running) {
     running = true;
@@ -103,18 +103,113 @@ std::chrono::milliseconds MAVLinkRFD900x::last_receive_time() {
 }
 
 bool MAVLinkRFD900x::connect(const string& path, int speed,
-                               const vector<string>& devices) {
-  mavio::log(LOG_NOTICE, "Connecting to RFD900x (%s %d)...", path.data(),
-             speed);
+                               const vector<string>& devices, int id) {
+  mavio::log(LOG_NOTICE, "Connecting to RFD900x (%s %d)...", path.data(), speed);
+
+  radio_id = 0;
 
   if (serial.init(path, speed)) {
-    mavio::log(LOG_NOTICE, "RFD900x serial port opened succesfully");
-    return true;
-  } else {
-    mavio::log(LOG_WARNING, "Failed to open serial rfd900x device '%s'.", path.data());
+    radio_id = detect_radio(path);
+
+    if (radio_id) {
+      if (radio_id == id) {
+        return true;
+      }
+    }
+
     serial.close();
+
+  } else {
+    mavio::log(LOG_WARNING, "Failed to open serial device '%s'.", path.data());
+  }
+
+  if (devices.size() > 0) {
+    mavio::log(LOG_NOTICE, "Attempting to detect radio at the serial devices...");
+
+    for (const std::string device : devices) {
+      if (device == path)
+        continue;
+
+      if (serial.init(device, speed)) {
+        radio_id = detect_radio(device);
+
+        if (radio_id) {
+          if (radio_id == id) {
+            return true;
+          }
+        }
+
+        mavio::log(LOG_NOTICE, "radio not detected at serial device '%s'.", device.data());
+
+        serial.close();
+      } else {
+        mavio::log(LOG_NOTICE, "Failed to open serial device '%s'.", device.data());
+      }
+    }
+
+    mavio::log(LOG_ERR, "radio was not detected on any of the serial devices.");
+  }
+
+  return false;
+}
+
+uint8_t MAVLinkRFD900x::detect_radio(const string device) {
+  mavlink_autopilot_version_t autopilot_version;
+  uint8_t autopilot, mav_type, sys_id;
+
+  mavio::log(LOG_NOTICE, "Detecting rfd at serial device '%s'...", device.data());
+
+  if (!request_radio_version(autopilot, mav_type, sys_id, autopilot_version)) {
+    mavio::log(LOG_DEBUG, "rfd not detected at serial device '%s'.", device.data());
     return false;
   }
+
+  mavio::log(LOG_NOTICE, "rfd detected at serial device '%s'.", device.data());
+  
+  return sys_id;
+}
+
+bool MAVLinkRFD900x::request_radio_version(
+                          uint8_t& autopilot, uint8_t& mav_type, uint8_t& sys_id,
+                          mavlink_autopilot_version_t& autopilot_version) {
+
+  mavlink_message_t msg;
+  autopilot = mav_type = sys_id = 0;
+  memset(&autopilot_version, 0, sizeof(autopilot_version));
+
+  Stopwatch timer;
+
+  // repeat 2 times just in case
+  for (int i = 0; i < 2; i ++) {
+    // send dummy heartbeat for the radio to send radio_status
+    mavlink_message_t heartbeat_msg;
+
+    mavlink_msg_heartbeat_pack(1, 0,
+                              &heartbeat_msg, MAV_TYPE_FIXED_WING,
+                              MAV_AUTOPILOT_ARDUPILOTMEGA, 0, 0, 0);
+
+
+    serial.send_message(heartbeat_msg, true);
+
+    while (timer.elapsed_time() < max_radio_heartbeat_interval) {
+      if (serial.receive_message(msg, true)) {
+        if (msg.msgid == MAVLINK_MSG_ID_RADIO_STATUS) {
+          sys_id = msg.sysid;
+        }
+      }
+
+      sleep(receive_retry_delay);
+    }
+    timer.reset();
+  }
+
+  // Return false if heartbeat message was not received
+  if (sys_id == 0) {
+    mavio::log(LOG_DEBUG, "Radio status not received.\n");
+    return false;
+  }
+
+  return true;
 }
 
 void MAVLinkRFD900x::send_task() {

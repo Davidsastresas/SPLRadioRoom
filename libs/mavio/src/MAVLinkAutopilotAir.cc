@@ -53,8 +53,8 @@ MAVLinkAutopilotAir::MAVLinkAutopilotAir()
       receive_time(0) {}
 
 bool MAVLinkAutopilotAir::init(const string& path, int speed,
-                            const vector<string>& devices) {
-  bool ret = connect(path, speed, devices);
+                            const vector<string>& devices, int id) {
+  bool ret = connect(path, speed, devices, id);
 
   if (!running) {
     running = true;
@@ -81,8 +81,9 @@ void MAVLinkAutopilotAir::close() {
 }
 
 bool MAVLinkAutopilotAir::request_autopilot_version(
-    uint8_t& autopilot, uint8_t& mav_type, uint8_t& sys_id,
-    mavlink_autopilot_version_t& autopilot_version) {
+                          uint8_t& autopilot, uint8_t& mav_type, uint8_t& sys_id,
+                          mavlink_autopilot_version_t& autopilot_version) {
+
   mavlink_message_t msg, msg_command_long;
   autopilot = mav_type = sys_id = 0;
   memset(&autopilot_version, 0, sizeof(autopilot_version));
@@ -96,9 +97,9 @@ bool MAVLinkAutopilotAir::request_autopilot_version(
         mav_type = mavlink_msg_heartbeat_get_type(&msg);
         sys_id = msg.sysid;
 
-        if (autopilot != MAV_AUTOPILOT_INVALID)  // Filter out heartbeat
-                                                 // messages forwarded from GCS
+        if (autopilot != MAV_AUTOPILOT_INVALID) {  // Filter out heartbeat messages forwarded from GCS
           break;
+        }
       }
     }
 
@@ -179,89 +180,75 @@ std::chrono::milliseconds MAVLinkAutopilotAir::last_receive_time() {
 }
 
 bool MAVLinkAutopilotAir::connect(const string& path, int speed,
-                               const vector<string>& devices) {
-  mavio::log(LOG_NOTICE, "Connecting to autopilot (%s %d)...", path.data(),
-             speed);
+                               const vector<string>& devices, int id) {
+  mavio::log(LOG_NOTICE, "Connecting to autopilot (%s %d)...", path.data(), speed);
+
+  // mavio::log(LOG_INFO, "Config Autopilot id: %d", id);
+  system_id = 0;
 
   if (serial.init(path, speed)) {
-    mavio::log(LOG_NOTICE, "Connected to autopilot (%s %d)...", path.data(),
-             speed);
+    system_id = detect_autopilot(path);
 
-    return true;
+    if (system_id) {
+      if (system_id == id) {
+        return true;
+      }
+    }
+
+    serial.close();
   
   } else {
-    mavio::log(LOG_NOTICE, "Autopilot serial not opened succesfully");
-
-    return false;
+    mavio::log(LOG_WARNING, "Failed to open serial device '%s'.", path.data());
   }
-  // system_id = 0;
 
-  // if (serial.init(path, speed)) {
-  //   system_id = detect_autopilot(path);
+  if (devices.size() > 0) {
+    mavio::log(LOG_NOTICE, "Attempting to detect autopilot at the serial devices...");
 
-  //   if (system_id) {
-  //     return true;
-  //   }
+    for (const std::string device : devices) {
+      if (device == path)
+        continue;
 
-  //   serial.close();
-  // } else {
-  //   mavio::log(LOG_WARNING, "Failed to open serial device '%s'.", path.data());
-  // }
+      if (serial.init(device, speed)) {
+        system_id = detect_autopilot(device);
 
-  // if (devices.size() > 0) {
-  //   mavio::log(LOG_NOTICE,
-  //              "Attempting to detect autopilot at the serial devices...");
+        if (system_id) {
+          if (system_id == id) {
+            return true;
+          }
+        }
 
-  //   for (const std::string device : devices) {
-  //     if (device == path)
-  //       continue;
+        mavio::log(LOG_NOTICE, "Autopilot not detected at serial device '%s'.", device.data());
 
-  //     if (serial.init(device, speed)) {
-  //       system_id = detect_autopilot(device);
+        serial.close();
+      } else {
+        mavio::log(LOG_NOTICE, "Failed to open serial device '%s'.", device.data());
+      }
+    }
 
-  //       if (system_id)
-  //         return true;
+    mavio::log(LOG_ERR, "Autopilot was not detected on any of the serial devices.");
+  }
 
-  //       mavio::log(LOG_NOTICE, "Autopilot not detected at serial device '%s'.",
-  //                  device.data());
-
-  //       serial.close();
-  //     } else {
-  //       mavio::log(LOG_NOTICE, "Failed to open serial device '%s'.",
-  //                  device.data());
-  //     }
-  //   }
-
-  //   mavio::log(LOG_ERR,
-  //              "Autopilot was not detected on any of the serial devices.");
-  // }
-
-  // return false;
+  return false;
 }
 
 uint8_t MAVLinkAutopilotAir::detect_autopilot(const string device) {
   mavlink_autopilot_version_t autopilot_version;
   uint8_t autopilot, mav_type, sys_id;
 
-  mavio::log(LOG_NOTICE, "Detecting autopilot at serial device '%s'...",
-             device.data());
+  mavio::log(LOG_NOTICE, "Detecting autopilot at serial device '%s'...", device.data());
 
-  if (!request_autopilot_version(autopilot, mav_type, sys_id,
-                                 autopilot_version)) {
-    mavio::log(LOG_DEBUG, "Autopilot not detected at serial device '%s'.",
-               device.data());
-    return 0;
+  if (!request_autopilot_version(autopilot, mav_type, sys_id, autopilot_version)) {
+    mavio::log(LOG_DEBUG, "Autopilot not detected at serial device '%s'.", device.data());
+    return false;
   }
 
   char buff[64];
   get_firmware_version(autopilot_version, buff, sizeof(buff));
 
-  mavio::log(LOG_NOTICE, "Autopilot detected at serial device '%s'.",
-             device.data());
-  mavio::log(
-      LOG_NOTICE,
-      "MAV type: %d, system id: %d, autopilot class: %d, firmware version: %s",
-      mav_type, sys_id, autopilot, buff);
+  mavio::log(LOG_NOTICE, "Mavlink stream detected at serial device '%s'.", device.data());
+  
+  mavio::log(LOG_NOTICE, "MAV type: %d, system id: %d, autopilot class: %d, firmware version: %s",
+                          mav_type, sys_id, autopilot, buff);
 
   return sys_id;
 }

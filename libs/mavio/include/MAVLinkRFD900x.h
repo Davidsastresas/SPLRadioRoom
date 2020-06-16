@@ -59,7 +59,7 @@ class MAVLinkRFD900x : public MAVLinkChannel {
    * @return true if initialization succeeded
    */
   bool init(const std::string& path, int speed,
-            const std::vector<std::string>& devices);
+            const std::vector<std::string>& devices, int id);
 
   /**
    * Stops send and receive tasks and closes the serial device.
@@ -74,7 +74,7 @@ class MAVLinkRFD900x : public MAVLinkChannel {
   /**
    * Returns the autopilot system id.
    */
-  inline uint8_t get_system_id() const { return system_id; }
+  inline uint8_t get_system_id() const { return radio_id; }
 
   /**
    * Send MAVLink message to autopilot.
@@ -112,7 +112,7 @@ class MAVLinkRFD900x : public MAVLinkChannel {
    * Connects to the serial device.
    */
   bool connect(const std::string& path, int speed,
-               const std::vector<std::string>& devices);
+               const std::vector<std::string>& devices, int id);
 
   /*
    * Checks if MAVLink autopilot is available on the specified serial device.
@@ -120,7 +120,7 @@ class MAVLinkRFD900x : public MAVLinkChannel {
    * If an autopilot was detected, returns the autopilot's system id,
    * otherwise returns 0.
    */
- // uint8_t detect_autopilot(const std::string device);
+ uint8_t detect_radio(const std::string device);
 
   /**
    * Sends REQUEST_AUTOPILOT_CAPABILITIES message to the autopilot and
@@ -128,9 +128,9 @@ class MAVLinkRFD900x : public MAVLinkChannel {
    *
    * Returns true if AUTOPILOT_VERSION message was received.
    */
- // bool request_autopilot_version(
- //     uint8_t& autopilot, uint8_t& mav_type, uint8_t& sys_id,
- //     mavlink_autopilot_version_t& autopilot_version);
+  bool request_radio_version(
+      uint8_t& autopilot, uint8_t& mav_type, uint8_t& sys_id,
+      mavlink_autopilot_version_t& autopilot_version);
  
   /**
    * Retrieves firmware version string from the specified AUTOPILOT_VERSION
@@ -162,7 +162,7 @@ class MAVLinkRFD900x : public MAVLinkChannel {
   CircularBuffer<mavlink_message_t> send_queue;
   // Queue that buffers messages received from autopilot
   CircularBuffer<mavlink_message_t> receive_queue;
-  uint8_t system_id;  // Autopilot system Id
+  uint8_t radio_id;  // Autopilot system Id
   std::chrono::milliseconds send_time;  // Last send epoch time
   std::chrono::milliseconds receive_time;  // Last receive epoch time
 };

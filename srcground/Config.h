@@ -58,6 +58,9 @@ class Config {
 
   int get_rfd_serial_speed() const;
   void set_rfd_serial_speed(int speed);
+  
+  int get_rfd_id() const;
+  void set_rfd_id(int id);
 
   /* ISBD comm link configuration properties */
 
@@ -222,6 +225,7 @@ class Config {
   // rfd
   std::string rfd_serial = "0";
   int rfd_serial_speed = 0;
+  int rfd_id = 0;
 
   // isbd
   std::string isbd_serial = "0";

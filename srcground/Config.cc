@@ -39,6 +39,7 @@ constexpr char autopilot_serial_speed_property[] = "serial_speed";
 constexpr char rfd_config_section[] = "rfd";
 constexpr char rfd_serial_property[] = "serial";
 constexpr char rfd_serial_speed_property[] = "serial_speed";
+constexpr char rfd_id_property[] = "radio_id";
 
 constexpr char radioroom_config_section[] = "radioroom";
 
@@ -100,6 +101,9 @@ int Config::init(const std::string& config_file) {
 
   set_rfd_serial_speed(conf.GetInteger(rfd_config_section,
                        rfd_serial_speed_property, default_int));
+
+  set_rfd_id(conf.GetInteger(rfd_config_section, rfd_id_property,
+                                    default_int));
 
   /* [isbd] config section */
 
@@ -287,6 +291,9 @@ void Config::set_rfd_serial(const std::string& path) {rfd_serial = path;}
 
 int Config::get_rfd_serial_speed() const {return rfd_serial_speed;}
 void Config::set_rfd_serial_speed(int speed) {rfd_serial_speed = speed;}
+
+int Config::get_rfd_id() const {return rfd_id;}
+void Config::set_rfd_id(int id) {rfd_id = id;}
 
 /* ISBD */
 

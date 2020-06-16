@@ -85,7 +85,7 @@ bool MAVLinkHandlerGround::init() {
 
   vector<string> devices;
 
-  if (!rfd.init(config.get_rfd_serial(), config.get_rfd_serial_speed(), devices)) {
+  if (!rfd.init(config.get_rfd_serial(), config.get_rfd_serial_speed(), devices, config.get_rfd_id())) {
     log(LOG_ERR, "UV Radio Room initialization failed: cannot connect to rfd900x.");
     return false;
   }

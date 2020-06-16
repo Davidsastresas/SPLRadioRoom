@@ -60,7 +60,7 @@ class MAVLinkAutopilotAir : public MAVLinkChannel {
    * @return true if initialization succeeded
    */
   bool init(const std::string& path, int speed,
-            const std::vector<std::string>& devices);
+            const std::vector<std::string>& devices, int id);
 
   /**
    * Stops send and receive tasks and closes the serial device.
@@ -113,7 +113,7 @@ class MAVLinkAutopilotAir : public MAVLinkChannel {
    * Connects to the serial device.
    */
   bool connect(const std::string& path, int speed,
-               const std::vector<std::string>& devices);
+               const std::vector<std::string>& devices, int id);
 
   /*
    * Checks if MAVLink autopilot is available on the specified serial device.
