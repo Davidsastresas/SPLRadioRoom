@@ -98,14 +98,14 @@ bool MAVLinkHandlerGround::init() {
     }
   }
 
-  if (isbd_channel.init(config.get_isbd_serial(), config.get_isbd_serial_speed(), devices)) {
-    log(LOG_INFO, "ISBD channel initialized.");
-  } else {
-    log(LOG_WARNING, "ISBD channel initialization failed.");
-  }
+  // if (isbd_channel.init(config.get_isbd_serial(), config.get_isbd_serial_speed(), devices)) {
+  //   log(LOG_INFO, "ISBD channel initialized.");
+  // } else {
+  //   log(LOG_WARNING, "ISBD channel initialization failed.");
+  // }
 
   if (sms_channel.init(config.get_gsm_serial(), config.get_gsm_serial_speed(),
-                        devices)) {
+                        devices, config.get_gsm_pin1())) {
     log(LOG_INFO, "SMS channel initialized.");
   } else {
     log(LOG_WARNING, "SMS channel initialization failed.");
