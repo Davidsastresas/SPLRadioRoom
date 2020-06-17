@@ -127,32 +127,6 @@ bool MAVLinkRFD900x::connect(const string& path, int speed,
     mavio::log(LOG_WARNING, "Failed to open serial device '%s'.", path.data());
   }
 
-  if (devices.size() > 0) {
-    mavio::log(LOG_NOTICE, "Attempting to detect radio at the serial devices...");
-
-    for (const std::string device : devices) {
-      if (device == path)
-        continue;
-
-      if (serial.init(device, speed)) {
-        radio_id = detect_radio(device);
-
-        if (radio_id) {
-          if (radio_id == id) {
-            return true;
-          }
-        }
-
-        mavio::log(LOG_NOTICE, "radio not detected at serial device '%s'.", device.data());
-
-        serial.close();
-      } else {
-        mavio::log(LOG_NOTICE, "Failed to open serial device '%s'.", device.data());
-      }
-    }
-
-    mavio::log(LOG_ERR, "radio was not detected on any of the serial devices.");
-  }
 
   return false;
 }
