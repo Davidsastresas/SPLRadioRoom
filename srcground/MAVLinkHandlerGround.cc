@@ -253,6 +253,8 @@ void MAVLinkHandlerGround::handle_mo_message(const mavlink_message_t& msg) {
   tcp_channel.send_message(msg);
   if (msg.msgid == MAVLINK_MSG_ID_HEARTBEAT) {
     last_rfd_heartbeat_timer.reset();
+    last_base_mode = mavlink_msg_heartbeat_get_base_mode(&msg);
+    last_custom_mode = mavlink_msg_heartbeat_get_custom_mode(&msg);
   }
 
   if (!rfd_active) {
@@ -287,12 +289,6 @@ bool MAVLinkHandlerGround::send_report() {
 
 void MAVLinkHandlerGround::send_heartbeats() {
   
-  if (last_rfd_heartbeat_timer.elapsed_time() >= heartbeat_period) {
-    last_rfd_heartbeat_timer.reset();
-    heartbeat_timer.reset();
-    send_hearbeat_tcp();
-  }
-
   if ( rfd_active ) {
     return;
   }
