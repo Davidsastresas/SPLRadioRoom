@@ -130,6 +130,7 @@ bool MAVLinkHandlerGround::init() {
 void MAVLinkHandlerGround::close() {
   tcp_channel.close();
   isbd_channel.close();
+  sms_channel.close();
   rfd.close();
 }
 
