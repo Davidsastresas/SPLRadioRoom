@@ -156,6 +156,11 @@ bool MAVLinkHandlerGround::loop() {
     sleep = false;
   }
 
+  if (isbd_channel.receive_message(mo_msg)) {
+    handle_mo_message(mo_msg);
+    sleep = false;
+  }
+
   if (tcp_channel.receive_message(mt_msg)) {
     handle_mt_message(mt_msg);
     sleep = false;
