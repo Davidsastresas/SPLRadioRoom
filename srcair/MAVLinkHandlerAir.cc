@@ -136,7 +136,8 @@ bool MAVLinkHandlerAir::init() {
     // return false;
   }
 
-
+  sms_channel.reset_timer();
+  rfd.reset_timer();
 
   log(LOG_INFO, "UV Radio Room initialization succeeded.");
 
