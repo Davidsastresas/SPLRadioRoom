@@ -131,8 +131,10 @@ bool MAVLinkHandlerAir::init() {
   // ----------------- ISBD ------------------
   if (isbd_channel.init(config.get_isbd_serial(), config.get_isbd_serial_speed(), devices, config.get_groundstation_rock_address())) {
     log(LOG_INFO, "ISBD channel initialized.");
+    isbd_initialized = true;
   } else {
     log(LOG_WARNING, "ISBD channel initialization failed.");
+    isbd_initialized = false;
     // return false;
   }
 
@@ -177,9 +179,11 @@ bool MAVLinkHandlerAir::loop() {
     _sleep = false;
   }
 
-  if (isbd_channel.receive_message(mt_msg)) {
-    handle_mt_message(mt_msg);
-    _sleep = false;
+  if (isbd_initialized) {
+    if (isbd_channel.receive_message(mt_msg)) {
+      handle_mt_message(mt_msg);
+      _sleep = false;
+    }
   }
 
 
@@ -225,29 +229,33 @@ void MAVLinkHandlerAir::update_active_channel() {
       log(LOG_INFO, "change to rfd");
 
     } else if ( current_time - sms_channel.last_receive_time() >= sms_timeout ) {
-      rfd_active = false;
-      sms_active = false;
-      isbd_active = true;
-      log(LOG_INFO, "time since last rfd %d", current_time - rfd.last_receive_time());
-      log(LOG_INFO, "change to isbd");
+      if (isbd_initialized) {
+        rfd_active = false;
+        sms_active = false;
+        isbd_active = true;
+        log(LOG_INFO, "time since last rfd %d", current_time - rfd.last_receive_time());
+        log(LOG_INFO, "change to isbd");
+      }
     }
     return;
 
   } else { // isbd active 
-    if ( current_time - rfd.last_receive_time() <= rfd_timeout ) {
-      rfd_active = true;
-      sms_active = false;
-      isbd_active = false;
-      log(LOG_INFO, "time since last rfd %d", current_time - rfd.last_receive_time());
-      log(LOG_INFO, "change to rfd");
+    if (isbd_initialized) {
+      if ( current_time - rfd.last_receive_time() <= rfd_timeout ) {
+        rfd_active = true;
+        sms_active = false;
+        isbd_active = false;
+        log(LOG_INFO, "time since last rfd %d", current_time - rfd.last_receive_time());
+        log(LOG_INFO, "change to rfd");
 
-    } else if ( current_time - sms_channel.last_receive_time() <= sms_timeout ) {
-      rfd_active = false;
-      sms_active = true;
-      isbd_active = false;
-      log(LOG_INFO, "time since last rfd %d", current_time - rfd.last_receive_time());
-      log(LOG_INFO, "change to sms");
-    
+      } else if ( current_time - sms_channel.last_receive_time() <= sms_timeout ) {
+        rfd_active = false;
+        sms_active = true;
+        isbd_active = false;
+        log(LOG_INFO, "time since last rfd %d", current_time - rfd.last_receive_time());
+        log(LOG_INFO, "change to sms");
+
+      }
     }
     return;
   }

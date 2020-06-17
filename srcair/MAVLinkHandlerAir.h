@@ -151,6 +151,8 @@ class MAVLinkHandlerAir {
   std::chrono::milliseconds retry_timeout;
   int retry_count;
   bool _sleep;
+
+  bool isbd_initialized = false;
 };
 
 }  // namespace radioroom

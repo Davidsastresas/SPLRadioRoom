@@ -155,6 +155,8 @@ class MAVLinkHandlerGround {
   // save state of vehicle for heartbeat
   uint8_t last_base_mode;
   uint32_t last_custom_mode;
+
+  bool isbd_initialized = false;
 };
 
 }  // namespace radioroom
