@@ -121,11 +121,12 @@ bool MAVLinkHandlerAir::init() {
   }
 
   // ----------------- ISBD ------------------
-  // if (isbd_channel.init(config.get_isbd_serial(), config.get_isbd_serial_speed(), devices)) {
-  //   log(LOG_INFO, "ISBD channel initialized.");
-  // } else {
-  //   log(LOG_WARNING, "ISBD channel initialization failed.");
-  // }
+  if (isbd_channel.init(config.get_isbd_serial(), config.get_isbd_serial_speed(), devices)) {
+    log(LOG_INFO, "ISBD channel initialized.");
+  } else {
+    log(LOG_WARNING, "ISBD channel initialization failed.");
+    return false;
+  }
 
   // ------------------- GSM -------------------
   if (sms_channel.init(config.get_gsm_serial(), config.get_gsm_serial_speed(), devices, config.get_gsm_pin1(), config.get_groundstation_tlf_number1())) {
@@ -135,6 +136,9 @@ bool MAVLinkHandlerAir::init() {
   }
 
   log(LOG_INFO, "UV Radio Room initialization succeeded.");
+
+  sms_channel.reset_timer();
+  rfd.reset_timer();
   
   return true;
 }

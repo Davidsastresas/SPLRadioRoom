@@ -50,6 +50,10 @@ MAVLinkSMSChannel::MAVLinkSMSChannel()
       receive_time = timelib::time_since_epoch();
 }
 
+void MAVLinkSMSChannel::reset_timer() {
+  receive_time = timelib::time_since_epoch();
+}
+
 MAVLinkSMSChannel::~MAVLinkSMSChannel() {}
 
 bool MAVLinkSMSChannel::init(std::string path, int speed,

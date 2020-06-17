@@ -107,6 +107,8 @@ class MAVLinkRFD900x : public MAVLinkChannel {
    */
   std::chrono::milliseconds last_receive_time() override;
 
+  void reset_timer();
+
  private:
   /**
    * Connects to the serial device.

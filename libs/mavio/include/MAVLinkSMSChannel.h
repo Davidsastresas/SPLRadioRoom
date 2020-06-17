@@ -98,6 +98,8 @@ class MAVLinkSMSChannel : public MAVLinkChannel {
    */
   bool get_signal_quality(int& quality);
 
+  void reset_timer();
+
  private:
   /**
    * While running is true, executes send-receive gsm sessions.

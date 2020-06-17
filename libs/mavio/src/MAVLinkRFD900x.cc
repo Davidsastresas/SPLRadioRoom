@@ -55,6 +55,10 @@ MAVLinkRFD900x::MAVLinkRFD900x()
       receive_time = timelib::time_since_epoch();
 }
 
+void MAVLinkRFD900x::reset_timer() {
+  receive_time = timelib::time_since_epoch();
+}
+
 bool MAVLinkRFD900x::init(const string& path, int speed,
                             const vector<string>& devices, int id) {
   bool ret = connect(path, speed, devices, id);
