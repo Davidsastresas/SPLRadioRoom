@@ -38,26 +38,14 @@ using radioroom::Config;
 
 namespace radioroom {
 
-constexpr int autopilot_send_retries = 5;
-constexpr uint16_t data_stream_rate = 2;  // Hz
-
-const std::chrono::milliseconds heartbeat_period(1000);
-// const std::chrono::milliseconds autopilot_send_retry_timeout(250);
-
-const std::chrono::milliseconds active_update_interval(100);
-const std::chrono::milliseconds rfd_timeout(2000);
-const std::chrono::milliseconds sms_timeout(30000);
-
-const std::chrono::milliseconds sms_alive_period(30000);
-
-constexpr char hl_report_period_param[] = "HL_REPORT_PERIOD";
-
 MAVLinkHandlerGround::MAVLinkHandlerGround()
     : rfd(),
       isbd_channel(),
       tcp_channel(),
       sms_channel(),
       current_time(0),
+      last_rfd_heartbeat_timer(),
+      isbd_alive_timer(),
       sms_alive_timer(),
       update_active_timer(),
       update_report_timer(),
@@ -125,6 +113,13 @@ bool MAVLinkHandlerGround::init() {
   sms_channel.reset_timer();
   rfd.reset_timer();
 
+  heartbeat_period = timelib::sec2ms(1);
+  active_update_interval = timelib::sec2ms(0.1);
+  rfd_timeout = timelib::sec2ms(2);
+  sms_timeout = timelib::sec2ms(30);
+  sms_alive_period = timelib::sec2ms(60);
+  isbd_alive_period = timelib::sec2ms(300);
+
   log(LOG_INFO, "UV Radio Room initialization succeeded.");
   return true;
 }
@@ -172,7 +167,7 @@ bool MAVLinkHandlerGround::loop() {
 
   update_active_channel();
 
-  send_heartbeat();
+  send_heartbeats();
 
   return sleep;
 }
@@ -191,6 +186,10 @@ void MAVLinkHandlerGround::update_active_channel() {
       rfd_active = false;
       sms_active = true;
       isbd_active = false;
+
+      // we don't need to send a sms heartbeat just after losing rfd
+      sms_alive_timer.reset();
+
       log(LOG_INFO, "time since last rfd %d", current_time - rfd.last_receive_time());
       log(LOG_INFO, "change to sms");
     }
@@ -209,6 +208,15 @@ void MAVLinkHandlerGround::update_active_channel() {
         rfd_active = false;
         sms_active = false;
         isbd_active = true;
+
+        // send  heartbeat for Iridium sats to know our location
+        if (!isbd_first_contact) {
+          isbd_first_contact = true;
+          send_hearbeat_isbd();
+        }
+        // reset for not sending this heartbeat just after losing sms
+        isbd_alive_timer.reset();
+
         log(LOG_INFO, "time since last rfd %d", current_time - rfd.last_receive_time());
         log(LOG_INFO, "change to isbd");
       }
@@ -242,6 +250,9 @@ void MAVLinkHandlerGround::update_active_channel() {
 void MAVLinkHandlerGround::handle_mo_message(const mavlink_message_t& msg) {
   
   tcp_channel.send_message(msg);
+  if (msg.msgid == MAVLINK_MSG_ID_HEARTBEAT) {
+    last_rfd_heartbeat_timer.reset();
+  }
 
   if (!rfd_active) {
     if (msg.msgid == MAVLINK_MSG_ID_HIGH_LATENCY) {
@@ -273,47 +284,37 @@ bool MAVLinkHandlerGround::send_report() {
   return false;
 }
 
-bool MAVLinkHandlerGround::send_heartbeat() {
+void MAVLinkHandlerGround::send_heartbeats() {
   
-  if ( rfd_active ) {
-    return false;
+  if (last_rfd_heartbeat_timer.elapsed_time() >= heartbeat_period) {
+    last_rfd_heartbeat_timer.reset();
+    heartbeat_timer.reset();
+    send_hearbeat_tcp();
   }
 
-  bool ret = false;
+  if ( rfd_active ) {
+    return;
+  }
 
-  // heartbeat from SMS system, for air not to change to
+  // heartbeat from SMS system, for air not to change to isbd
   if ( sms_active ) {
     if ( sms_alive_timer.elapsed_time() >= sms_alive_period ) {
       sms_alive_timer.reset();
-
-      mavlink_message_t sms_heartbeat_msg;
-
-      mavlink_msg_heartbeat_pack(255, 0,
-                               &sms_heartbeat_msg, MAV_TYPE_GCS,
-                               MAV_AUTOPILOT_INVALID, 0, 0, 0);
-
-      sms_channel.send_message(sms_heartbeat_msg);
-
-      ret = true;
+      send_hearbeat_sms();
     }
   }
-
-  
+  // hearbeat from isbd, for the air unit to know ground is ok
+  if ( isbd_active ) {
+    if ( isbd_alive_timer.elapsed_time() >= isbd_alive_period ) {
+      isbd_alive_timer.reset();
+      send_hearbeat_isbd();
+    }
+  }
+  // hearbeat to GCS, for not showing fail safe
   if (heartbeat_timer.elapsed_time() >= heartbeat_period) {
     heartbeat_timer.reset();
-
-
-    mavlink_message_t heartbeat_msg;
-    mavlink_msg_heartbeat_pack(1, 1,
-                               &heartbeat_msg, MAV_TYPE_FIXED_WING,
-                               MAV_AUTOPILOT_ARDUPILOTMEGA, last_base_mode, last_custom_mode, 0);
-    
-    tcp_channel.send_message(heartbeat_msg);
-  
-    ret = true;
+    send_hearbeat_tcp();
   }
-  
-  return ret;
 }
 
 void MAVLinkHandlerGround::set_retry_send_timer(const mavlink_message_t& msg,
@@ -337,6 +338,45 @@ void MAVLinkHandlerGround::check_retry_send_timer() {
     retry_count--;
     retry_timer.reset();
   }
+}
+
+bool MAVLinkHandlerGround::send_hearbeat_isbd() {
+
+  mavlink_message_t sms_heartbeat_msg;
+
+  mavlink_msg_heartbeat_pack(255, 0,
+                           &sms_heartbeat_msg, MAV_TYPE_GCS,
+                           MAV_AUTOPILOT_INVALID, 0, 0, 0);
+  
+  isbd_channel.send_message(sms_heartbeat_msg);
+
+  return true;
+}
+
+bool MAVLinkHandlerGround::send_hearbeat_sms() {
+
+  mavlink_message_t sms_heartbeat_msg;
+
+  mavlink_msg_heartbeat_pack(255, 0,
+                           &sms_heartbeat_msg, MAV_TYPE_GCS,
+                           MAV_AUTOPILOT_INVALID, 0, 0, 0);
+
+  sms_channel.send_message(sms_heartbeat_msg);
+
+  return true;
+}
+
+bool MAVLinkHandlerGround::send_hearbeat_tcp() {
+
+  mavlink_message_t heartbeat_msg;
+  
+  mavlink_msg_heartbeat_pack(1, 1,
+                             &heartbeat_msg, MAV_TYPE_FIXED_WING,
+                             MAV_AUTOPILOT_ARDUPILOTMEGA, last_base_mode, last_custom_mode, 0);
+  
+  tcp_channel.send_message(heartbeat_msg);
+
+  return true;
 }
 
 }  // namespace radioroom

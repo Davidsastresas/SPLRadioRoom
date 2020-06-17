@@ -93,7 +93,13 @@ class MAVLinkHandlerGround {
    * This allows autopilots to handle lost link gracefully if heartbeats are not
    * received.
    */
-  bool send_heartbeat();
+  void send_heartbeats();
+
+  bool send_hearbeat_isbd();
+
+  bool send_hearbeat_sms();
+
+  bool send_hearbeat_tcp();
 
   /*
    * Requests autopilot data streams required to compose report message.
@@ -130,6 +136,8 @@ class MAVLinkHandlerGround {
   //
   std::chrono::milliseconds current_time;
 
+  timelib::Stopwatch last_rfd_heartbeat_timer;
+  timelib::Stopwatch isbd_alive_timer;
   timelib::Stopwatch sms_alive_timer;
   timelib::Stopwatch update_active_timer;
   timelib::Stopwatch update_report_timer;
@@ -157,6 +165,21 @@ class MAVLinkHandlerGround {
   uint32_t last_custom_mode;
 
   bool isbd_initialized = false;
+  bool isbd_first_contact = false;
+  // Period of heartbeat sent to GCS if no hearbeat received from radio
+  std::chrono::milliseconds heartbeat_period;
+
+// Period of checking active channel
+  std::chrono::milliseconds active_update_interval;
+
+// After this time with no rfd messages it switches to GSM
+  std::chrono::milliseconds rfd_timeout;
+
+// After this time with no sms messages it switches back to SBD
+  std::chrono::milliseconds sms_timeout;
+  std::chrono::milliseconds sms_alive_period; // 1 minute
+
+  std::chrono::milliseconds isbd_alive_period; // 5 minutes
 };
 
 }  // namespace radioroom
