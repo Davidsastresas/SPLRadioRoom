@@ -37,7 +37,12 @@ MAVLinkSMS::~MAVLinkSMS() {}
 
 bool MAVLinkSMS::detect_transceiver(string device, string pin) {
   int ret = sms.begin(pin);
-  sms.deleteSMSlist();
+
+  int retdeletelist = sms.deleteSMSlist();
+
+  if (retdeletelist != GSM_SUCCESS) {
+    mavio::log(LOG_WARNING,"SMS delete mesages failed, error %d", retdeletelist);
+  }
 
   if (ret == GSM_SUCCESS || ret == GSM_ALREADY_AWAKE) {
     char model[256], imea[256];
@@ -54,7 +59,7 @@ bool MAVLinkSMS::detect_transceiver(string device, string pin) {
   }
 
   mavio::log(
-      LOG_DEBUG,
+      LOG_WARNING,
       "sms transceiver not detected at serial device '%s'. Error code = %d.",
       device.data(), ret);
   return false;
@@ -82,30 +87,30 @@ bool MAVLinkSMS::init(string path, int speed, const vector<string>& devices, str
     mavio::log(LOG_INFO, "Failed to open serial device '%s'.", path.data());
   }
 
-  if (devices.size() > 0) {
-    mavio::log(LOG_INFO,
-               "Attempting to detect sms transceiver at the available serial "
-               "devices...");
+  // if (devices.size() > 0) {
+  //   mavio::log(LOG_INFO,
+  //              "Attempting to detect sms transceiver at the available serial "
+  //              "devices...");
 
-    for (size_t i = 0; i < devices.size(); i++) {
-      if (devices[i] == path) continue;
+  //   for (size_t i = 0; i < devices.size(); i++) {
+  //     if (devices[i] == path) continue;
 
-      if (stream.open(devices[i].data(), speed) == 0) {
-        if (detect_transceiver(devices[i], pin)) {
-          return true;
-        } else {
-          stream.close();
-        }
-      } else {
-        mavio::log(LOG_DEBUG, "Failed to open serial device '%s'.",
-                   devices[i].data());
-      }
-    }
-  }
+  //     if (stream.open(devices[i].data(), speed) == 0) {
+  //       if (detect_transceiver(devices[i], pin)) {
+  //         return true;
+  //       } else {
+  //         stream.close();
+  //       }
+  //     } else {
+  //       mavio::log(LOG_DEBUG, "Failed to open serial device '%s'.",
+  //                  devices[i].data());
+  //     }
+  //   }
+  // }
 
-  stream.open(path, speed);
+  // stream.open(path, speed);
   mavio::log(LOG_ERR,
-             "sms transceiver was not detected on any of the serial devices.");
+             "GSM modem was not detected on any of the serial devices.");
 
   return false;
 }

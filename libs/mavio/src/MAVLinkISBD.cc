@@ -90,7 +90,7 @@ bool MAVLinkISBD::init(string path, int speed, const vector<string>& devices, ui
 
   remoteid = remid;
 
-  mavio::log(LOG_INFO, "remote id: %d", remoteid);
+  // mavio::log(LOG_INFO, "remote id: %d", remoteid);
 
   isbd.setPowerProfile(1);
 
@@ -104,28 +104,28 @@ bool MAVLinkISBD::init(string path, int speed, const vector<string>& devices, ui
     mavio::log(LOG_INFO, "Failed to open serial device '%s'.", path.data());
   }
 
-  if (devices.size() > 0) {
-    mavio::log(LOG_INFO,
-               "Attempting to detect ISBD transceiver at the available serial "
-               "devices...");
+  // if (devices.size() > 0) {
+  //   mavio::log(LOG_INFO,
+  //              "Attempting to detect ISBD transceiver at the available serial "
+  //              "devices...");
 
-    for (size_t i = 0; i < devices.size(); i++) {
-      if (devices[i] == path) continue;
+  //   for (size_t i = 0; i < devices.size(); i++) {
+  //     if (devices[i] == path) continue;
 
-      if (stream.open(devices[i].data(), speed) == 0) {
-        if (detect_transceiver(devices[i])) {
-          return true;
-        } else {
-          stream.close();
-        }
-      } else {
-        mavio::log(LOG_DEBUG, "Failed to open serial device '%s'.",
-                   devices[i].data());
-      }
-    }
-  }
+  //     if (stream.open(devices[i].data(), speed) == 0) {
+  //       if (detect_transceiver(devices[i])) {
+  //         return true;
+  //       } else {
+  //         stream.close();
+  //       }
+  //     } else {
+  //       mavio::log(LOG_DEBUG, "Failed to open serial device '%s'.",
+  //                  devices[i].data());
+  //     }
+  //   }
+  // }
 
-  stream.open(path, speed);
+  // stream.open(path, speed);
   mavio::log(LOG_ERR,
              "ISBD transceiver was not detected on any of the serial devices.");
 

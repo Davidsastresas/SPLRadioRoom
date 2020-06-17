@@ -213,12 +213,6 @@ int SMS::internalBegin(std::string pin) {
       return cancelled() ? GSM_CANCELLED : GSM_PROTOCOL_ERROR;
     }
 
-    // for some reason this is needed for proper init
-    send(askpinstr);
-    if (!waitForATResponse(buffer, sizeof(buffer), "AT+CPIN?\r\r\n", "OK")) {
-      return GSM_PROTOCOL_ERROR;
-    }
-
     mavio::log(LOG_NOTICE, "SMS: pin setup succesful");
 
   } else {
@@ -584,7 +578,7 @@ int SMS::internalsendSMSBinary(const uint8_t* txData, size_t txDataSize, std::st
 
 // -----------------------------------
 
-  int character;
+  uint character;
   char octett[10];
 
   for (character=0 ; character < ( data_size_int*2) ; character++)
@@ -984,7 +978,6 @@ int SMS::internaldeleteSMSlist(void) {
   send("AT+CMGD=0,4\r");
   
   if (!waitForATResponse()) {
-      mavio::log(LOG_WARNING, "SMS: Delete message list failed!");
       return cancelled() ? GSM_CANCELLED : GSM_PROTOCOL_ERROR;
     }
 
