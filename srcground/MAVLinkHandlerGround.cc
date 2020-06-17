@@ -110,7 +110,7 @@ bool MAVLinkHandlerGround::init() {
     log(LOG_INFO, "ISBD channel initialized.");
   } else {
     log(LOG_WARNING, "ISBD channel initialization failed.");
-    return false;
+    // return false;
   }
 
   if (tcp_channel.init(config.get_tcp_port())) {
