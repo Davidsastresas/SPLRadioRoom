@@ -153,6 +153,15 @@ class MAVLinkHandlerAir {
   bool _sleep;
 
   bool isbd_initialized = false;
+
+  std::chrono::milliseconds heartbeat_period;
+
+  std::chrono::milliseconds active_update_interval;
+  std::chrono::milliseconds rfd_timeout;
+  std::chrono::milliseconds sms_timeout;
+
+  std::chrono::milliseconds sms_report_period;
+  std::chrono::milliseconds isbd_report_period;
 };
 
 }  // namespace radioroom

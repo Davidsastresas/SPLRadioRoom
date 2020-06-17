@@ -38,27 +38,13 @@ using radioroom::Config;
 
 namespace radioroom {
 
-constexpr int autopilot_send_retries = 5;
-constexpr uint16_t data_stream_rate = 2;  // Hz
-
-const std::chrono::milliseconds heartbeat_period(1000);
-// const std::chrono::milliseconds autopilot_send_retry_timeout(250);
-
-const std::chrono::milliseconds active_update_interval(100);
-const std::chrono::milliseconds rfd_timeout(2000);
-const std::chrono::milliseconds sms_timeout(10000);
-
-const std::chrono::milliseconds report_period(60000);
-
-constexpr char hl_report_period_param[] = "HL_REPORT_PERIOD";
-
 MAVLinkHandlerAir::MAVLinkHandlerAir()
     : rfd(),
       autopilot(),
       isbd_channel(),
       sms_channel(),
-      // tcp_channel(),
       current_time(0),
+      update_active_timer(),
       update_report_timer(),
       heartbeat_timer(),
       primary_report_timer(),
@@ -138,14 +124,18 @@ bool MAVLinkHandlerAir::init() {
     // return false;
   }
 
-  sms_channel.reset_timer();
-  rfd.reset_timer();
-
-  log(LOG_INFO, "UV Radio Room initialization succeeded.");
+  heartbeat_period = timelib::sec2ms(1);
+  active_update_interval = timelib::sec2ms(0.1);
+  rfd_timeout = timelib::sec2ms(2);
+  sms_timeout = timelib::sec2ms(10);
+  sms_report_period = timelib::sec2ms(16);
+  isbd_report_period = timelib::sec2ms(60);
 
   sms_channel.reset_timer();
   rfd.reset_timer();
   
+  log(LOG_INFO, "UV Radio Room initialization succeeded.");
+
   return true;
 }
 
@@ -215,6 +205,10 @@ void MAVLinkHandlerAir::update_active_channel() {
       rfd_active = false;
       sms_active = true;
       isbd_active = false;
+
+      // we don't need to send the report inmediately after losing radio link
+      primary_report_timer.reset();
+      
       log(LOG_INFO, "time since last rfd %d", current_time - rfd.last_receive_time());
       log(LOG_INFO, "change to sms");
     }
@@ -233,6 +227,10 @@ void MAVLinkHandlerAir::update_active_channel() {
         rfd_active = false;
         sms_active = false;
         isbd_active = true;
+
+        // we don't need to send the report inmediately after losing sms link
+        secondary_report_timer.reset();
+
         log(LOG_INFO, "time since last rfd %d", current_time - rfd.last_receive_time());
         log(LOG_INFO, "change to isbd");
       }
@@ -296,17 +294,24 @@ bool MAVLinkHandlerAir::send_report() {
     return false;
   }
 
-  if (primary_report_timer.elapsed_time() >= report_period) {
-    primary_report_timer.reset();
+  if (sms_active) {
+    if (primary_report_timer.elapsed_time() >= sms_report_period) {
+      primary_report_timer.reset();
 
-    mavlink_message_t report_msg;
-    report.get_message(report_msg);
+      mavlink_message_t sms_report_msg;
+      report.get_message(sms_report_msg);
 
-    if ( sms_active ) {
-      return sms_channel.send_message(report_msg);
-    
-    } else {
-      return isbd_channel.send_message(report_msg);
+      return sms_channel.send_message(sms_report_msg);
+    }
+  }
+  if (isbd_initialized && isbd_active) {
+    if (secondary_report_timer.elapsed_time() >= isbd_report_period) {
+      secondary_report_timer.reset();
+
+      mavlink_message_t isbd_report_msg;
+      report.get_message(isbd_report_msg);
+
+      return isbd_channel.send_message(isbd_report_msg);
     }
   }
 
