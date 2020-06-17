@@ -121,21 +121,21 @@ int IridiumSBD::sendSBDBinary(const uint8_t* txData, size_t txDataSize) {
   }
 
   this->reentrant = true;
-  int ret = internalSendReceiveSBD(NULL, txData, txDataSize, NULL, NULL);
+  int ret = internalSendReceiveSBD(NULL, txData, txDataSize, NULL, NULL, 0);
   this->reentrant = false;
   return ret;
 }
 
 // Transmit and receive a binary message
 int IridiumSBD::sendReceiveSBDBinary(const uint8_t* txData, size_t txDataSize,
-                                     uint8_t* rxBuffer, size_t& rxBufferSize) {
+                                     uint8_t* rxBuffer, size_t& rxBufferSize, uint32_t remid) {
   if (this->reentrant) {
     return ISBD_REENTRANT;
   }
 
   this->reentrant = true;
   int ret =
-      internalSendReceiveSBD(NULL, txData, txDataSize, rxBuffer, &rxBufferSize);
+      internalSendReceiveSBD(NULL, txData, txDataSize, rxBuffer, &rxBufferSize, remid);
   this->reentrant = false;
   return ret;
 }
@@ -147,7 +147,7 @@ int IridiumSBD::sendSBDText(const char* message) {
   }
 
   this->reentrant = true;
-  int ret = internalSendReceiveSBD(message, NULL, 0, NULL, NULL);
+  int ret = internalSendReceiveSBD(message, NULL, 0, NULL, NULL, 0);
   this->reentrant = false;
   return ret;
 }
@@ -160,7 +160,7 @@ int IridiumSBD::sendReceiveSBDText(const char* message, uint8_t* rxBuffer,
   }
 
   this->reentrant = true;
-  int ret = internalSendReceiveSBD(message, NULL, 0, rxBuffer, &rxBufferSize);
+  int ret = internalSendReceiveSBD(message, NULL, 0, rxBuffer, &rxBufferSize, 0);
   this->reentrant = false;
   return ret;
 }
@@ -348,7 +348,7 @@ int IridiumSBD::internalGetTransceiverSerialNumber(char* buffer,
 int IridiumSBD::internalSendReceiveSBD(const char* txTxtMessage,
                                        const uint8_t* txData, size_t txDataSize,
                                        uint8_t* rxBuffer,
-                                       size_t* prxBufferSize) {
+                                       size_t* prxBufferSize, uint32_t remid) {
   // diag << "internalSendReceive\n";
 
   if (this->asleep) {
@@ -362,13 +362,41 @@ int IridiumSBD::internalSendReceiveSBD(const char* txTxtMessage,
     }
   } else if (txData && txDataSize) {  // Binary transmission?
     send("AT+SBDWB=");
-    send(txDataSize);
+    send(txDataSize+5); // need to add 5 for the aditional header 5 bytes of rockblock to rockblock service
     send("\r");
     if (!waitForATResponse(NULL, 0, NULL, "READY\r\n")) {
       return cancelled() ? ISBD_CANCELLED : ISBD_PROTOCOL_ERROR;
     }
 
     uint16_t checksum = 0;
+
+    // This is the header for directing the message to another rockblock unit
+    stream.write(0x52);
+    checksum += (uint16_t)0x52;
+    stream.write(0x42);
+    checksum += (uint16_t)0x42;
+
+    uint8_t byte1 = remid >> 16;
+    uint8_t byte2 = remid >> 8;
+    uint8_t byte3 = remid;
+
+    // mavio::log(LOG_INFO, "byte %x", 0x52);
+    // mavio::log(LOG_INFO, "byte %x", 0x42);
+    // mavio::log(LOG_INFO, "byte %x", byte1);
+    // mavio::log(LOG_INFO, "byte %x", byte2);
+    // mavio::log(LOG_INFO, "byte %x", byte3);
+
+    stream.write(byte1);
+    checksum += (uint16_t)byte1;
+
+    stream.write(byte2);
+    checksum += (uint16_t)byte2;
+
+    stream.write(byte3);
+    checksum += (uint16_t)byte3;
+    // ---------------------------------------
+
+    // uint16_t checksum = 0;
     for (size_t i = 0; i < txDataSize; ++i) {
       stream.write(txData[i]);
       checksum += (uint16_t)txData[i];
@@ -630,6 +658,8 @@ bool IridiumSBD::waitForATResponse(char* response, int responseSize,
     int cc = stream.read();
     if (cc >= 0) {
       char c = cc;
+
+      mavio::log(LOG_INFO, "rd: %c", c);
 
       if (prompt) {
         switch (promptState) {

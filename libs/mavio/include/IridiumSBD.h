@@ -63,7 +63,7 @@ class IridiumSBD {
   int sendReceiveSBDText(const char* message, uint8_t* rxBuffer,
                          size_t& rxBufferSize);
   int sendReceiveSBDBinary(const uint8_t* txData, size_t txDataSize,
-                           uint8_t* rxBuffer, size_t& rxBufferSize);
+                           uint8_t* rxBuffer, size_t& rxBufferSize, uint32_t remid);
   int getSignalQuality(int& quality);
   int queryRingIndicationStatus(int& sri);
 
@@ -98,7 +98,7 @@ class IridiumSBD {
   int internalGetTransceiverSerialNumber(char* buffer, size_t bufferSize);
   int internalSendReceiveSBD(const char* txTxtMessage, const uint8_t* txData,
                              size_t txDataSize, uint8_t* rxBuffer,
-                             size_t* prxBufferSize);
+                             size_t* prxBufferSize, uint32_t remid);
   int internalQueryRingIndicationStatus(int& sri);
   int internalGetStatusExtended(uint16_t& moFlag, uint16_t& moMSN,
                                 uint16_t& mtFlag, uint16_t& mtMSN,

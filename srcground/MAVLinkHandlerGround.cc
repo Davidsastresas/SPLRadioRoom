@@ -106,7 +106,7 @@ bool MAVLinkHandlerGround::init() {
     return false;
   }
 
-  if (isbd_channel.init(config.get_isbd_serial(), config.get_isbd_serial_speed(), devices)) {
+  if (isbd_channel.init(config.get_isbd_serial(), config.get_isbd_serial_speed(), devices, config.get_aircraft1_rock_address())) {
     log(LOG_INFO, "ISBD channel initialized.");
   } else {
     log(LOG_WARNING, "ISBD channel initialization failed.");

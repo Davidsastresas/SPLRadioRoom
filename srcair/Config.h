@@ -111,8 +111,8 @@ class Config {
   std::string get_groundstation_tlf_number3() const;
   void set_groundstation_tlf_number3(const std::string& number);
 
-  std::string get_groundstation_rock_address() const;
-  void set_groundstation_rock_address(const std::string& address);
+  int get_groundstation_rock_address() const;
+  void set_groundstation_rock_address(int address);
 
   int get_groundstation_mav_id() const;
   void set_groundstation_mav_id(int mavid);
@@ -131,8 +131,8 @@ class Config {
   std::string get_aircraft1_tlf_number3() const;
   void set_aircraft1_tlf_number3(const std::string& number);
 
-  std::string get_aircraft1_rock_address() const;
-  void set_aircraft1_rock_address(const std::string& address);
+  int get_aircraft1_rock_address() const;
+  void set_aircraft1_rock_address(int address);
 
   int get_aircraft1_mav_id() const;
   void set_aircraft1_mav_id(int mavid);
@@ -151,8 +151,8 @@ class Config {
   std::string get_aircraft2_tlf_number3() const;
   void set_aircraft2_tlf_number3(const std::string& number);
 
-  std::string get_aircraft2_rock_address() const;
-  void set_aircraft2_rock_address(const std::string& address);
+  int get_aircraft2_rock_address() const;
+  void set_aircraft2_rock_address(int address);
 
   int get_aircraft2_mav_id() const;
   void set_aircraft2_mav_id(int mavid);
@@ -171,8 +171,8 @@ class Config {
   std::string get_aircraft3_tlf_number3() const;
   void set_aircraft3_tlf_number3(const std::string& number);
 
-  std::string get_aircraft3_rock_address() const;
-  void set_aircraft3_rock_address(const std::string& address);
+  int get_aircraft3_rock_address() const;
+  void set_aircraft3_rock_address(int address);
 
   int get_aircraft3_mav_id() const;
   void set_aircraft3_mav_id(int mavid);
@@ -191,8 +191,8 @@ class Config {
   std::string get_aircraft4_tlf_number3() const;
   void set_aircraft4_tlf_number3(const std::string& number);
 
-  std::string get_aircraft4_rock_address() const;
-  void set_aircraft4_rock_address(const std::string& address);
+  int get_aircraft4_rock_address() const;
+  void set_aircraft4_rock_address(int address);
 
   int get_aircraft4_mav_id() const;
   void set_aircraft4_mav_id(int mavid);
@@ -211,8 +211,8 @@ class Config {
   std::string get_aircraft5_tlf_number3() const;
   void set_aircraft5_tlf_number3(const std::string& number);
 
-  std::string get_aircraft5_rock_address() const;
-  void set_aircraft5_rock_address(const std::string& address);
+  int get_aircraft5_rock_address() const;
+  void set_aircraft5_rock_address(int address);
 
   int get_aircraft5_mav_id() const;
   void set_aircraft5_mav_id(int mavid);
@@ -253,7 +253,7 @@ class Config {
   std::string groundstation_tlf_number1 = "0";
   std::string groundstation_tlf_number2 = "0";
   std::string groundstation_tlf_number3 = "0";
-  std::string groundstation_rock_address = "0";
+  int groundstation_rock_address = 0;
   int groundstation_mav_id = 0;
   
   // aircraft 1
@@ -261,7 +261,7 @@ class Config {
   std::string aircraft1_tlf_number1 = "0";
   std::string aircraft1_tlf_number2 = "0";
   std::string aircraft1_tlf_number3 = "0";
-  std::string aircraft1_rock_address = "0";
+  int aircraft1_rock_address = 0;
   int aircraft1_mav_id = 0;
 
   // aircraft 2
@@ -269,7 +269,7 @@ class Config {
   std::string aircraft2_tlf_number1 = "0";
   std::string aircraft2_tlf_number2 = "0";
   std::string aircraft2_tlf_number3 = "0";
-  std::string aircraft2_rock_address = "0";
+  int aircraft2_rock_address = 0;
   int aircraft2_mav_id = 0;
 
   // aircraft 3
@@ -277,7 +277,7 @@ class Config {
   std::string aircraft3_tlf_number1 = "0";
   std::string aircraft3_tlf_number2 = "0";
   std::string aircraft3_tlf_number3 = "0";
-  std::string aircraft3_rock_address = "0";
+  int aircraft3_rock_address = 0;
   int aircraft3_mav_id = 0;
 
   // aircraft 4
@@ -285,7 +285,7 @@ class Config {
   std::string aircraft4_tlf_number1 = "0";
   std::string aircraft4_tlf_number2 = "0";
   std::string aircraft4_tlf_number3 = "0";
-  std::string aircraft4_rock_address = "0";
+  int aircraft4_rock_address = 0;
   int aircraft4_mav_id = 0;
 
   // aircraft 5
@@ -293,7 +293,7 @@ class Config {
   std::string aircraft5_tlf_number1 = "0";
   std::string aircraft5_tlf_number2 = "0";
   std::string aircraft5_tlf_number3 = "0";
-  std::string aircraft5_rock_address = "0";
+  int aircraft5_rock_address = 0;
   int aircraft5_mav_id = 0;
 };
 

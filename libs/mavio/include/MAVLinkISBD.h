@@ -49,7 +49,7 @@ class MAVLinkISBD {
    * Returns true if connection was successful.
    */
   bool init(std::string path, int speed,
-            const std::vector<std::string>& devices);
+            const std::vector<std::string>& devices, uint32_t remid);
 
   /*
    * Closes the serial device used to connect to ISBD.
@@ -99,6 +99,7 @@ class MAVLinkISBD {
  private:
   Serial stream;
   IridiumSBD isbd;
+  uint32_t remoteid;
 };
 
 }  // namespace mavio

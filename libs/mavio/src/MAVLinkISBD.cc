@@ -84,9 +84,13 @@ bool MAVLinkISBD::get_signal_quality(int& quality) {
   return isbd.getSignalQuality(quality) == ISBD_SUCCESS;
 }
 
-bool MAVLinkISBD::init(string path, int speed, const vector<string>& devices) {
+bool MAVLinkISBD::init(string path, int speed, const vector<string>& devices, uint32_t remid) {
   mavio::log(LOG_INFO, "Connecting to ISBD transceiver (%s %d)...", path.data(),
              speed);
+
+  remoteid = remid;
+
+  mavio::log(LOG_INFO, "remote id: %d", remoteid);
 
   isbd.setPowerProfile(1);
 
@@ -163,7 +167,7 @@ bool MAVLinkISBD::send_receive_message(const mavlink_message_t& mo_msg,
 
   received = false;
 
-  int ret = isbd.sendReceiveSBDBinary(buf, len, buf, buf_size);
+  int ret = isbd.sendReceiveSBDBinary(buf, len, buf, buf_size, remoteid);
 
   if (ret != ISBD_SUCCESS) {
     if (mo_msg.len != 0 && mo_msg.msgid != 0) {

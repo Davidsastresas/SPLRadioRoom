@@ -46,9 +46,9 @@ const std::chrono::milliseconds heartbeat_period(1000);
 
 const std::chrono::milliseconds active_update_interval(100);
 const std::chrono::milliseconds rfd_timeout(2000);
-const std::chrono::milliseconds sms_timeout(120000);
+const std::chrono::milliseconds sms_timeout(10000);
 
-const std::chrono::milliseconds report_period(18000);
+const std::chrono::milliseconds report_period(60000);
 
 constexpr char hl_report_period_param[] = "HL_REPORT_PERIOD";
 
@@ -121,7 +121,7 @@ bool MAVLinkHandlerAir::init() {
   }
 
   // ----------------- ISBD ------------------
-  if (isbd_channel.init(config.get_isbd_serial(), config.get_isbd_serial_speed(), devices)) {
+  if (isbd_channel.init(config.get_isbd_serial(), config.get_isbd_serial_speed(), devices, config.get_groundstation_rock_address())) {
     log(LOG_INFO, "ISBD channel initialized.");
   } else {
     log(LOG_WARNING, "ISBD channel initialization failed.");
@@ -294,7 +294,7 @@ bool MAVLinkHandlerAir::send_report() {
       return sms_channel.send_message(report_msg);
     
     } else {
-      return sms_channel.send_message(report_msg);
+      return isbd_channel.send_message(report_msg);
     }
   }
 
