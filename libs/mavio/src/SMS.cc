@@ -529,7 +529,7 @@ int SMS::internalsendSMSBinary(const uint8_t* txData, size_t txDataSize, std::st
 
   // mavio::log(LOG_INFO, "mav msg size: %d", txDataSize);
   const char* tlfstr = tlf.c_str();
-  // mavio::log(LOG_INFO, "tlf str: %s", tlfstr);
+  mavio::log(LOG_INFO, "Tlf number: %s", tlfstr);
   
   uint data_size_int = txDataSize;
 

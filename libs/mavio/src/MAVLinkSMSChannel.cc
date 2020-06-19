@@ -86,7 +86,10 @@ std::string MAVLinkSMSChannel::prepare_number_gsm(std::string number) {
       str[i - 1] = number[i];
     }
   }
-  str[10] = 'F';
+
+  if ( number.size() < 12 ) {
+    str[10] = 'F';
+  }
 
   return str;
 }
