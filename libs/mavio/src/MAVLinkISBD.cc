@@ -49,6 +49,13 @@ bool MAVLinkISBD::get_ring_alert_flag(uint16_t& ra_flag) {
     mavio::log(LOG_INFO, "Ring alert received.");
   }
 
+  // mavio::log(LOG_INFO, "Message in MO buffer: %d", mo_flag);  
+  // mavio::log(LOG_INFO, "MO secuence number: %d", mo_msn);  
+  // mavio::log(LOG_INFO, "Message in MT buffer: %d", mt_flag);  
+  // mavio::log(LOG_INFO, "MT secuence in last: %d", mt_msn);  
+  // mavio::log(LOG_INFO, "Ring alert: %d", ra_flag);  
+  // mavio::log(LOG_INFO, "Messages waiting: %d", msg_waiting);  
+
   return err == ISBD_SUCCESS;
 }
 
@@ -185,8 +192,27 @@ bool MAVLinkISBD::send_receive_message(const mavlink_message_t& mo_msg,
   if (buf_size > 0) {
     mavlink_status_t mavlink_status;
 
+    uint8_t bufdecoded[ISBD_MAX_MT_MGS_SIZE];
+
+    bufdecoded[0] = 0xFD;
+    bufdecoded[1] = buf[5];
+    bufdecoded[2] = 0x00;
+    bufdecoded[3] = 0x00;
+    bufdecoded[4] = buf[6];
+    bufdecoded[5] = buf[7];
+    bufdecoded[6] = 0x01;
+    bufdecoded[7] = 0xEA;
+    bufdecoded[8] = 0x00;
+    bufdecoded[9] = 0x00;
+
+    for (size_t i_dec = 8; i_dec < buf_size; i_dec++) {
+      bufdecoded[i_dec + 2] = buf[i_dec];
+    }
+
+    buf_size = buf_size + 7;
+
     for (size_t i = 0; i < buf_size; i++) {
-      if (mavlink_parse_char(MAVLINK_COMM_0, buf[i], &mt_msg,
+      if (mavlink_parse_char(MAVLINK_COMM_3, bufdecoded[i], &mt_msg,
                              &mavlink_status)) {
         received = true;
 

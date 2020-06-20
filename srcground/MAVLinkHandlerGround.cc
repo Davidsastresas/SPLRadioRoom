@@ -118,7 +118,7 @@ bool MAVLinkHandlerGround::init() {
   rfd_timeout = timelib::sec2ms(2);
   sms_timeout = timelib::sec2ms(30);
   sms_alive_period = timelib::sec2ms(60);
-  isbd_alive_period = timelib::sec2ms(300);
+  isbd_alive_period = timelib::sec2ms(600);
 
   log(LOG_INFO, "UV Radio Room initialization succeeded.");
   return true;
@@ -210,11 +210,11 @@ void MAVLinkHandlerGround::update_active_channel() {
         sms_active = false;
         isbd_active = true;
 
-        // send  heartbeat for Iridium sats to know our location
-        if (!isbd_first_contact) {
-          isbd_first_contact = true;
-          send_hearbeat_isbd();
-        }
+        // send  heartbeat for Iridium sats to know our location. put it as option in .conf!!
+        // if (!isbd_first_contact) {
+        //   isbd_first_contact = true;
+        //   send_hearbeat_isbd();
+        // }
         // reset for not sending this heartbeat just after losing sms
         isbd_alive_timer.reset();
 
@@ -288,10 +288,16 @@ bool MAVLinkHandlerGround::send_report() {
 }
 
 void MAVLinkHandlerGround::send_heartbeats() {
+
+  if ( isbd_alive_timer.elapsed_time() >= isbd_alive_period ) {
+     isbd_alive_timer.reset();
+     log(LOG_INFO, "send_hearbeat_isbd");
+     send_hearbeat_isbd();
+   }
   
-  if ( rfd_active ) {
-    return;
-  }
+  // if ( rfd_active ) {
+  //   return;
+  // }
 
   // heartbeat from SMS system, for air not to change to isbd
   if ( sms_active ) {
@@ -301,12 +307,12 @@ void MAVLinkHandlerGround::send_heartbeats() {
     }
   }
   // hearbeat from isbd, for the air unit to know ground is ok
-  if ( isbd_active ) {
-    if ( isbd_alive_timer.elapsed_time() >= isbd_alive_period ) {
-      isbd_alive_timer.reset();
-      send_hearbeat_isbd();
-    }
-  }
+  // if ( isbd_active ) {
+  //   if ( isbd_alive_timer.elapsed_time() >= isbd_alive_period ) {
+  //     isbd_alive_timer.reset();
+  //     send_hearbeat_isbd();
+  //   }
+  // }
   // hearbeat to GCS, for not showing fail safe
   if (heartbeat_timer.elapsed_time() >= heartbeat_period) {
     heartbeat_timer.reset();

@@ -312,6 +312,12 @@ int IridiumSBD::internalBegin() {
     }
   }
 
+  send("AT+SBDD2\r");
+  if (!waitForATResponse(NULL, 0, "+SBDD2")) {
+    return cancelled() ? ISBD_CANCELLED : ISBD_PROTOCOL_ERROR;
+  }
+  mavio::log(LOG_INFO, "SBD buffers flushed");
+
   // diag << "InternalBegin: success!\n";
   return ISBD_SUCCESS;
 }
@@ -357,7 +363,9 @@ int IridiumSBD::internalSendReceiveSBD(const char* txTxtMessage,
 
   if (!txTxtMessage && !txDataSize) {  // Just receive, clear MO message buffer
     send("AT+SBDD0\r");
-    if (!waitForATResponse(NULL, 0, NULL, "\r")) {
+    // mavio::log(LOG_INFO, "sending sbdd0");
+    if (!waitForATResponse(NULL, 0, "+SBDD0")) {
+      // mavio::log(LOG_INFO, "sbdd0 error, returning");
       return cancelled() ? ISBD_CANCELLED : ISBD_PROTOCOL_ERROR;
     }
   } else if (txData && txDataSize) {  // Binary transmission?
@@ -424,17 +432,21 @@ int IridiumSBD::internalSendReceiveSBD(const char* txTxtMessage,
     }
   }
 
+  // mavio::log(LOG_INFO, "starting sbdix loop");
+
   // Long SBDIX loop begins here
   Stopwatch timer;
   while (timer.elapsed_time() < isbd_default_sendreceive_time) {
     int strength = 0;
     bool okToProceed = true;
+    // mavio::log(LOG_INFO, "going to check signal quality");
     int ret = internalGetSignalQuality(strength);
     if (ret != ISBD_SUCCESS) {
+      // mavio::log(LOG_INFO, "check singal quality failed!");
       return ret;
     }
 
-    mavio::log(LOG_INFO, "SBD signal quality: %d", strength);
+    // mavio::log(LOG_INFO, "SBD signal quality: %d", strength);
 
     if (useWorkaround && strength >= minimumCSQ) {
       okToProceed = false;
@@ -659,7 +671,7 @@ bool IridiumSBD::waitForATResponse(char* response, int responseSize,
     if (cc >= 0) {
       char c = cc;
 
-      mavio::log(LOG_INFO, "rd: %c", c);
+      // mavio::log(LOG_INFO, "rd: %c", c);
 
       if (prompt) {
         switch (promptState) {
