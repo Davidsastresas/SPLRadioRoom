@@ -126,7 +126,7 @@ bool MAVLinkHandlerAir::init() {
 
   heartbeat_period = timelib::sec2ms(1);
   active_update_interval = timelib::sec2ms(0.1);
-  rfd_timeout = timelib::sec2ms(2);
+  rfd_timeout = timelib::sec2ms(3);
   sms_timeout = timelib::sec2ms(10);
   sms_report_period = timelib::sec2ms(16);
   isbd_report_period = timelib::sec2ms(60);
@@ -290,21 +290,21 @@ void MAVLinkHandlerAir::handle_mt_message(const mavlink_message_t& msg) {
 
 bool MAVLinkHandlerAir::send_report() {
 
-  if ( rfd_active ) {
-    return false;
-  }
+  // if ( rfd_active ) {
+  //   return false;
+  // }
 
-  if (sms_active) {
-    if (primary_report_timer.elapsed_time() >= sms_report_period) {
-      primary_report_timer.reset();
+  // if (sms_active) {
+  //   if (primary_report_timer.elapsed_time() >= sms_report_period) {
+  //     primary_report_timer.reset();
 
-      mavlink_message_t sms_report_msg;
-      report.get_message(sms_report_msg);
+  //     mavlink_message_t sms_report_msg;
+  //     report.get_message(sms_report_msg);
 
-      return sms_channel.send_message(sms_report_msg);
-    }
-  }
-  if (isbd_initialized && isbd_active) {
+  //     return sms_channel.send_message(sms_report_msg);
+  //   }
+  // }
+  if (isbd_initialized /* && isbd_active */ ) {
     if (secondary_report_timer.elapsed_time() >= isbd_report_period) {
       secondary_report_timer.reset();
 

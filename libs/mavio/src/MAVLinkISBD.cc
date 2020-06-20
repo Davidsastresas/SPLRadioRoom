@@ -206,4 +206,68 @@ bool MAVLinkISBD::send_receive_message(const mavlink_message_t& mo_msg,
   return true;
 }
 
+bool MAVLinkISBD::send_receive_message_air(const mavlink_message_t& mo_msg,
+                                       mavlink_message_t& mt_msg,
+                                       bool& received) {
+  uint8_t buforiginal[ISBD_MAX_MT_MGS_SIZE];
+  size_t buf_size = sizeof(buforiginal);
+  uint16_t len = 0;
+
+  if (mo_msg.len != 0 && mo_msg.msgid != 0) {
+    len = mavlink_msg_to_send_buffer(buforiginal, &mo_msg);
+  }
+
+  received = false;
+
+  uint8_t buf[ISBD_MAX_MT_MGS_SIZE];
+
+  buf[0] = buforiginal[1];
+  buf[1] = buforiginal[4];
+  buf[2] = buforiginal[5];
+
+  for (uint16_t i = 3; i < len - 7; i++) {
+    buf[i] = buforiginal[i + 7];
+  }
+
+  len = len - 7;
+
+  int ret = isbd.sendReceiveSBDBinary(buf, len, buf, buf_size, remoteid);
+
+  if (ret != ISBD_SUCCESS) {
+    if (mo_msg.len != 0 && mo_msg.msgid != 0) {
+      char prefix[32];
+      snprintf(prefix, sizeof(prefix), "SBD << FAILED(%d)", ret);
+      MAVLinkLogger::log(LOG_WARNING, prefix, mo_msg);
+    } else {
+      mavio::log(LOG_WARNING, "SBD >> FAILED(%d)",
+                 ret);  // Failed to receive MT message from ISBD
+    }
+
+    return false;
+  }
+
+  if (buf_size > 0) {
+    mavlink_status_t mavlink_status;
+
+    for (size_t i = 0; i < buf_size; i++) {
+      if (mavlink_parse_char(MAVLINK_COMM_0, buf[i], &mt_msg,
+                             &mavlink_status)) {
+        received = true;
+
+        MAVLinkLogger::log(LOG_INFO, "SBD >>", mt_msg);
+        break;
+      }
+    }
+
+    if (!received) {
+      mavio::log(LOG_WARNING,
+                 "Failed to parse MAVLink message received from ISBD.");
+    }
+  }
+
+  MAVLinkLogger::log(LOG_INFO, "SBD <<", mo_msg);
+
+  return true;
+}
+
 }  // namespace mavio

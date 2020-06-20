@@ -123,7 +123,7 @@ void MAVLinkISBDChannel::send_receive_task() {
       }
 
       bool received = false;
-      if (isbd.send_receive_message(mo_msg, mt_msg, received)) {
+      if (isbd.send_receive_message_air(mo_msg, mt_msg, received)) {
         send_time = timelib::time_since_epoch();
         if (received) {
           receive_time = send_time;

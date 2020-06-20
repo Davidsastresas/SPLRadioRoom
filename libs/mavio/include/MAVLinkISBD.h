@@ -83,6 +83,9 @@ class MAVLinkISBD {
    */
   bool send_receive_message(const mavlink_message_t& mo_msg,
                             mavlink_message_t& mt_msg, bool& received);
+  
+  bool send_receive_message_air(const mavlink_message_t& mo_msg,
+                            mavlink_message_t& mt_msg, bool& received);
 
   /**
    * Returns true if ISBD transceiver detected at the specified serial device.
