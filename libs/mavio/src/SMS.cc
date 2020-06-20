@@ -613,14 +613,14 @@ int SMS::internalsendSMSBinary(const uint8_t* txData, size_t txDataSize, std::st
       // mavio::log(LOG_INFO, "at > NOT ok");
     }
 
-    send("0011000B91");
+    send("0011000C91");
     send(tlfstr);    
     send("0004AA");
     send(data_size_str);
     stream.write(data, data_size_int*2);
     send("\x1A");
 
-    if (!waitForATResponse(NULL, 0, NULL, "OK\r\n")) {
+    if (!waitForATResponseDebug(NULL, 0, NULL, "OK\r\n")) {
       return cancelled() ? GSM_CANCELLED : GSM_PROTOCOL_ERROR;
     }
     return GSM_SUCCESS;
