@@ -48,7 +48,7 @@ const std::chrono::milliseconds isbd_default_csq_interval(10000);
 const std::chrono::milliseconds isbd_default_csq_interval_usb(20000);
 const std::chrono::milliseconds isbd_default_sbdix_interval(30000);
 const std::chrono::milliseconds isbd_default_sbdix_interval_usb(30000);
-const std::chrono::milliseconds isbd_default_sendreceive_time(60000);
+const std::chrono::milliseconds isbd_default_sendreceive_time(40000);
 const std::chrono::milliseconds isbd_startup_max_time(240000);
 const std::chrono::milliseconds smart_wait_sleep(1);
 
@@ -312,6 +312,12 @@ int IridiumSBD::internalBegin() {
     }
   }
 
+  send("AT+SBDD2\r");
+    if (!waitForATResponse(NULL, 0, "+SBDD2")) {
+      return cancelled() ? ISBD_CANCELLED : ISBD_PROTOCOL_ERROR;
+    }
+  mavio::log(LOG_INFO, "SBD buffers flushed");
+
   // diag << "InternalBegin: success!\n";
   return ISBD_SUCCESS;
 }
@@ -357,7 +363,7 @@ int IridiumSBD::internalSendReceiveSBD(const char* txTxtMessage,
 
   if (!txTxtMessage && !txDataSize) {  // Just receive, clear MO message buffer
     send("AT+SBDD0\r");
-    if (!waitForATResponse(NULL, 0, NULL, "\r")) {
+    if (!waitForATResponse(NULL, 0, "+SBDD0")) {
       return cancelled() ? ISBD_CANCELLED : ISBD_PROTOCOL_ERROR;
     }
   } else if (txData && txDataSize) {  // Binary transmission?
@@ -371,6 +377,7 @@ int IridiumSBD::internalSendReceiveSBD(const char* txTxtMessage,
     uint16_t checksum = 0;
 
     // This is the header for directing the message to another rockblock unit
+
     stream.write(0x52);
     checksum += (uint16_t)0x52;
     stream.write(0x42);
@@ -380,12 +387,6 @@ int IridiumSBD::internalSendReceiveSBD(const char* txTxtMessage,
     uint8_t byte2 = remid >> 8;
     uint8_t byte3 = remid;
 
-    // mavio::log(LOG_INFO, "byte %x", 0x52);
-    // mavio::log(LOG_INFO, "byte %x", 0x42);
-    // mavio::log(LOG_INFO, "byte %x", byte1);
-    // mavio::log(LOG_INFO, "byte %x", byte2);
-    // mavio::log(LOG_INFO, "byte %x", byte3);
-
     stream.write(byte1);
     checksum += (uint16_t)byte1;
 
@@ -394,6 +395,13 @@ int IridiumSBD::internalSendReceiveSBD(const char* txTxtMessage,
 
     stream.write(byte3);
     checksum += (uint16_t)byte3;
+
+    // mavio::log(LOG_INFO, "byte %x", 0x52);
+    // mavio::log(LOG_INFO, "byte %x", 0x42);
+    // mavio::log(LOG_INFO, "byte %x", byte1);
+    // mavio::log(LOG_INFO, "byte %x", byte2);
+    // mavio::log(LOG_INFO, "byte %x", byte3);
+
     // ---------------------------------------
 
     // uint16_t checksum = 0;
@@ -659,7 +667,7 @@ bool IridiumSBD::waitForATResponse(char* response, int responseSize,
     if (cc >= 0) {
       char c = cc;
 
-      mavio::log(LOG_INFO, "rd: %c", c);
+      // mavio::log(LOG_INFO, "rd: %c", c);
 
       if (prompt) {
         switch (promptState) {
