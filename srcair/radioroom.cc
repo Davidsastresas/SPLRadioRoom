@@ -76,7 +76,7 @@ void handle_signal(int sig) {
 
 int main(int argc, char** argv) {
   MAVLinkHandlerAir msg_handler;
-  std::string config_file = radioroom::default_config_file;
+  std::string config_file = "/boot/radioroomair.conf";
 
   int c;
   while ((c = getopt(argc, argv, "c:hvV")) != -1) {

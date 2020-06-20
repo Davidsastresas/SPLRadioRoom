@@ -27,16 +27,19 @@ include_directories("${PROJECT_SOURCE_DIR}/libs/mavio/include")
 include_directories("${PROJECT_SOURCE_DIR}/libs/inih/include")
 include_directories("${PROJECT_SOURCE_DIR}/libs/timelib/include")
 include_directories("${PROJECT_BINARY_DIR}")
+include_directories("${PROJECT_SOURCE_DIR}/common/include")
 
 file(GLOB mavio_sources libs/mavio/src/*.cc)
 file(GLOB inih_sources libs/inih/src/*.cc libs/inih/src/*.c)
 file(GLOB sources src/*.c src/*.cc)
 
+file(GLOB common common/src/*.cc)
 file(GLOB sourcesair srcair/*.c srcair/*.cc)
 file(GLOB sourcesground srcground/*.c srcground/*.cc)
 
 add_library(mavio STATIC ${mavio_sources})
 add_library(inih STATIC ${inih_sources})
+add_library(common STATIC ${common})
 
 # add_executable(radioroom ${sources})
 # target_link_libraries(radioroom mavio)
@@ -44,10 +47,12 @@ add_library(inih STATIC ${inih_sources})
 
 add_executable(airunit ${sourcesair})
 target_link_libraries(airunit mavio)
+target_link_libraries(airunit common)
 target_link_libraries(airunit inih)
 
 add_executable(groundunit ${sourcesground})
 target_link_libraries(groundunit mavio)
+target_link_libraries(groundunit common)
 target_link_libraries(groundunit inih)
 
 # add_executable(aptest tests/MAVLinkAutopilotTest.cc)
