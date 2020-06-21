@@ -165,26 +165,27 @@ bool MAVLinkISBD::send_receive_message(const mavlink_message_t& mo_msg,
                                        mavlink_message_t& mt_msg,
                                        bool& received) {
   uint8_t buforiginal[ISBD_MAX_MT_MGS_SIZE];
+  uint8_t buf[ISBD_MAX_MT_MGS_SIZE];
   size_t buf_size = sizeof(buforiginal);
   uint16_t len = 0;
 
+  received = false;
+  
+  // Transform original mavlink message for fitting into 50 bytes
   if (mo_msg.len != 0 && mo_msg.msgid != 0) {
     len = mavlink_msg_to_send_buffer(buforiginal, &mo_msg);
+  
+    buf[0] = buforiginal[4];
+    buf[1] = buforiginal[5];
+    buf[2] = buforiginal[7];
+
+    for (uint16_t i = 3; i < len - 7; i++) {
+      buf[i] = buforiginal[i + 7];
+    }
+
+    len = len - 7;
   }
-
-  received = false;
-
-  uint8_t buf[ISBD_MAX_MT_MGS_SIZE];
-
-  buf[0] = buforiginal[4];
-  buf[1] = buforiginal[5];
-  buf[2] = buforiginal[7];
-
-  for (uint16_t i = 3; i < len - 7; i++) {
-    buf[i] = buforiginal[i + 7];
-  }
-
-  len = len - 7;
+  // -------------------------------------------------------------
 
   int ret = isbd.sendReceiveSBDBinary(buf, len, buf, buf_size, remoteid);
 
@@ -204,8 +205,11 @@ bool MAVLinkISBD::send_receive_message(const mavlink_message_t& mo_msg,
   if (buf_size > 0) {
     mavlink_status_t mavlink_status;
 
+    // Recompose original mavlink message from the reduced version sent
     uint8_t bufdecoded[ISBD_MAX_MT_MGS_SIZE];
-    uint8_t mavlink_size = buf_size - 5 - 3 - 2; // minus rockblock prefix, minus 3 headers (seq, id, msgid), minus crc
+    uint8_t mavlink_size = buf_size - 5 - 3 - 2; // minus rockblock prefix, 
+                                                 // minus 3 headers 
+                                                 // (seq, id, msgid), minus crc
 
     mavio::log(LOG_INFO, "mavlink lenght: %x", mavlink_size);
 
@@ -225,6 +229,7 @@ bool MAVLinkISBD::send_receive_message(const mavlink_message_t& mo_msg,
     }
 
     buf_size = buf_size + 7;
+    //--------------------------------------------------------------------
 
     for (size_t i = 0; i < buf_size; i++) {
       if (mavlink_parse_char(MAVLINK_COMM_3, bufdecoded[i], &mt_msg,
