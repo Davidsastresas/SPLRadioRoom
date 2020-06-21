@@ -47,6 +47,7 @@ constexpr char radioroom_config_section[] = "radioroom";
 constexpr char isbd_config_section[] = "isbd";
 constexpr char isbd_serial_property[] = "serial";
 constexpr char isbd_serial_speed_property[] = "serial_speed";
+constexpr char isbd_get_noticed_property[] = "get_noticed";
 
 constexpr char gsm_config_section[] = "gsm";
 constexpr char gsm_serial_property[] = "serial";
@@ -122,6 +123,9 @@ int Config::init(const std::string& config_file) {
 
   set_isbd_enabled(conf.GetBoolean(isbd_config_section, enabled,
                                     default_enabled));
+
+  set_isbd_get_noticed(conf.GetBoolean(isbd_config_section, isbd_get_noticed_property,
+                                          true));
 
   /* [gsm] config section */
 
@@ -323,6 +327,9 @@ void Config::set_isbd_serial(const std::string& path) { isbd_serial = path; }
 
 bool Config::get_isbd_enabled() const {return isbd_enabled;}
 void Config::set_isbd_enabled(bool enabled) {isbd_enabled = enabled;}
+
+bool Config::get_isbd_get_noticed() const {return isbd_get_noticed;}
+void Config::set_isbd_get_noticed(bool get_noticed) {isbd_get_noticed = get_noticed;}
 
 /* GSM */
 

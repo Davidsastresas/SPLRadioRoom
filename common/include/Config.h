@@ -79,6 +79,9 @@ class Config {
   bool get_isbd_enabled() const;
   void set_isbd_enabled(bool enabled);
 
+  bool get_isbd_get_noticed() const;
+  void set_isbd_get_noticed(bool get_noticed);
+
   /* gsm comm link configuration properties */
 
   std::string get_gsm_serial() const;
@@ -245,6 +248,7 @@ class Config {
   std::string isbd_serial = "0";
   int isbd_serial_speed = 0;
   bool isbd_enabled = false;
+  bool isbd_get_noticed = false;
 
   // gsm
   std::string gsm_serial = "0";

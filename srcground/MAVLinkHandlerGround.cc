@@ -73,36 +73,57 @@ bool MAVLinkHandlerGround::init() {
 
   vector<string> devices;
 
-  if (!rfd.init(config.get_rfd_serial(), config.get_rfd_serial_speed(), devices, config.get_rfd_id())) {
-    log(LOG_ERR, "UV Radio Room initialization failed: cannot connect to rfd900x.");
-    return false;
-  }
-  // Exclude the serial device used by rfd
-  for (vector<string>::iterator iter = devices.begin(); iter != devices.end();
-       ++iter) {
-    if (*iter == rfd.get_path()) {
-      devices.erase(iter);
-      break;
+  // Radio ---------------------------------------------------------------------------------------------
+  if (config.get_rfd_enabled()) {  
+    if (!rfd.init(config.get_rfd_serial(), config.get_rfd_serial_speed(), devices, config.get_rfd_id())) {
+      log(LOG_ERR, "UV Radio Room initialization failed: cannot connect to rfd900x.");
+      return false;
     }
+    radio_initialized = true;
+    // Exclude the serial device used by rfd
+    for (vector<string>::iterator iter = devices.begin(); iter != devices.end();
+         ++iter) {
+      if (*iter == rfd.get_path()) {
+        devices.erase(iter);
+        break;
+      }
+    }
+  } else {
+    log(LOG_INFO, "Radio disabled.");
+    radio_initialized = false;
   }
 
-  if (sms_channel.init(config.get_gsm_serial(), config.get_gsm_serial_speed(),
-                        devices, config.get_gsm_pin1(), config.get_aircraft1_tlf_number1())) {
-    log(LOG_INFO, "SMS channel initialized.");
+  // GSM -------------------------------------------------------------------------------------------------
+  if (config.get_gsm_enabled()) {  
+    if (sms_channel.init(config.get_gsm_serial(), config.get_gsm_serial_speed(),
+                          devices, config.get_gsm_pin1(), config.get_aircraft1_tlf_number1())) {
+      log(LOG_INFO, "SMS channel initialized.");
+      gsm_initialized = true;
+    } else {
+      log(LOG_WARNING, "SMS channel initialization failed.");
+      return false;
+    }
   } else {
-    log(LOG_WARNING, "SMS channel initialization failed.");
-    return false;
+    log(LOG_INFO, "GSM disabled.");
+    gsm_initialized = false;
   }
 
-  if (isbd_channel.init(config.get_isbd_serial(), config.get_isbd_serial_speed(), devices, config.get_aircraft1_rock_address())) {
-    log(LOG_INFO, "ISBD channel initialized.");
-    isbd_initialized = true;
+  // SBD -------------------------------------------------------------------------------------------------
+  if (config.get_isbd_enabled()) {  
+    if (isbd_channel.init(config.get_isbd_serial(), config.get_isbd_serial_speed(), devices, config.get_aircraft1_rock_address())) {
+      log(LOG_INFO, "ISBD channel initialized.");
+      isbd_initialized = true;
+      isbd_first_contact = !config.get_isbd_get_noticed(); 
+    } else {
+      log(LOG_WARNING, "ISBD channel initialization failed.");
+      return false;
+    }
   } else {
-    log(LOG_WARNING, "ISBD channel initialization failed.");
+    log(LOG_INFO, "SBD disabled.");
     isbd_initialized = false;
-    // return false;
   }
 
+  // TCP --------------------------------------------------------------------------------------------------
   if (tcp_channel.init(config.get_tcp_port())) {
     log(LOG_INFO, "TCP channel initialized.");
   } else {
@@ -118,7 +139,7 @@ bool MAVLinkHandlerGround::init() {
   rfd_timeout = timelib::sec2ms(2);
   sms_timeout = timelib::sec2ms(30);
   sms_alive_period = timelib::sec2ms(60);
-  isbd_alive_period = timelib::sec2ms(300);
+  isbd_alive_period = timelib::sec2ms(600);
 
   log(LOG_INFO, "UV Radio Room initialization succeeded.");
   return true;
@@ -210,12 +231,11 @@ void MAVLinkHandlerGround::update_active_channel() {
         sms_active = false;
         isbd_active = true;
 
-        // send  heartbeat for Iridium sats to know our location
+        // send  heartbeat for Iridium sats to know our location. put it as option in .conf!!
         if (!isbd_first_contact) {
           isbd_first_contact = true;
           send_hearbeat_isbd();
         }
-        // reset for not sending this heartbeat just after losing sms
         isbd_alive_timer.reset();
 
         log(LOG_INFO, "time since last rfd %d", current_time - rfd.last_receive_time());
@@ -245,9 +265,6 @@ void MAVLinkHandlerGround::update_active_channel() {
   }
 }
 
-// Forward ACK messages to the specified channel.
-// Use missions array to get mission items on MISSION_REQUEST.
-// Pass all other messages to update_report_msg().
 void MAVLinkHandlerGround::handle_mo_message(const mavlink_message_t& msg) {
   
   tcp_channel.send_message(msg);
@@ -265,15 +282,6 @@ void MAVLinkHandlerGround::handle_mo_message(const mavlink_message_t& msg) {
   }
 }
 
-/**
- * Handles writing waypoints list as described  in
- * http://qgroundcontrol.org/mavlink/waypoint_protocol
- *
- * If message specified by msg parameter is of type MISSION_COUNT,
- * the method retrieves all the mission items from the channel, sends them
- * to the autopilot, and sends MISSION_ACK to the channel. Otherwise the
- * method does nothing and just returns false.
- */
 void MAVLinkHandlerGround::handle_mt_message(const mavlink_message_t& msg) {
 
   rfd.send_message(msg);
@@ -288,25 +296,31 @@ bool MAVLinkHandlerGround::send_report() {
 }
 
 void MAVLinkHandlerGround::send_heartbeats() {
+
+  // if ( isbd_alive_timer.elapsed_time() >= isbd_alive_period ) {
+  //    isbd_alive_timer.reset();
+  //    log(LOG_INFO, "send_hearbeat_isbd");
+  //    send_hearbeat_isbd();
+  //  }
   
-  if ( rfd_active ) {
-    return;
-  }
+  // if ( rfd_active ) {
+  //   return;
+  // }
 
   // heartbeat from SMS system, for air not to change to isbd
-  if ( sms_active ) {
+  if ( gsm_initialized && sms_active ) {
     if ( sms_alive_timer.elapsed_time() >= sms_alive_period ) {
       sms_alive_timer.reset();
       send_hearbeat_sms();
     }
   }
   // hearbeat from isbd, for the air unit to know ground is ok
-  if ( isbd_active ) {
-    if ( isbd_alive_timer.elapsed_time() >= isbd_alive_period ) {
-      isbd_alive_timer.reset();
-      send_hearbeat_isbd();
-    }
-  }
+  // if ( isbd_active ) {
+  //   if ( isbd_alive_timer.elapsed_time() >= isbd_alive_period ) {
+  //     isbd_alive_timer.reset();
+  //     send_hearbeat_isbd();
+  //   }
+  // }
   // hearbeat to GCS, for not showing fail safe
   if (heartbeat_timer.elapsed_time() >= heartbeat_period) {
     heartbeat_timer.reset();

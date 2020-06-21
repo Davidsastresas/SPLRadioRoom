@@ -164,8 +164,12 @@ class MAVLinkHandlerGround {
   uint8_t last_base_mode;
   uint32_t last_custom_mode;
 
-  bool isbd_initialized = false;
   bool isbd_first_contact = false;
+
+  bool isbd_initialized = false;
+  bool radio_initialized = false;
+  bool gsm_initialized = false;
+
   // Period of heartbeat sent to GCS if no hearbeat received from radio
   std::chrono::milliseconds heartbeat_period;
 
