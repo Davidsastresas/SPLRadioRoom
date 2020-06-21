@@ -152,6 +152,8 @@ class MAVLinkHandlerAir {
   int retry_count;
   bool _sleep;
 
+  bool radio_initialized = false;
+  bool gsm_initialized = false;
   bool isbd_initialized = false;
 
   std::chrono::milliseconds heartbeat_period;

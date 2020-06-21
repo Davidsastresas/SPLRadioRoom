@@ -85,48 +85,64 @@ bool MAVLinkHandlerAir::init() {
 
   // ----------------- RFD ------------------
   // if autopilot serial was switched, switch back now
-  string rfd_serial_string;
-  if ( autopilot.get_path() == config.get_rfd_serial() ) {
-    rfd_serial_string = config.get_autopilot_serial();
-  } else {
-    rfd_serial_string = config.get_rfd_serial();
-  }
-  if (!rfd.init(rfd_serial_string, config.get_rfd_serial_speed(), devices, config.get_rfd_id())) {
-    log(LOG_ERR, "UV Radio Room initialization failed: cannot connect to rfd900x.");
-    return false;
-  }
-
-  log(LOG_INFO,"Radio initialization succesful.");
-  // Exclude the serial device used by rfd 
-  for (vector<string>::iterator iter = devices.begin(); iter != devices.end();
-       ++iter) {
-    if (*iter == rfd.get_path()) {
-      devices.erase(iter);
-      break;
+  if (config.get_rfd_enabled()) {
+    string rfd_serial_string;
+    if ( autopilot.get_path() == config.get_rfd_serial() ) {
+      rfd_serial_string = config.get_autopilot_serial();
+    } else {
+      rfd_serial_string = config.get_rfd_serial();
     }
+    if (!rfd.init(rfd_serial_string, config.get_rfd_serial_speed(), devices, config.get_rfd_id())) {
+      log(LOG_ERR, "UV Radio Room initialization failed: cannot connect to Radio");
+      return false;
+    }
+
+    log(LOG_INFO,"Radio initialization succesful.");
+    radio_initialized = true;
+    // Exclude the serial device used by rfd 
+    for (vector<string>::iterator iter = devices.begin(); iter != devices.end();
+         ++iter) {
+      if (*iter == rfd.get_path()) {
+        devices.erase(iter);
+        break;
+      }
+    }
+  } else {
+    log(LOG_INFO,"Radio disabled.");
+    radio_initialized = false;
   }
 
   // ------------------- GSM -------------------
-  if (sms_channel.init(config.get_gsm_serial(), config.get_gsm_serial_speed(), devices, config.get_gsm_pin1(), config.get_groundstation_tlf_number1())) {
-    log(LOG_INFO, "GSM channel initialized.");
+  if (config.get_gsm_enabled()) {  
+    if (sms_channel.init(config.get_gsm_serial(), config.get_gsm_serial_speed(), devices, config.get_gsm_pin1(), config.get_groundstation_tlf_number1())) {
+      log(LOG_INFO, "GSM channel initialized.");
+      gsm_initialized = true;
+    } else {
+      log(LOG_WARNING, "GSM channel initialization failed.");
+      return false;
+    }
   } else {
-    log(LOG_WARNING, "GSM channel initialization failed.");
-    return false;
+    log(LOG_INFO,"GSM disabled.");
+    gsm_initialized = false;
   }
 
   // ----------------- ISBD ------------------
-  if (isbd_channel.init(config.get_isbd_serial(), config.get_isbd_serial_speed(), devices, config.get_groundstation_rock_address())) {
-    log(LOG_INFO, "ISBD channel initialized.");
-    isbd_initialized = true;
+  if (config.get_isbd_enabled()) {  
+    if (isbd_channel.init(config.get_isbd_serial(), config.get_isbd_serial_speed(), devices, config.get_groundstation_rock_address())) {
+      log(LOG_INFO, "ISBD channel initialized.");
+      isbd_initialized = true;
+    } else {
+      log(LOG_WARNING, "ISBD channel initialization failed.");
+      return false;
+    }
   } else {
-    log(LOG_WARNING, "ISBD channel initialization failed.");
+    log(LOG_INFO,"SBD disabled");
     isbd_initialized = false;
-    // return false;
   }
 
   heartbeat_period = timelib::sec2ms(1);
   active_update_interval = timelib::sec2ms(0.1);
-  rfd_timeout = timelib::sec2ms(2);
+  rfd_timeout = timelib::sec2ms(3);
   sms_timeout = timelib::sec2ms(10);
   sms_report_period = timelib::sec2ms(16);
   isbd_report_period = timelib::sec2ms(60);
@@ -290,11 +306,11 @@ void MAVLinkHandlerAir::handle_mt_message(const mavlink_message_t& msg) {
 
 bool MAVLinkHandlerAir::send_report() {
 
-  if ( rfd_active ) {
+  if ( radio_initialized && rfd_active ) {
     return false;
   }
 
-  if (sms_active) {
+  if (gsm_initialized && sms_active) {
     if (primary_report_timer.elapsed_time() >= sms_report_period) {
       primary_report_timer.reset();
 

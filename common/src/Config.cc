@@ -109,6 +109,9 @@ int Config::init(const std::string& config_file) {
   set_rfd_id(conf.GetInteger(rfd_config_section, rfd_id_property,
                                     default_int));
 
+  set_rfd_enabled(conf.GetBoolean(rfd_config_section, enabled,
+                                    default_enabled));
+
   /* [isbd] config section */
 
   set_isbd_serial(conf.Get(isbd_config_section, isbd_serial_property,
@@ -116,6 +119,9 @@ int Config::init(const std::string& config_file) {
 
   set_isbd_serial_speed(conf.GetInteger(isbd_config_section, 
                         isbd_serial_speed_property, default_int));
+
+  set_isbd_enabled(conf.GetBoolean(isbd_config_section, enabled,
+                                    default_enabled));
 
   /* [gsm] config section */
 
@@ -129,6 +135,8 @@ int Config::init(const std::string& config_file) {
   set_gsm_pin2(conf.Get(gsm_config_section, gsm_pin2_property, default_string));
 
   set_gsm_pin3(conf.Get(gsm_config_section, gsm_pin3_property, default_string));
+
+  set_gsm_enabled(conf.GetBoolean(gsm_config_section, enabled, default_enabled));
 
   /* [tcp] config section */
 
@@ -302,6 +310,9 @@ void Config::set_rfd_serial_speed(int speed) {rfd_serial_speed = speed;}
 int Config::get_rfd_id() const {return rfd_id;}
 void Config::set_rfd_id(int id) {rfd_id = id;}
 
+bool Config::get_rfd_enabled() const {return rfd_enabled;}
+void Config::set_rfd_enabled(bool enabled) {rfd_enabled = enabled;}
+
 /* ISBD */
 
 int Config::get_isbd_serial_speed() const { return isbd_serial_speed; }
@@ -309,6 +320,9 @@ void Config::set_isbd_serial_speed(int speed) { isbd_serial_speed = speed; }
 
 std::string Config::get_isbd_serial() const { return isbd_serial; }
 void Config::set_isbd_serial(const std::string& path) { isbd_serial = path; }
+
+bool Config::get_isbd_enabled() const {return isbd_enabled;}
+void Config::set_isbd_enabled(bool enabled) {isbd_enabled = enabled;}
 
 /* GSM */
 
@@ -326,6 +340,9 @@ void Config::set_gsm_pin2(const std::string& path) { gsm_pin2 = path; }
 
 std::string Config::get_gsm_pin3() const { return gsm_pin3; }
 void Config::set_gsm_pin3(const std::string& path) { gsm_pin3 = path; }
+
+bool Config::get_gsm_enabled() const {return gsm_enabled;}
+void Config::set_gsm_enabled(bool enabled) {gsm_enabled = enabled;}
 
 /* TCP */
 

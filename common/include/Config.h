@@ -65,6 +65,9 @@ class Config {
   int get_rfd_id() const;
   void set_rfd_id(int id);
 
+  bool get_rfd_enabled() const;
+  void set_rfd_enabled(bool enabled);
+
   /* ISBD comm link configuration properties */
 
   std::string get_isbd_serial() const;
@@ -72,6 +75,9 @@ class Config {
 
   int get_isbd_serial_speed() const;
   void set_isbd_serial_speed(int speed);
+
+  bool get_isbd_enabled() const;
+  void set_isbd_enabled(bool enabled);
 
   /* gsm comm link configuration properties */
 
@@ -89,6 +95,9 @@ class Config {
 
   std::string get_gsm_pin3() const;
   void set_gsm_pin3(const std::string& pin);
+
+  bool get_gsm_enabled() const;
+  void set_gsm_enabled(bool enabled);
 
   /* TCP/IP comm link configuration properties */
 
@@ -230,10 +239,12 @@ class Config {
   std::string rfd_serial = "0";
   int rfd_serial_speed = 0;
   int rfd_id = 0;
+  bool rfd_enabled = false;
 
   // isbd
   std::string isbd_serial = "0";
   int isbd_serial_speed = 0;
+  bool isbd_enabled = false;
 
   // gsm
   std::string gsm_serial = "0";
@@ -241,6 +252,7 @@ class Config {
   std::string gsm_pin1 = "0";
   std::string gsm_pin2 = "0";
   std::string gsm_pin3 = "0";
+  bool gsm_enabled = false;
 
   // tcp
   int tcp_port = 0;
