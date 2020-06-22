@@ -300,12 +300,36 @@ bool MAVLinkHandlerGround::init() {
   sms_channel.reset_timer();
   rfd.reset_timer();
 
-  heartbeat_period = timelib::sec2ms(1);
   active_update_interval = timelib::sec2ms(0.1);
-  rfd_timeout = timelib::sec2ms(5);
-  sms_timeout = timelib::sec2ms(30);
-  sms_alive_period = timelib::sec2ms(60);
   isbd_alive_period = timelib::sec2ms(600);
+  
+  // configurable options
+  heartbeat_period = timelib::sec2ms(1);
+  rfd_timeout = timelib::sec2ms(2);
+  sms_timeout = timelib::sec2ms(25);
+  sms_alive_period = timelib::sec2ms(20);
+
+  if (config.get_heartbeat_period() > 1) {
+    heartbeat_period = timelib::sec2ms((double)config.get_heartbeat_period());
+  }
+
+  if ( config.get_rfd_timeout() > 2 ) {
+    rfd_timeout = timelib::sec2ms((double)config.get_rfd_timeout());
+  }
+
+  if ( config.get_sms_timeout() > 25 ) {
+    sms_timeout = timelib::sec2ms((double)config.get_sms_timeout());
+  }
+
+  if ( config.get_sms_heartbeat_period() > 20 ) {
+    sms_alive_period = timelib::sec2ms((double)config.get_sms_heartbeat_period());
+  }
+
+  log(LOG_INFO,"rfd_timeout %d", rfd_timeout);
+  log(LOG_INFO,"sms_timeout %d", sms_timeout);
+  log(LOG_INFO,"sms_alive_period %d", sms_alive_period);
+  log(LOG_INFO,"heartbeat_period %d", heartbeat_period);
+
 
   log(LOG_INFO, "UV Radio Room initialization succeeded.");
   return true;

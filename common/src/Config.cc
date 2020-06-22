@@ -65,6 +65,8 @@ constexpr char rfd_timeout_property[] = "rfd_timeout";
 constexpr char sms_timeout_property[] = "sms_timeout";
 constexpr char sms_period_property[] = "sms_period";
 constexpr char sbd_period_property[] = "sbd_period";
+constexpr char heartbeat_period_property[] = "heartbeat_period";
+constexpr char sms_heartbeat_period_property[] = "sms_heartbeat_period";
 
 constexpr char groundstation_config_section[] = "groundstation";
 constexpr char aircraft1_config_section[] = "aircraft1";
@@ -153,16 +155,23 @@ int Config::init(const std::string& config_file) {
 
   /* [misc] config section */
 
+  //common
   set_debug_mode(conf.GetBoolean(misc_config_section, debug_mode_property, default_enabled));
 
   set_rfd_timeout(conf.GetInteger(misc_config_section, rfd_timeout_property, default_int));
 
   set_sms_timeout(conf.GetInteger(misc_config_section, sms_timeout_property, default_int));
 
+  // air
   set_sms_period(conf.GetInteger(misc_config_section, sms_period_property, default_int));
 
   set_sbd_period(conf.GetInteger(misc_config_section, sbd_period_property, default_int));
   
+  // ground
+  set_heartbeat_period(conf.GetInteger(misc_config_section, heartbeat_period_property, default_int));
+
+  set_sms_heartbeat_period(conf.GetInteger(misc_config_section, sms_heartbeat_period_property, default_int));
+
   /* [groundstation] config section */ 
 
   set_groundstation_tlf_number1(conf.Get(groundstation_config_section,
@@ -370,6 +379,7 @@ void Config::set_tcp_port(int port) { tcp_port = port; }
 
 /* misc configuration properties */
 
+// common
 bool Config::get_debug_mode() const { return debug;}
 void Config::set_debug_mode(bool deb) { debug = deb; }
 
@@ -379,11 +389,19 @@ void Config::set_rfd_timeout(int timeout) {rfd_timeout = timeout;}
 int Config::get_sms_timeout() const { return sms_timeout;}
 void Config::set_sms_timeout(int timeout) {sms_timeout = timeout;}
 
+// air
 int Config::get_sms_period() const { return sms_period;}
 void Config::set_sms_period(int period) {sms_period = period;}
 
 int Config::get_sbd_period() const { return sbd_period;}
 void Config::set_sbd_period(int period) {sbd_period = period;}
+
+// ground
+int Config::get_heartbeat_period() const { return heartbeat_period;}
+void Config::set_heartbeat_period(int period) {heartbeat_period = period;}
+
+int Config::get_sms_heartbeat_period() const { return sms_heartbeat_period;}
+void Config::set_sms_heartbeat_period(int period) {sms_heartbeat_period = period;}
 
 /* groundstation configuration properties */
 

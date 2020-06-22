@@ -109,6 +109,7 @@ class Config {
 
   /* misc configuration properties */
 
+  // common
   bool get_debug_mode() const;
   void set_debug_mode(bool deb);
 
@@ -117,12 +118,20 @@ class Config {
 
   int get_sms_timeout() const;
   void set_sms_timeout(int timeout);
-
+  
+  // air
   int get_sms_period() const;
   void set_sms_period(int period);
 
   int get_sbd_period() const;
   void set_sbd_period(int period);
+
+  // ground
+  int get_heartbeat_period() const;
+  void set_heartbeat_period(int period);
+
+  int get_sms_heartbeat_period() const;
+  void set_sms_heartbeat_period(int period);
 
   /* groundstation configuration properties */
 
@@ -279,6 +288,8 @@ class Config {
   int sms_timeout = 0;
   int sms_period = 0;
   int sbd_period = 0;
+  int heartbeat_period = 0;
+  int sms_heartbeat_period = 0;
 
   // groundstation
   bool groundstation_enabled = false;
