@@ -370,27 +370,24 @@ bool MAVLinkHandlerAir::init() {
 
   // configurable options, set limits
 
-  if ( config.get_rfd_timeout() < 2 ) {
-    rfd_timeout = timelib::sec2ms(2);
-  } else {
+  rfd_timeout = timelib::sec2ms(2);
+  sms_timeout = timelib::sec2ms(20);
+  sms_report_period = timelib::sec2ms(14);
+  isbd_report_period = timelib::sec2ms(40);
+  
+  if ( config.get_rfd_timeout() > 2 ) {
     rfd_timeout = timelib::sec2ms((double)config.get_rfd_timeout());
   }
 
-  if ( config.get_sms_timeout() < 20 ) {
-    sms_timeout = timelib::sec2ms(20);
-  } else {
+  if ( config.get_sms_timeout() > 20 ) {
     sms_timeout = timelib::sec2ms((double)config.get_sms_timeout());
   }
 
-  if ( config.get_sms_period() < 14 ) {
-    sms_report_period = timelib::sec2ms(14);
-  } else {
+  if ( config.get_sms_period() > 14 ) {
     sms_report_period = timelib::sec2ms((double)config.get_sms_period());
   }
 
-  if ( config.get_sbd_period() < 40 ) {
-    isbd_report_period = timelib::sec2ms(40);
-  } else {
+  if ( config.get_sbd_period() > 40 ) {
     isbd_report_period = timelib::sec2ms((double)config.get_sbd_period());
   }
 
