@@ -122,6 +122,16 @@ class MAVLinkHandlerAir {
 
   void update_active_channel();
 
+  bool set_rfd_active();
+
+  bool set_gsm_active();
+
+  bool set_isbd_active();
+
+  void handle_rfd_out();
+
+  void handle_gsm_out();
+
   mavio::MAVLinkRFD900x rfd;
   mavio::MAVLinkAutopilotAir autopilot;
   mavio::MAVLinkISBDChannel isbd_channel;
@@ -143,7 +153,7 @@ class MAVLinkHandlerAir {
 
   //
   bool rfd_active;
-  bool sms_active;
+  bool gsm_active;
   bool isbd_active;
 
   timelib::Stopwatch retry_timer;

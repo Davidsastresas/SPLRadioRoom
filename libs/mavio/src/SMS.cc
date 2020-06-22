@@ -529,7 +529,7 @@ int SMS::internalsendSMSBinary(const uint8_t* txData, size_t txDataSize, std::st
 
   // mavio::log(LOG_INFO, "mav msg size: %d", txDataSize);
   const char* tlfstr = tlf.c_str();
-  mavio::log(LOG_INFO, "Tlf number: %s", tlfstr);
+  // mavio::log(LOG_INFO, "Tlf number: %s", tlfstr);
   
   uint data_size_int = txDataSize;
 
@@ -620,7 +620,7 @@ int SMS::internalsendSMSBinary(const uint8_t* txData, size_t txDataSize, std::st
     stream.write(data, data_size_int*2);
     send("\x1A");
 
-    if (!waitForATResponseDebug(NULL, 0, NULL, "OK\r\n")) {
+    if (!waitForATResponse(NULL, 0, NULL, "OK\r\n")) {
       return cancelled() ? GSM_CANCELLED : GSM_PROTOCOL_ERROR;
     }
     return GSM_SUCCESS;
