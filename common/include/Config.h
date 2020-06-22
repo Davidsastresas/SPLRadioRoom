@@ -112,6 +112,18 @@ class Config {
   bool get_debug_mode() const;
   void set_debug_mode(bool deb);
 
+  int get_rfd_timeout() const;
+  void set_rfd_timeout(int timeout);
+
+  int get_sms_timeout() const;
+  void set_sms_timeout(int timeout);
+
+  int get_sms_period() const;
+  void set_sms_period(int period);
+
+  int get_sbd_period() const;
+  void set_sbd_period(int period);
+
   /* groundstation configuration properties */
 
   std::string get_groundstation_tlf_number1() const;
@@ -263,6 +275,10 @@ class Config {
 
   // misc
   bool debug = false;
+  int rfd_timeout = 0;
+  int sms_timeout = 0;
+  int sms_period = 0;
+  int sbd_period = 0;
 
   // groundstation
   bool groundstation_enabled = false;

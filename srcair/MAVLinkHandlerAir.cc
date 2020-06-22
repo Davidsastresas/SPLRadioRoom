@@ -367,10 +367,37 @@ bool MAVLinkHandlerAir::init() {
 
   heartbeat_period = timelib::sec2ms(1);
   active_update_interval = timelib::sec2ms(0.1);
-  rfd_timeout = timelib::sec2ms(5);
-  sms_timeout = timelib::sec2ms(40);
-  sms_report_period = timelib::sec2ms(16);
-  isbd_report_period = timelib::sec2ms(60);
+
+  // configurable options, set limits
+
+  if ( config.get_rfd_timeout() < 2 ) {
+    rfd_timeout = timelib::sec2ms(2);
+  } else {
+    rfd_timeout = timelib::sec2ms((double)config.get_rfd_timeout());
+  }
+
+  if ( config.get_sms_timeout() < 20 ) {
+    sms_timeout = timelib::sec2ms(20);
+  } else {
+    sms_timeout = timelib::sec2ms((double)config.get_sms_timeout());
+  }
+
+  if ( config.get_sms_period() < 14 ) {
+    sms_report_period = timelib::sec2ms(14);
+  } else {
+    sms_report_period = timelib::sec2ms((double)config.get_sms_period());
+  }
+
+  if ( config.get_sbd_period() < 40 ) {
+    isbd_report_period = timelib::sec2ms(40);
+  } else {
+    isbd_report_period = timelib::sec2ms((double)config.get_sbd_period());
+  }
+
+  log(LOG_INFO,"rfd_timeout %d", rfd_timeout);
+  log(LOG_INFO,"sms_timeout %d", sms_timeout);
+  log(LOG_INFO,"sms_report_period %d", sms_report_period);
+  log(LOG_INFO,"isbd_report_period %d", isbd_report_period);
 
   sms_channel.reset_timer();
   rfd.reset_timer();

@@ -61,6 +61,10 @@ constexpr char tcp_port_property[] = "port";
 
 constexpr char misc_config_section[] = "misc";
 constexpr char debug_mode_property[] = "debug";
+constexpr char rfd_timeout_property[] = "rfd_timeout";
+constexpr char sms_timeout_property[] = "sms_timeout";
+constexpr char sms_period_property[] = "sms_period";
+constexpr char sbd_period_property[] = "sbd_period";
 
 constexpr char groundstation_config_section[] = "groundstation";
 constexpr char aircraft1_config_section[] = "aircraft1";
@@ -150,6 +154,14 @@ int Config::init(const std::string& config_file) {
   /* [misc] config section */
 
   set_debug_mode(conf.GetBoolean(misc_config_section, debug_mode_property, default_enabled));
+
+  set_rfd_timeout(conf.GetInteger(misc_config_section, rfd_timeout_property, default_int));
+
+  set_sms_timeout(conf.GetInteger(misc_config_section, sms_timeout_property, default_int));
+
+  set_sms_period(conf.GetInteger(misc_config_section, sms_period_property, default_int));
+
+  set_sbd_period(conf.GetInteger(misc_config_section, sbd_period_property, default_int));
   
   /* [groundstation] config section */ 
 
@@ -361,6 +373,17 @@ void Config::set_tcp_port(int port) { tcp_port = port; }
 bool Config::get_debug_mode() const { return debug;}
 void Config::set_debug_mode(bool deb) { debug = deb; }
 
+int Config::get_rfd_timeout() const { return rfd_timeout;}
+void Config::set_rfd_timeout(int timeout) {rfd_timeout = timeout;}
+
+int Config::get_sms_timeout() const { return sms_timeout;}
+void Config::set_sms_timeout(int timeout) {sms_timeout = timeout;}
+
+int Config::get_sms_period() const { return sms_period;}
+void Config::set_sms_period(int period) {sms_period = period;}
+
+int Config::get_sbd_period() const { return sbd_period;}
+void Config::set_sbd_period(int period) {sbd_period = period;}
 
 /* groundstation configuration properties */
 
