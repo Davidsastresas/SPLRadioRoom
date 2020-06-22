@@ -77,14 +77,6 @@ class MAVLinkHandlerGround {
    */
   void handle_mt_message(const mavlink_message_t& msg);
 
-  /**
-   * Sends report message to one of the comm channels if the channel report
-   * period has elapsed.
-   *
-   * returns true if report was sent.
-   */
-  bool send_report();
-
   /*
    * Sends heartbeat message to autopilot if hearbeat period has elapsed and
    * the comm channels are not at faulted state (one of the channels successfuly
@@ -100,6 +92,16 @@ class MAVLinkHandlerGround {
   bool send_hearbeat_sms();
 
   bool send_hearbeat_tcp();
+
+  bool set_rfd_active();
+
+  bool set_gsm_active();
+
+  bool set_isbd_active();
+
+  void handle_rfd_out();
+
+  void handle_gsm_out();
 
   /*
    * Requests autopilot data streams required to compose report message.
@@ -137,9 +139,6 @@ class MAVLinkHandlerGround {
   std::chrono::milliseconds current_time;
 
   timelib::Stopwatch last_rfd_heartbeat_timer;
-  timelib::Stopwatch isbd_alive_timer;
-  timelib::Stopwatch sms_alive_timer;
-  timelib::Stopwatch update_active_timer;
   timelib::Stopwatch update_report_timer;
   timelib::Stopwatch heartbeat_timer;
   timelib::Stopwatch primary_report_timer;
@@ -150,9 +149,9 @@ class MAVLinkHandlerGround {
   size_t missions_received;
 
   //
-  bool rfd_active;
-  bool sms_active;
-  bool isbd_active;
+  bool rfd_active = true;
+  bool gsm_active = false;
+  bool isbd_active = false;
 
   timelib::Stopwatch retry_timer;
   mavlink_message_t retry_msg;
@@ -161,8 +160,8 @@ class MAVLinkHandlerGround {
   bool _sleep;
 
   // save state of vehicle for heartbeat
-  uint8_t last_base_mode;
-  uint32_t last_custom_mode;
+  uint8_t last_base_mode = 0;
+  uint32_t last_custom_mode = 0;
 
   bool isbd_first_contact = false;
 
@@ -174,6 +173,7 @@ class MAVLinkHandlerGround {
   std::chrono::milliseconds heartbeat_period;
 
 // Period of checking active channel
+  timelib::Stopwatch active_update_timer;
   std::chrono::milliseconds active_update_interval;
 
 // After this time with no rfd messages it switches to GSM
@@ -181,8 +181,11 @@ class MAVLinkHandlerGround {
 
 // After this time with no sms messages it switches back to SBD
   std::chrono::milliseconds sms_timeout;
+
+  timelib::Stopwatch sms_alive_timer;
   std::chrono::milliseconds sms_alive_period; // 1 minute
 
+  timelib::Stopwatch isbd_alive_timer;
   std::chrono::milliseconds isbd_alive_period; // 5 minutes
 };
 
