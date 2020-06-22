@@ -61,8 +61,7 @@ MAVLinkHandlerGround::MAVLinkHandlerGround()
 
 /**
  * One iteration of the message handler.
- *
- * NOTE: Must not use blocking calls.
+ * No blocking calls here
  */
 bool MAVLinkHandlerGround::loop() {
   mavlink_message_t mo_msg;
@@ -374,6 +373,11 @@ bool MAVLinkHandlerGround::set_isbd_active() {
     gsm_active = false;
     isbd_active = true;
     log(LOG_INFO, "ISBD active");
+
+    mavlink_message_t status_msg;
+    mavlink_msg_statustext_pack(1,1, &status_msg, MAV_SEVERITY_NOTICE, "ISBD active", 0, 0);
+    tcp_channel.send_message(status_msg);
+    
   } else {
     isbd_active = false;
   }
@@ -388,6 +392,11 @@ bool MAVLinkHandlerGround::set_gsm_active() {
     sms_channel.reset_timer();
     sms_alive_timer.reset();
     log(LOG_INFO, "GSM active");
+
+    mavlink_message_t status_msg;
+    mavlink_msg_statustext_pack(1,1, &status_msg, MAV_SEVERITY_NOTICE, "GSM active", 0, 0);
+    tcp_channel.send_message(status_msg);
+
   } else {
     gsm_active = false;
   }
@@ -400,6 +409,11 @@ bool MAVLinkHandlerGround::set_rfd_active() {
     gsm_active = false;
     rfd_active = true;
     log(LOG_INFO, "RFD active");
+
+    mavlink_message_t status_msg;
+    mavlink_msg_statustext_pack(1,1, &status_msg, MAV_SEVERITY_NOTICE, "RFD active", 0, 0);
+    tcp_channel.send_message(status_msg);
+    
   } else {
     rfd_active = false;
   }
