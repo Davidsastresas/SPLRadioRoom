@@ -1116,6 +1116,7 @@ bool SMS::waitforSMSlistText(uint8_t* response, size_t& responseSize, bool& inbo
   }
 
   sms_struct _buffer_sms;
+  buffersms.data_lenght = 0;
 
   char indexresponse[3]; 
   memset(indexresponse, 0, sizeof(indexresponse));  // allow for 3 digits indexes
