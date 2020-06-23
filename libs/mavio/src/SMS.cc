@@ -569,8 +569,6 @@ int SMS::internalsendSMSBinary(const uint8_t* txData, size_t txDataSize, std::st
 
   snprintf(pdu_size, 3, "%d",(unsigned char)pdu_size_int);
 
-  // mavio::log(LOG_INFO, "pdu size str: %s", pdu_size);
-
   pdu_size[2] = '\0';
 
   // mavio::log(LOG_INFO, "data size int: %d", data_size_int);
@@ -789,9 +787,6 @@ bool SMS::waitforSMSlistBin(uint8_t* response, size_t& responseSize, bool& inbox
   int smsc_size_response_pos = 0;
 
   int _step = 0;
-  int sender_number_pos = 0;
-  int timestamp_pos = 0;
-  int data_pos = 0;
 
   enum { LOOKING_FOR_PROMPT, GATHERING_RESPONSE, LOOKING_FOR_TERMINATOR };
   int promptState = LOOKING_FOR_PROMPT;
@@ -1121,9 +1116,6 @@ bool SMS::waitforSMSlistText(uint8_t* response, size_t& responseSize, bool& inbo
   int smsc_size_response_pos = 0;
 
   int _step = 0;
-  int sender_number_pos = 0;
-  int timestamp_pos = 0;
-  int data_pos = 0;
 
   enum { LOOKING_FOR_PROMPT, GATHERING_RESPONSE, LOOKING_FOR_TERMINATOR };
   int promptState = LOOKING_FOR_PROMPT;
