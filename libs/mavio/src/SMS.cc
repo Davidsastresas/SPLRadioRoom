@@ -1116,6 +1116,7 @@ bool SMS::waitforSMSlistText(uint8_t* response, size_t& responseSize, bool& inbo
   }
 
   sms_struct _buffer_sms;
+  buffersms.data_lenght = 0;
 
   char indexresponse[3]; 
   memset(indexresponse, 0, sizeof(indexresponse));  // allow for 3 digits indexes
@@ -1155,7 +1156,7 @@ bool SMS::waitforSMSlistText(uint8_t* response, size_t& responseSize, bool& inbo
   Stopwatch timer;
   while (timer.elapsed_time() < atTimeout) {
     if (cancelled()) {
-      return false;
+      return GSM_CANCELLED;
     }
 
     cc = stream.read();
@@ -1206,169 +1207,34 @@ bool SMS::waitforSMSlistText(uint8_t* response, size_t& responseSize, bool& inbo
                         _step++;
                         [[fallthrough]];
                       } 
-                    case 1: // size, etc, ignore by the moment
-                      if ( c != ',' ) {
-                        pdu_size_response[pdu_size_response_pos] = c;
-                        pdu_size_response_pos++;
-                      } else {
-                        pdu_size_response_pos = 0;
+                    case 1: // label ( REC, UNREAD, ETC )
+                      if ( c == ',' ) {
+                        _step++;
                       }
+                      break;
+                    case 2: // sender number
+                      if ( isdigit(c) ) {
+                        buffersms.sender_number[counter] = c;
+                        counter++;
+                      }
+                      if ( c == ',' ) {
+                        counter = 0;
+                        // mavio::log(LOG_INFO, "SMS: sender number: %s", buffersms.sender_number);
+                        _step++;
+                      }
+                      break;
+                    case 3: // whatever, not used
+                      if ( c == ',' ) {
+                        _step++;
+                      }
+                      break;
+                    case 4: // timestamp, not used by the moment
                       if ( c == '\r' ) {
-                        // pdu_size = atoi(pdu_size_response);
-                        // mavio::log(LOG_INFO, "pdu size: %d", pdu_size);
-                        pdu_size_response_pos = 0;
-                        _step++;
-                      }
-                      break;
-                    case 2: // sms struct
-                      if ( isxdigit(c) ) {
-                        smsc_size_response[smsc_size_response_pos] = c;
-                        smsc_size_response_pos++;
-                      }
-                      if ( smsc_size_response_pos >= 2 ) {
-                        smsc_size = octet2bin(smsc_size_response);
-                        // mavio::log(LOG_INFO, "smsc size: %d", smsc_size);
-                        smsc_size_response_pos = 0;
-                        _step++;
-                      }
-                      break;
-                    case 3: // type_address
-                      if ( isxdigit(c) ) {
-                        bytechar[counter] = c;
-                        counter++;
-                      }
-                      if ( counter >= 2 ) {
-                        counter = 0;
-                        buffersms.type_address = octet2bin(bytechar);
-                        // mavio::log(LOG_INFO, "type address: %x", buffersms.type_address);
-                        _step++;
-
-                        memset(buffersms.service_center_number, 0, sizeof(buffersms.service_center_number));
-                      }
-                      break;
-                    case 4: // service_center_number
-                      if ( isxdigit(c) ) {
-                        if ( !(counter & 1) ) { // even
-                          buffersms.service_center_number[counter + 1] = c;
-                        } else { // odd
-                          buffersms.service_center_number[counter - 1] = c;
-                        }
-                        counter++;
-                      }
-                      if ( counter >= ( ( smsc_size - 1 ) << 1 ) ) {
-                        if ( !isdigit(buffersms.service_center_number[counter-1]) ) {
-                          buffersms.service_center_number[counter-1] = '\0';
-                        } else {
-                          buffersms.service_center_number[counter] = '\0';
-                        }
-                        counter = 0;
-                        // mavio::log(LOG_INFO, "service center number: %s", buffersms.service_center_number);
+                        // mavio::log(LOG_INFO, "going to read now");
                         _step++;
                       }
                       break;
                     case 5:
-                      bytechar[counter] = c;
-                      counter++;
-                      if ( counter >= 2 ) {
-                        counter = 0;
-                        buffersms.first_byte = octet2bin(bytechar);
-                        // mavio::log(LOG_INFO, "fist fyte: %x", buffersms.first_byte);
-                        _step++;\
-                      }
-                      break;
-                    case 6:
-                      if ( isxdigit(c) ) {
-                        bytechar[counter] = c;
-                        counter++;
-                      }
-                      if ( counter >= 2 ) {
-                        counter = 0;
-                        buffersms.address_lenght = octet2bin(bytechar);
-                        // mavio::log(LOG_INFO, "address lenght: %d", buffersms.address_lenght);
-                        _step++;
-
-                        memset(buffersms.sender_number, 0, sizeof(buffersms.sender_number));
-                      }
-                      break;
-                    case 7:
-                      bytechar[counter] = c;
-                      counter++;
-                      if ( counter >= 2 ) {
-                        counter = 0;
-                        buffersms.address_type = octet2bin(bytechar);
-                        // mavio::log(LOG_INFO, "address type: %x", buffersms.address_type);
-                        _step++;
-                      }
-                      break;
-                    case 8:
-                      if ( isxdigit(c) ) {
-                        if ( !(counter & 1) ) { // even
-                          buffersms.sender_number[counter + 1] = c;
-                        } else { // odd
-                          buffersms.sender_number[counter - 1] = c;
-                        }
-                        counter++;
-                      }
-                      if ( counter > buffersms.address_lenght ) {
-                        if ( !isdigit(buffersms.sender_number[counter-1]) ) {
-                          buffersms.sender_number[counter-1] = '\0';
-                        } else {
-                          buffersms.sender_number[counter] = '\0';
-                        }
-                        counter = 0;
-                        // mavio::log(LOG_INFO, "sender number: %s", buffersms.sender_number);
-                        _step++;
-                      }
-                      break;
-                    case 9:
-                      bytechar[counter] = c;
-                      counter++;
-                      if ( counter >= 2 ) {
-                        counter = 0;
-                        buffersms.TP_PID = octet2bin(bytechar);
-                        // mavio::log(LOG_INFO, "tc_pid: %x", buffersms.TP_PID);
-                        _step++;
-                      }
-                      break;
-                    case 10:
-                      bytechar[counter] = c;
-                      counter++;
-                      if ( counter >= 2 ) {
-                        counter = 0;
-                        buffersms.TO_DCS = octet2bin(bytechar);
-                        // mavio::log(LOG_INFO, "to_dcs: %x", buffersms.TO_DCS);
-                        _step++;
-                      }
-                      break;
-                    case 11:
-                      if ( isxdigit(c) ) {
-                        if ( !(counter & 1) ) { // even
-                          buffersms.timestamp[counter + 1] = c;
-                        } else { // odd
-                          buffersms.timestamp[counter - 1] = c;
-                        }
-                        counter++;
-                      }
-                      if ( counter >= 14 /*timestamp format*/ ) {
-                        buffersms.timestamp[counter] = '\0';
-                        counter = 0;
-                        // mavio::log(LOG_INFO, "timestamp: %s", buffersms.timestamp);
-                        _step++;
-                      }
-                      break;
-                    case 12:
-                      bytechar[counter] = c;
-                      counter++;
-                      if ( counter >= 2 ) {
-                        counter = 0;
-                        buffersms.data_lenght = octet2bin(bytechar);
-                        // mavio::log(LOG_INFO, "data_lenght: %x", buffersms.data_lenght);
-                        _step++;
-
-                        memset(buffersms.data, 0, sizeof(buffersms.data));
-                      }
-                      break;
-                    case 13:
                       if ( isxdigit(c) ) {
                         bytechar[counterbyte] = c;
                         counterbyte++;
@@ -1378,8 +1244,10 @@ bool SMS::waitforSMSlistText(uint8_t* response, size_t& responseSize, bool& inbo
                         counterbyte = 0;
                         // mavio::log(LOG_INFO, "byte[%d] = %x", counter, buffersms.data[counter]);
                         counter++;
+                        buffersms.data_lenght++;
+                        // mavio::log(LOG_INFO, "data lenght: %d", buffersms.data_lenght);
                       }
-                      if ( counter >= buffersms.data_lenght ) {
+                      if ( c == '\r' ) {
                         counter = 0;
                         // for ( int i=0 ; i < buffersms.data_lenght ; i++ ) { 
                         //   mavio::log(LOG_INFO, "data: %x", buffersms.data[i]);
