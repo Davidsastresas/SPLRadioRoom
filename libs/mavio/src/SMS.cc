@@ -729,7 +729,7 @@ int SMS::internalsendSMSText(const uint8_t* txData, size_t txDataSize, std::stri
     send(tlfstr);
     send("\"\r");
 
-    if(waitForATResponseDebug(NULL, 0, NULL, "> ")) {
+    if(waitForATResponse(NULL, 0, NULL, "> ")) {
       // mavio::log(LOG_INFO, "at > ok");
     } else {
       // mavio::log(LOG_INFO, "at > NOT ok");
@@ -738,7 +738,7 @@ int SMS::internalsendSMSText(const uint8_t* txData, size_t txDataSize, std::stri
     stream.write(data, data_size_int*2);
     send("\x1A");
 
-    if (!waitForATResponseDebug(NULL, 0, NULL, "OK\r\n")) {
+    if (!waitForATResponse(NULL, 0, NULL, "OK\r\n")) {
       return cancelled() ? GSM_CANCELLED : GSM_PROTOCOL_ERROR;
     }
     return GSM_SUCCESS;
@@ -1116,7 +1116,6 @@ bool SMS::waitforSMSlistText(uint8_t* response, size_t& responseSize, bool& inbo
   }
 
   sms_struct _buffer_sms;
-  buffersms.data_lenght = 0;
 
   char indexresponse[3]; 
   memset(indexresponse, 0, sizeof(indexresponse));  // allow for 3 digits indexes
@@ -1156,7 +1155,7 @@ bool SMS::waitforSMSlistText(uint8_t* response, size_t& responseSize, bool& inbo
   Stopwatch timer;
   while (timer.elapsed_time() < atTimeout) {
     if (cancelled()) {
-      return GSM_CANCELLED;
+      return false;
     }
 
     cc = stream.read();
@@ -1219,7 +1218,6 @@ bool SMS::waitforSMSlistText(uint8_t* response, size_t& responseSize, bool& inbo
                       }
                       if ( c == ',' ) {
                         counter = 0;
-                        // mavio::log(LOG_INFO, "SMS: sender number: %s", buffersms.sender_number);
                         _step++;
                       }
                       break;
@@ -1245,7 +1243,6 @@ bool SMS::waitforSMSlistText(uint8_t* response, size_t& responseSize, bool& inbo
                         // mavio::log(LOG_INFO, "byte[%d] = %x", counter, buffersms.data[counter]);
                         counter++;
                         buffersms.data_lenght++;
-                        // mavio::log(LOG_INFO, "data lenght: %d", buffersms.data_lenght);
                       }
                       if ( c == '\r' ) {
                         counter = 0;
