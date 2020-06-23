@@ -7,7 +7,7 @@ Type=simple
 ExecStart=/usr/sbin/groundunit
 StandardOutput=null
 Restart=on-failure
-RestartSec=30
+RestartSec=2
 
 [Install]
 WantedBy=multi-user.target
