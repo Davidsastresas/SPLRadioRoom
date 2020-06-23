@@ -581,7 +581,7 @@ int SMS::internalsendSMSBinary(const uint8_t* txData, size_t txDataSize, std::st
 
   // mavio::log(LOG_INFO, "strlen %d", strlen(data_size));
 
-  char ca[1];
+  // char ca[1];
 
   char data_size_str[2];
 
@@ -596,7 +596,7 @@ int SMS::internalsendSMSBinary(const uint8_t* txData, size_t txDataSize, std::st
   {
     sprintf(octett,"%02X",(unsigned char) txData[character]);
     strcat(data,octett);
-    ca[0] = data[character];
+    // ca[0] = data[character];
     // mavio::log(LOG_INFO, "data %d byte: %s", character, ca);
   }
 
@@ -684,7 +684,7 @@ int SMS::internalsendSMSText(const uint8_t* txData, size_t txDataSize, std::stri
 
   // mavio::log(LOG_INFO, "strlen %d", strlen(data_size));
 
-  char ca[1];
+  // char ca[1];
 
   char data_size_str[2];
 
@@ -699,7 +699,7 @@ int SMS::internalsendSMSText(const uint8_t* txData, size_t txDataSize, std::stri
   {
     sprintf(octett,"%02X",(unsigned char) txData[character]);
     strcat(data,octett);
-    ca[0] = data[character];
+    // ca[0] = data[character];
     // mavio::log(LOG_INFO, "data %d byte: %s", character, ca);
   }
 
@@ -771,7 +771,7 @@ bool SMS::waitforSMSlistBin(uint8_t* response, size_t& responseSize, bool& inbox
   int indexresponse_pos = 0;
   uint8_t index;
   
-  uint8_t pdu_size;
+  // uint8_t pdu_size;
   char pdu_size_response[3]; // allow for 3 digits size, we need more than 100
   memset(pdu_size_response, 0, sizeof(pdu_size_response));  
   int pdu_size_response_pos = 0;
@@ -863,7 +863,7 @@ bool SMS::waitforSMSlistBin(uint8_t* response, size_t& responseSize, bool& inbox
                         pdu_size_response_pos = 0;
                       }
                       if ( c == '\r' ) {
-                        pdu_size = atoi(pdu_size_response);
+                        // pdu_size = atoi(pdu_size_response);
                         // mavio::log(LOG_INFO, "pdu size: %d", pdu_size);
                         pdu_size_response_pos = 0;
                         _step++;
@@ -1100,7 +1100,7 @@ bool SMS::waitforSMSlistText(uint8_t* response, size_t& responseSize, bool& inbo
   int indexresponse_pos = 0;
   uint8_t index;
   
-  uint8_t pdu_size;
+  // uint8_t pdu_size;
   char pdu_size_response[3]; // allow for 3 digits size, we need more than 100
   memset(pdu_size_response, 0, sizeof(pdu_size_response));  
   int pdu_size_response_pos = 0;
@@ -1192,7 +1192,7 @@ bool SMS::waitforSMSlistText(uint8_t* response, size_t& responseSize, bool& inbo
                         pdu_size_response_pos = 0;
                       }
                       if ( c == '\r' ) {
-                        pdu_size = atoi(pdu_size_response);
+                        // pdu_size = atoi(pdu_size_response);
                         // mavio::log(LOG_INFO, "pdu size: %d", pdu_size);
                         pdu_size_response_pos = 0;
                         _step++;
