@@ -166,6 +166,8 @@ class MAVLinkHandlerAir {
   bool gsm_initialized = false;
   bool isbd_initialized = false;
 
+  uint8_t gcs_id = 255;
+
   std::chrono::milliseconds heartbeat_period;
 
   std::chrono::milliseconds active_update_interval;

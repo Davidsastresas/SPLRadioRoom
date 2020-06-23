@@ -192,7 +192,7 @@ bool MAVLinkHandlerAir::send_heartbeat() {
     heartbeat_timer.reset();
 
     mavlink_message_t heartbeat_msg;
-    mavlink_msg_heartbeat_pack(mavio::gcs_system_id, mavio::gcs_component_id,
+    mavlink_msg_heartbeat_pack(gcs_id, mavio::gcs_component_id,
                                &heartbeat_msg, MAV_TYPE_GCS,
                                MAV_AUTOPILOT_INVALID, 0, 0, 0);
 
@@ -367,6 +367,9 @@ bool MAVLinkHandlerAir::init() {
 
   heartbeat_period = timelib::sec2ms(1);
   active_update_interval = timelib::sec2ms(0.1);
+
+  // set gcs id for the hearbeat back to autopilot
+  gcs_id = config.get_groundstation_mav_id();
 
   // configurable options, set limits
 
