@@ -69,11 +69,7 @@ bool MAVLinkSMS::get_signal_quality(int& quality) {
   return sms.getSignalQuality(quality) == GSM_SUCCESS;
 }
 
-void MAVLinkSMS::list_sms() {
-  sms.readSMSlist();
-}
-
-bool MAVLinkSMS::init(string path, int speed, const vector<string>& devices, string pin) {
+bool MAVLinkSMS::init(string path, int speed, string pin) {
   mavio::log(LOG_NOTICE, "Connecting to sms transceiver (%s %d)...", path.data(),
              speed);
 
@@ -87,28 +83,6 @@ bool MAVLinkSMS::init(string path, int speed, const vector<string>& devices, str
     mavio::log(LOG_INFO, "Failed to open serial device '%s'.", path.data());
   }
 
-  // if (devices.size() > 0) {
-  //   mavio::log(LOG_INFO,
-  //              "Attempting to detect sms transceiver at the available serial "
-  //              "devices...");
-
-  //   for (size_t i = 0; i < devices.size(); i++) {
-  //     if (devices[i] == path) continue;
-
-  //     if (stream.open(devices[i].data(), speed) == 0) {
-  //       if (detect_transceiver(devices[i], pin)) {
-  //         return true;
-  //       } else {
-  //         stream.close();
-  //       }
-  //     } else {
-  //       mavio::log(LOG_DEBUG, "Failed to open serial device '%s'.",
-  //                  devices[i].data());
-  //     }
-  //   }
-  // }
-
-  // stream.open(path, speed);
   mavio::log(LOG_ERR,
              "GSM modem was not detected on any of the serial devices.");
 
@@ -120,9 +94,8 @@ void MAVLinkSMS::close() {
   mavio::log(LOG_DEBUG, "sms connection closed.");
 }
 
-bool MAVLinkSMS::send_message(const mavlink_message_t& mo_msg, std::string tlf) {
+bool MAVLinkSMS::send_message_bin(const mavlink_message_t& mo_msg, std::string tlf) {
   uint8_t buf[GSM_MAX_MT_MGS_SIZE];
-  size_t buf_size = sizeof(buf);
   uint16_t len = 0;
 
   if (mo_msg.len != 0) {
@@ -143,7 +116,29 @@ bool MAVLinkSMS::send_message(const mavlink_message_t& mo_msg, std::string tlf) 
   return true;
 }
 
-bool MAVLinkSMS::receive_message(mavlink_message_t& mt_msg, bool& inbox_empty) {
+bool MAVLinkSMS::send_message_text(const mavlink_message_t& mo_msg, std::string tlf) {
+  uint8_t buf[GSM_MAX_MT_MGS_SIZE];
+  uint16_t len = 0;
+
+  if (mo_msg.len != 0) {
+    len = mavlink_msg_to_send_buffer(buf, &mo_msg);
+  }
+
+  int ret = sms.sendSMSText(buf, len, tlf);
+
+  if (ret != GSM_SUCCESS) {
+    char prefix[32];
+    snprintf(prefix, sizeof(prefix), "SMS << FAILED(%d)", ret);
+    MAVLinkLogger::log(LOG_WARNING, prefix, mo_msg);
+    
+    return false;
+  }
+  MAVLinkLogger::log(LOG_INFO, "SMS <<", mo_msg);
+
+  return true;
+}
+
+bool MAVLinkSMS::receive_message_bin(mavlink_message_t& mt_msg, bool& inbox_empty) {
   uint8_t buf[160];
   size_t size = sizeof(buf);
   mavlink_status_t mavlink_status;
@@ -151,6 +146,38 @@ bool MAVLinkSMS::receive_message(mavlink_message_t& mt_msg, bool& inbox_empty) {
   int ret;
 
   ret = sms.receiveSMSBinary(buf, size, inbox_empty);
+  // mavio::log(LOG_INFO, "inbox ret %d" , ret);
+  // mavio::log(LOG_INFO, "buf size %d" , size);
+
+  if ( ret == 0 ) {
+    for (size_t i = 0; i < size; i++) {
+      if (mavlink_parse_char(MAVLINK_COMM_2, buf[i], &mt_msg, 
+                            &mavlink_status)) {
+        MAVLinkLogger::log(LOG_INFO, "SMS >>", mt_msg);
+        received = true;
+        break;
+      }
+      // mavio::log(LOG_INFO, "sms parse(%d): %x", i, buf[i]);
+      // mavio::log(LOG_INFO, "sms parse status: %d", mavlink_status.parse_state);
+    }
+  }
+  if ( received ) {
+    // mavio::log(LOG_INFO, "parsing ok!");
+  } else {
+    // mavio::log(LOG_INFO, "parsing not!");
+  }
+  // mavio::log(LOG_INFO, "inbox empty %d" , inbox_empty);
+  return received;
+}
+
+bool MAVLinkSMS::receive_message_text(mavlink_message_t& mt_msg, bool& inbox_empty) {
+  uint8_t buf[160];
+  size_t size = sizeof(buf);
+  mavlink_status_t mavlink_status;
+  bool received = false;
+  int ret;
+
+  ret = sms.receiveSMSText(buf, size, inbox_empty);
   // mavio::log(LOG_INFO, "inbox ret %d" , ret);
   // mavio::log(LOG_INFO, "buf size %d" , size);
 

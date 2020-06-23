@@ -63,12 +63,14 @@ class SMS {
 
   int sendSMSBinary(const uint8_t* txData, size_t txDataSize, std::string tlf);
   
+  int sendSMSText(const uint8_t* txData, size_t txDataSize, std::string tlf);
+  
   int receiveSMSBinary(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_empty);
+  
+  int receiveSMSText(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_empty);
 
   int deleteSMSlist(void);
 
-  int readSMSlist(void);
-  
   int getSignalQuality(int& quality);
 
   struct sms_struct {
@@ -99,7 +101,9 @@ class SMS {
                          const char* prompt = NULL,
                          const char* terminator = "OK\r\n");
 
-  bool waitforSMSlist(uint8_t* response, size_t& responseSize, bool& inbox_empty);
+  bool waitforSMSlistBin(uint8_t* response, size_t& responseSize, bool& inbox_empty);
+  
+  bool waitforSMSlistText(uint8_t* response, size_t& responseSize, bool& inbox_empty);
 
   int internalBegin(std::string pin);
 
@@ -110,9 +114,11 @@ class SMS {
 
   int internalsendSMSBinary(const uint8_t* txData, size_t txDataSize, std::string tlf);
   
+  int internalsendSMSText(const uint8_t* txData, size_t txDataSize, std::string tlf);
+  
   int internalreceiveSMSBinary(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_empty);
-
-  int internalreadSMSlist(void);
+  
+  int internalreceiveSMSText(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_empty);
 
   int internaldeleteSMSlist(void);
 

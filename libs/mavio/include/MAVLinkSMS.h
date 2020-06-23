@@ -48,19 +48,20 @@ class MAVLinkSMS {
    *
    * Returns true if connection was successful.
    */
-  bool init(std::string path, int speed,
-            const std::vector<std::string>& devices, std::string pin);
+  bool init(std::string path, int speed, std::string pin);
 
   /*
    * Closes the serial device used to connect to gsm.
    */
   void close();
 
-  bool send_message(const mavlink_message_t& mo_msg, std::string tlf);
+  bool send_message_bin(const mavlink_message_t& mo_msg, std::string tlf);
 
-  bool receive_message(mavlink_message_t& mt_msg, bool& inbox_empty);
+  bool send_message_text(const mavlink_message_t& mo_msg, std::string tlf);
 
-  void list_sms();
+  bool receive_message_bin(mavlink_message_t& mt_msg, bool& inbox_empty);
+
+  bool receive_message_text(mavlink_message_t& mt_msg, bool& inbox_empty);
 
   /**
    * Returns true if gsm transceiver detected at the specified serial device.

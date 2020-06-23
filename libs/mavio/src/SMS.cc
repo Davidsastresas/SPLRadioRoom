@@ -91,7 +91,7 @@ int SMS::getTransceiverSerialNumber(char* buffer, size_t bufferSize) {
   return ret;
 }
 
-// Transmit and receive a binary message
+// Transmit a binary message
 int SMS::sendSMSBinary(const uint8_t* txData, size_t txDataSize, std::string tlf) {
   if (this->reentrant) {
     return GSM_REENTRANT;
@@ -99,6 +99,18 @@ int SMS::sendSMSBinary(const uint8_t* txData, size_t txDataSize, std::string tlf
 
   this->reentrant = true;
   int ret = internalsendSMSBinary(txData, txDataSize, tlf);
+  this->reentrant = false;
+  return ret;
+}
+
+// Transmit a text message
+int SMS::sendSMSText(const uint8_t* txData, size_t txDataSize, std::string tlf) {
+  if (this->reentrant) {
+    return GSM_REENTRANT;
+  }
+
+  this->reentrant = true;
+  int ret = internalsendSMSText(txData, txDataSize, tlf);
   this->reentrant = false;
   return ret;
 }
@@ -115,13 +127,14 @@ int SMS::receiveSMSBinary(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_e
   return ret;
 }
 
-int SMS::readSMSlist() {
+// Transmit and receive a binary message
+int SMS::receiveSMSText(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_emtpy) {
   if (this->reentrant) {
     return GSM_REENTRANT;
   }
 
   this->reentrant = true;
-  int ret = internalreadSMSlist();
+  int ret = internalreceiveSMSText(rxBuffer, rxBufferSize, inbox_emtpy);
   this->reentrant = false;
   return ret;
 }
@@ -628,24 +641,462 @@ int SMS::internalsendSMSBinary(const uint8_t* txData, size_t txDataSize, std::st
   return GSM_MSG_TO_SEND_EMPTY;
 }
 
+int SMS::internalsendSMSText(const uint8_t* txData, size_t txDataSize, std::string tlf) {
+
+  // mavio::log(LOG_INFO, "mav msg size: %d", txDataSize);
+  const char* tlfstr = tlf.c_str();
+  // mavio::log(LOG_INFO, "Tlf number: %s", tlfstr);
+  
+  uint data_size_int = txDataSize;
+
+  char pdu[160];
+  memset(pdu, 0, sizeof(pdu));
+
+  char data_size[3];
+  memset(data_size, 0, sizeof(data_size));
+  
+  char data[140];
+  memset(data, 0, sizeof(data));
+  
+  char command[80];
+  memset(command, 0, sizeof(command));
+  
+  char pdu_size[3];
+  memset(pdu_size, 0, sizeof(pdu_size));
+
+  int pdu_size_int = 0;
+
+  pdu_size_int = data_size_int + 1 + 13;
+
+  // mavio::log(LOG_INFO, "pdu size int: %d", pdu_size_int);
+
+  snprintf(pdu_size, 3, "%d",(unsigned char)pdu_size_int);
+
+  // mavio::log(LOG_INFO, "pdu size str: %s", pdu_size);
+
+  pdu_size[2] = '\0';
+
+  // mavio::log(LOG_INFO, "data size int: %d", data_size_int);
+
+  snprintf(data_size, 3, "%d",(unsigned char)data_size_int);
+  
+  data_size[2] = '\0';
+
+  // mavio::log(LOG_INFO, "data size str: %s", data_size);
+
+  // mavio::log(LOG_INFO, "strlen %d", strlen(data_size));
+
+  char ca[1];
+
+  char data_size_str[2];
+
+  snprintf(data_size_str, 3, "%x", data_size_int);
+
+// -----------------------------------
+
+  uint character;
+  char octett[10];
+
+  for (character=0 ; character < ( data_size_int*2) ; character++)
+  {
+    sprintf(octett,"%02X",(unsigned char) txData[character]);
+    strcat(data,octett);
+    ca[0] = data[character];
+    // mavio::log(LOG_INFO, "data %d byte: %s", character, ca);
+  }
+
+    // mavio::log(LOG_INFO, "strlen %d", strlen(data));
+// --------------------------------
+
+  // snprintf(pdu, sizeof(pdu), "%s%s%s%s", "0011000B914336575652F60002AA", "33", data, "\x1A");
+
+  // for (int x = 0; x < sizeof(pdu); x++ ) {
+  //   ca[0] = pdu[x];
+  //   // mavio::log(LOG_INFO, "pdu byte: %s", ca);
+  // }
+
+  // // mavio::log(LOG_INFO, "pdu size: %d", sizeof(pdu));
+  
+  if (txData && txDataSize) {  
+    
+    send("AT+CMGS=");
+    send(pdu_size);
+    send("\r");
+
+    if(waitForATResponse(NULL, 0, NULL, "> ")) {
+      // mavio::log(LOG_INFO, "at > ok");
+    } else {
+      // mavio::log(LOG_INFO, "at > NOT ok");
+    }
+
+    send("0011000C91");
+    send(tlfstr);    
+    send("0004AA");
+    send(data_size_str);
+    stream.write(data, data_size_int*2);
+    send("\x1A");
+
+    if (!waitForATResponse(NULL, 0, NULL, "OK\r\n")) {
+      return cancelled() ? GSM_CANCELLED : GSM_PROTOCOL_ERROR;
+    }
+    return GSM_SUCCESS;
+  } 
+  return GSM_MSG_TO_SEND_EMPTY;
+}
+
 int SMS::internalreceiveSMSBinary(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_empty) {
 
   send("AT+CMGL\r");
   int ret;
-  ret = waitforSMSlist(rxBuffer, rxBufferSize, inbox_empty);
+  ret = waitforSMSlistBin(rxBuffer, rxBufferSize, inbox_empty);
   return ret;
 }
 
-int SMS::internalreadSMSlist(void) {
-  return true;
+int SMS::internalreceiveSMSText(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_empty) {
+
+  send("AT+CMGL\r");
+  int ret;
+  ret = waitforSMSlistText(rxBuffer, rxBufferSize, inbox_empty);
+  return ret;
 }
 
-bool SMS::waitforSMSlist(uint8_t* response, size_t& responseSize, bool& inbox_empty) {
+bool SMS::waitforSMSlistBin(uint8_t* response, size_t& responseSize, bool& inbox_empty) {
 
   if (response) {
     memset(response, 0, responseSize);
   }
 
+  sms_struct _buffer_sms;
+
+  char indexresponse[3]; 
+  memset(indexresponse, 0, sizeof(indexresponse));  // allow for 3 digits indexes
+  int indexresponse_pos = 0;
+  uint8_t index;
+  
+  uint8_t pdu_size;
+  char pdu_size_response[3]; // allow for 3 digits size, we need more than 100
+  memset(pdu_size_response, 0, sizeof(pdu_size_response));  
+  int pdu_size_response_pos = 0;
+
+  char bytechar[2];
+  memset(bytechar, 0, sizeof(bytechar));  
+  int counterbyte = 0;
+  int counter = 0;
+
+  uint8_t smsc_size;
+  char smsc_size_response[2]; // allow for 3 digits size, we need more than 100
+  memset(smsc_size_response, 0, sizeof(smsc_size_response));  
+  int smsc_size_response_pos = 0;
+
+  int _step = 0;
+  int sender_number_pos = 0;
+  int timestamp_pos = 0;
+  int data_pos = 0;
+
+  enum { LOOKING_FOR_PROMPT, GATHERING_RESPONSE, LOOKING_FOR_TERMINATOR };
+  int promptState = LOOKING_FOR_PROMPT;
+
+  const char prompt[] = "+CMGL: ";
+  int matchPromptPos = 0;      // Matches chars in prompt
+  
+  const char prompt_no_msg[] = "OK\r\n";
+  int matchPromptPos_no_msg = 0; 
+
+  // parsing variables
+  int cc;
+  char c;
+
+  Stopwatch timer;
+  while (timer.elapsed_time() < atTimeout) {
+    if (cancelled()) {
+      return false;
+    }
+
+    cc = stream.read();
+    if (cc >= 0) {
+      c = cc;
+
+      // mavio::log(LOG_INFO, "SMS rd: %c", c);
+
+      if (prompt) {
+        switch (promptState) {
+          case LOOKING_FOR_PROMPT:
+            if (c == prompt[matchPromptPos]) {
+              ++matchPromptPos;
+              if (prompt[matchPromptPos] == '\0') {
+                promptState = GATHERING_RESPONSE;
+                // mavio::log(LOG_INFO, "gathering response");
+              }
+            } else {
+              matchPromptPos = c == prompt[0] ? 1 : 0;
+            }
+
+            if (c == prompt_no_msg[matchPromptPos_no_msg]) {
+              // mavio::log(LOG_INFO, "prompt_no_msg matches");
+              ++matchPromptPos_no_msg;
+              if (prompt_no_msg[matchPromptPos_no_msg] == '\0') {
+                // mavio::log(LOG_INFO, "prompt_no_msg finished");
+                inbox_empty = true;
+                return GSM_INBOX_EMPTY;
+              }
+            } else {
+              matchPromptPos_no_msg = c == prompt_no_msg[0] ? 1 : 0;
+            }
+
+
+            break;
+          case GATHERING_RESPONSE: 
+                if ( c != ' ') {
+                  switch (_step) {
+                    case 0: // index
+                      if ( c != ',' || indexresponse_pos >= 3 ) {
+                        indexresponse[indexresponse_pos] = c;
+                        indexresponse_pos++;
+                        break;
+                      } else {
+                        index = atoi(indexresponse);
+                        // mavio::log(LOG_INFO, "SMS index: %d", index);
+                        indexresponse_pos = 0;
+                        _step++;
+                        [[fallthrough]];
+                      } 
+                    case 1: // size, etc, ignore by the moment
+                      if ( c != ',' ) {
+                        pdu_size_response[pdu_size_response_pos] = c;
+                        pdu_size_response_pos++;
+                      } else {
+                        pdu_size_response_pos = 0;
+                      }
+                      if ( c == '\r' ) {
+                        pdu_size = atoi(pdu_size_response);
+                        // mavio::log(LOG_INFO, "pdu size: %d", pdu_size);
+                        pdu_size_response_pos = 0;
+                        _step++;
+                      }
+                      break;
+                    case 2: // sms struct
+                      if ( isxdigit(c) ) {
+                        smsc_size_response[smsc_size_response_pos] = c;
+                        smsc_size_response_pos++;
+                      }
+                      if ( smsc_size_response_pos >= 2 ) {
+                        smsc_size = octet2bin(smsc_size_response);
+                        // mavio::log(LOG_INFO, "smsc size: %d", smsc_size);
+                        smsc_size_response_pos = 0;
+                        _step++;
+                      }
+                      break;
+                    case 3: // type_address
+                      if ( isxdigit(c) ) {
+                        bytechar[counter] = c;
+                        counter++;
+                      }
+                      if ( counter >= 2 ) {
+                        counter = 0;
+                        buffersms.type_address = octet2bin(bytechar);
+                        // mavio::log(LOG_INFO, "type address: %x", buffersms.type_address);
+                        _step++;
+
+                        memset(buffersms.service_center_number, 0, sizeof(buffersms.service_center_number));
+                      }
+                      break;
+                    case 4: // service_center_number
+                      if ( isxdigit(c) ) {
+                        if ( !(counter & 1) ) { // even
+                          buffersms.service_center_number[counter + 1] = c;
+                        } else { // odd
+                          buffersms.service_center_number[counter - 1] = c;
+                        }
+                        counter++;
+                      }
+                      if ( counter >= ( ( smsc_size - 1 ) << 1 ) ) {
+                        if ( !isdigit(buffersms.service_center_number[counter-1]) ) {
+                          buffersms.service_center_number[counter-1] = '\0';
+                        } else {
+                          buffersms.service_center_number[counter] = '\0';
+                        }
+                        counter = 0;
+                        // mavio::log(LOG_INFO, "service center number: %s", buffersms.service_center_number);
+                        _step++;
+                      }
+                      break;
+                    case 5:
+                      bytechar[counter] = c;
+                      counter++;
+                      if ( counter >= 2 ) {
+                        counter = 0;
+                        buffersms.first_byte = octet2bin(bytechar);
+                        // mavio::log(LOG_INFO, "fist fyte: %x", buffersms.first_byte);
+                        _step++;\
+                      }
+                      break;
+                    case 6:
+                      if ( isxdigit(c) ) {
+                        bytechar[counter] = c;
+                        counter++;
+                      }
+                      if ( counter >= 2 ) {
+                        counter = 0;
+                        buffersms.address_lenght = octet2bin(bytechar);
+                        // mavio::log(LOG_INFO, "address lenght: %d", buffersms.address_lenght);
+                        _step++;
+
+                        memset(buffersms.sender_number, 0, sizeof(buffersms.sender_number));
+                      }
+                      break;
+                    case 7:
+                      bytechar[counter] = c;
+                      counter++;
+                      if ( counter >= 2 ) {
+                        counter = 0;
+                        buffersms.address_type = octet2bin(bytechar);
+                        // mavio::log(LOG_INFO, "address type: %x", buffersms.address_type);
+                        _step++;
+                      }
+                      break;
+                    case 8:
+                      if ( isxdigit(c) ) {
+                        if ( !(counter & 1) ) { // even
+                          buffersms.sender_number[counter + 1] = c;
+                        } else { // odd
+                          buffersms.sender_number[counter - 1] = c;
+                        }
+                        counter++;
+                      }
+                      if ( counter > buffersms.address_lenght ) {
+                        if ( !isdigit(buffersms.sender_number[counter-1]) ) {
+                          buffersms.sender_number[counter-1] = '\0';
+                        } else {
+                          buffersms.sender_number[counter] = '\0';
+                        }
+                        counter = 0;
+                        // mavio::log(LOG_INFO, "sender number: %s", buffersms.sender_number);
+                        _step++;
+                      }
+                      break;
+                    case 9:
+                      bytechar[counter] = c;
+                      counter++;
+                      if ( counter >= 2 ) {
+                        counter = 0;
+                        buffersms.TP_PID = octet2bin(bytechar);
+                        // mavio::log(LOG_INFO, "tc_pid: %x", buffersms.TP_PID);
+                        _step++;
+                      }
+                      break;
+                    case 10:
+                      bytechar[counter] = c;
+                      counter++;
+                      if ( counter >= 2 ) {
+                        counter = 0;
+                        buffersms.TO_DCS = octet2bin(bytechar);
+                        // mavio::log(LOG_INFO, "to_dcs: %x", buffersms.TO_DCS);
+                        _step++;
+                      }
+                      break;
+                    case 11:
+                      if ( isxdigit(c) ) {
+                        if ( !(counter & 1) ) { // even
+                          buffersms.timestamp[counter + 1] = c;
+                        } else { // odd
+                          buffersms.timestamp[counter - 1] = c;
+                        }
+                        counter++;
+                      }
+                      if ( counter >= 14 /*timestamp format*/ ) {
+                        buffersms.timestamp[counter] = '\0';
+                        counter = 0;
+                        // mavio::log(LOG_INFO, "timestamp: %s", buffersms.timestamp);
+                        _step++;
+                      }
+                      break;
+                    case 12:
+                      bytechar[counter] = c;
+                      counter++;
+                      if ( counter >= 2 ) {
+                        counter = 0;
+                        buffersms.data_lenght = octet2bin(bytechar);
+                        // mavio::log(LOG_INFO, "data_lenght: %x", buffersms.data_lenght);
+                        _step++;
+
+                        memset(buffersms.data, 0, sizeof(buffersms.data));
+                      }
+                      break;
+                    case 13:
+                      if ( isxdigit(c) ) {
+                        bytechar[counterbyte] = c;
+                        counterbyte++;
+                      }
+                      if ( counterbyte >=2 ) {
+                        buffersms.data[counter] = octet2bin(bytechar);
+                        counterbyte = 0;
+                        // mavio::log(LOG_INFO, "byte[%d] = %x", counter, buffersms.data[counter]);
+                        counter++;
+                      }
+                      if ( counter >= buffersms.data_lenght ) {
+                        counter = 0;
+                        // for ( int i=0 ; i < buffersms.data_lenght ; i++ ) { 
+                        //   mavio::log(LOG_INFO, "data: %x", buffersms.data[i]);
+                        // }
+                        _step = 0;
+                        promptState = LOOKING_FOR_TERMINATOR;
+                      }
+                      break;
+                  }
+                } 
+            break;
+          case LOOKING_FOR_TERMINATOR:
+            if (waitForATResponse()) {
+              // mavio::log(LOG_INFO, "ok");
+            }
+
+            // mavio::log(LOG_INFO, "sender number: %s", buffersms.sender_number);
+            
+            for ( int i=0 ; i < buffersms.data_lenght ; i++ ) { 
+                          response[i] = buffersms.data[i];
+                          // mavio::log(LOG_INFO, "data: %x", response[i]);
+            }
+
+            responseSize = buffersms.data_lenght;
+            // mavio::log(LOG_INFO, "rsponsesize: %d", responseSize);
+
+            if ( index > 5 ) {
+              mavio::log(LOG_WARNING, "SMS: More than 5 SMS in inbox! Deleting ...");
+              send("AT+CMGD=0,4\r");
+            } else {
+              send("AT+CMGD=");
+              
+              char index_char[3];
+              memset(index_char, 0, sizeof(index_char));
+              int index_char_int = 0;
+
+              index_char_int = index;
+              snprintf(index_char, 3, "%d",(unsigned char)index_char_int);
+              index_char[2] = '\0';
+
+              send(index_char);
+
+              send("\r");
+            }
+
+            if (waitForATResponse()) {
+              // mavio::log(LOG_INFO, "ok");
+            }
+            inbox_empty = false;
+            return GSM_SUCCESS;
+        }
+      }
+    }  
+  }
+  mavio::log(LOG_WARNING, "SMS: Read sms list timeout");
+  return GSM_PROTOCOL_ERROR;
+}
+
+bool SMS::waitforSMSlistText(uint8_t* response, size_t& responseSize, bool& inbox_empty) {
+
+  if (response) {
+    memset(response, 0, responseSize);
+  }
 
   sms_struct _buffer_sms;
 

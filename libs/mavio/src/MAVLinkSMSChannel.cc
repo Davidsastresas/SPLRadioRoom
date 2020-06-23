@@ -56,18 +56,23 @@ void MAVLinkSMSChannel::reset_timer() {
 
 MAVLinkSMSChannel::~MAVLinkSMSChannel() {}
 
-bool MAVLinkSMSChannel::init(std::string path, int speed,
-                              const vector<string>& devices, std::string pin, std::string numb1) {
-  bool ret = sms.init(path, speed, devices, pin);
+bool MAVLinkSMSChannel::init(std::string path, int speed, bool pdu_enabled, std::string pin, std::string numb1) {
+  bool ret = sms.init(path, speed, pin);
 
   if (ret) {
-    tlf1 = prepare_number_gsm(numb1);
-    
+    tlf1 = prepare_number_gsm(numb1, pdu_enabled);
+
     if (!running) {
       running = true;
+      pdu_mode_enabled = pdu_enabled;
 
-      std::thread send_receive_th(&MAVLinkSMSChannel::send_receive_task, this);
-      send_receive_thread.swap(send_receive_th);
+      if (pdu_mode_enabled) {
+        std::thread send_receive_th(&MAVLinkSMSChannel::send_receive_task_pdu, this);
+        send_receive_thread.swap(send_receive_th);
+      } else {
+        std::thread send_receive_th(&MAVLinkSMSChannel::send_receive_task_text, this);
+        send_receive_thread.swap(send_receive_th);
+      }
     }
   }
     return ret;
@@ -75,20 +80,32 @@ bool MAVLinkSMSChannel::init(std::string path, int speed,
 
 // we need this function to present the tlf number to gsm backend the way it is used by PDU mode
 // it supports standard 11 digit international number
-std::string MAVLinkSMSChannel::prepare_number_gsm(std::string number) {
+std::string MAVLinkSMSChannel::prepare_number_gsm(std::string number, bool pdu_enabled) {
 
   std::string str = "000000000000";
 
-  for ( uint i = 0; i < number.size(); i++ ) {
-    if ( !( i % 2 ) ) { // even
-      str[i + 1] = number[i];
-    } else { // odd
-      str[i - 1] = number[i];
+  // if pdu we need to do this weird switch by pairs, and pad the last with F if odd number of digits
+  if (pdu_enabled) {
+    for ( uint i = 0; i < number.size(); i++ ) {
+      if ( !( i % 2 ) ) { // even
+        str[i + 1] = number[i];
+      } else { // odd
+        str[i - 1] = number[i];
+      }
     }
-  }
 
-  if ( number.size() < 12 ) {
-    str[10] = 'F';
+    if ( number.size() < 12 ) {
+      str[10] = 'F';
+    }
+
+  // if not pdu, the number is copied as it is, and the size of the string adjusted if less than 12 digits
+  } else {
+    for ( uint i = 0; i < number.size(); i++) {
+      str[i] = number[i];
+    }
+    if ( number.size() < 12) {
+      str.erase(11,12);
+    }
   }
 
   return str;
@@ -138,7 +155,7 @@ bool MAVLinkSMSChannel::get_signal_quality(int& quality) {
  * is up, pop send_queue, run send-receive session, and push received messages
  * to receive_queue.
  */
-void MAVLinkSMSChannel::send_receive_task() {
+void MAVLinkSMSChannel::send_receive_task_pdu() {
   while (running) {
     bool inbox_empty = true;
     int quality = 0;
@@ -153,7 +170,7 @@ void MAVLinkSMSChannel::send_receive_task() {
       if ( !send_queue.pop(mo_msg) ) {
         mavio::log(LOG_INFO, "SMS: send_queue error!");
       } else {
-        if ( sms.send_message(mo_msg, tlf1) ) {
+        if ( sms.send_message_bin(mo_msg, tlf1) ) {
           send_time = timelib::time_since_epoch();
         } else {
           mavio::log(LOG_INFO, "SMS: error sending sms");
@@ -162,7 +179,42 @@ void MAVLinkSMSChannel::send_receive_task() {
     }
 
     mavlink_message_t mt_msg;
-    if ( sms.receive_message(mt_msg, inbox_empty) ) {
+    if ( sms.receive_message_bin(mt_msg, inbox_empty) ) {
+      receive_time = timelib::time_since_epoch();
+      receive_queue.push(mt_msg);
+    }
+
+    if ( inbox_empty ) {
+      sleep(sms_channel_poll_interval);
+    }
+  }
+}
+
+void MAVLinkSMSChannel::send_receive_task_text() {
+  while (running) {
+    bool inbox_empty = true;
+    int quality = 0;
+    if (sms.get_signal_quality(quality)) {
+      signal_quality = quality;
+    } else {
+      signal_quality = 0;
+    }
+
+    if ( !send_queue.empty() ) {
+      mavlink_message_t mo_msg;
+      if ( !send_queue.pop(mo_msg) ) {
+        mavio::log(LOG_INFO, "SMS: send_queue error!");
+      } else {
+        if ( sms.send_message_text(mo_msg, tlf1) ) {
+          send_time = timelib::time_since_epoch();
+        } else {
+          mavio::log(LOG_INFO, "SMS: error sending sms");
+        }
+      }
+    }
+
+    mavlink_message_t mt_msg;
+    if ( sms.receive_message_text(mt_msg, inbox_empty) ) {
       receive_time = timelib::time_since_epoch();
       receive_queue.push(mt_msg);
     }

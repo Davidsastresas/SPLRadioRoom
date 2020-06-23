@@ -260,7 +260,7 @@ bool MAVLinkHandlerGround::init() {
   // GSM -------------------------------------------------------------------------------------------------
   if (config.get_gsm_enabled()) {  
     if (sms_channel.init(config.get_gsm_serial(), config.get_gsm_serial_speed(),
-                          devices, config.get_gsm_pin1(), config.get_aircraft1_tlf_number1())) {
+                          config.get_gsm_pdu_enabled(), config.get_gsm_pin1(), config.get_aircraft1_tlf_number1())) {
       log(LOG_INFO, "SMS channel initialized.");
       gsm_initialized = true;
     } else {

@@ -101,6 +101,9 @@ class Config {
 
   bool get_gsm_enabled() const;
   void set_gsm_enabled(bool enabled);
+  
+  bool get_gsm_pdu_enabled() const;
+  void set_gsm_pdu_enabled(bool pdu);
 
   /* TCP/IP comm link configuration properties */
 
@@ -278,6 +281,7 @@ class Config {
   std::string gsm_pin2 = "0";
   std::string gsm_pin3 = "0";
   bool gsm_enabled = false;
+  bool gsm_pdu_enabled = false;
 
   // tcp
   int tcp_port = 0;

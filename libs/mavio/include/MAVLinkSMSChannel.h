@@ -52,8 +52,7 @@ class MAVLinkSMSChannel : public MAVLinkChannel {
    *
    * Returns true if connection was successful.
    */
-  bool init(std::string path, int speed,
-            const std::vector<std::string>& devices, std::string pin, std::string numb1);
+  bool init(std::string path, int speed, bool pdu_enabled, std::string pin, std::string numb1);
 
   /*
    * Closes the serial device used to connect to gsm.
@@ -104,15 +103,18 @@ class MAVLinkSMSChannel : public MAVLinkChannel {
   /**
    * While running is true, executes send-receive gsm sessions.
    */
-  void send_receive_task();
+  void send_receive_task_pdu();
+  
+  void send_receive_task_text();
 
   /**
    * Prepare number to the format used by gsm backend.
    * suport international format 11 digits
    */
-  std::string prepare_number_gsm(std::string number);
+  std::string prepare_number_gsm(std::string number, bool pdu_enabled);
 
   // variables
+  bool pdu_mode_enabled;
 
   MAVLinkSMS sms;
   

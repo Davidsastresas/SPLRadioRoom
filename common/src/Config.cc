@@ -55,6 +55,7 @@ constexpr char gsm_serial_speed_property[] = "serial_speed";
 constexpr char gsm_pin1_property[] = "pin1";
 constexpr char gsm_pin2_property[] = "pin2";
 constexpr char gsm_pin3_property[] = "pin3";
+constexpr char gsm_pdu_enabled_property[] = "pdu_enabled";
 
 constexpr char tcp_config_section[] = "tcp";
 constexpr char tcp_port_property[] = "port";
@@ -147,6 +148,8 @@ int Config::init(const std::string& config_file) {
   set_gsm_pin3(conf.Get(gsm_config_section, gsm_pin3_property, default_string));
 
   set_gsm_enabled(conf.GetBoolean(gsm_config_section, enabled, default_enabled));
+
+  set_gsm_pdu_enabled(conf.GetBoolean(gsm_config_section, gsm_pdu_enabled_property, default_enabled));
 
   /* [tcp] config section */
 
@@ -371,6 +374,9 @@ void Config::set_gsm_pin3(const std::string& path) { gsm_pin3 = path; }
 
 bool Config::get_gsm_enabled() const {return gsm_enabled;}
 void Config::set_gsm_enabled(bool enabled) {gsm_enabled = enabled;}
+
+bool Config::get_gsm_pdu_enabled() const {return gsm_pdu_enabled;}
+void Config::set_gsm_pdu_enabled(bool enabled) {gsm_pdu_enabled = enabled;}
 
 /* TCP */
 
