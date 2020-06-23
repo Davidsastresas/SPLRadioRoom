@@ -244,6 +244,8 @@ int SMS::internalBegin(std::string pin) {
       return cancelled() ? GSM_CANCELLED : GSM_PROTOCOL_ERROR;
     }
   }
+
+  pdu_mode_active = true;
   // diag << "InternalBegin: success!\n";
   return GSM_SUCCESS;
 }
@@ -613,6 +615,15 @@ int SMS::internalsendSMSBinary(const uint8_t* txData, size_t txDataSize, std::st
   // // mavio::log(LOG_INFO, "pdu size: %d", sizeof(pdu));
   
   if (txData && txDataSize) {  
+
+    // set pdu mode
+    if (!pdu_mode_active) {
+      send("AT+CMGF=0\r");
+      if(!waitForATResponse()) {
+        return cancelled() ? GSM_CANCELLED : GSM_PROTOCOL_ERROR;
+      }
+      pdu_mode_active = true;
+    }
     
     send("AT+CMGS=");
     send(pdu_size);
@@ -703,38 +714,31 @@ int SMS::internalsendSMSText(const uint8_t* txData, size_t txDataSize, std::stri
     // mavio::log(LOG_INFO, "data %d byte: %s", character, ca);
   }
 
-    // mavio::log(LOG_INFO, "strlen %d", strlen(data));
-// --------------------------------
-
-  // snprintf(pdu, sizeof(pdu), "%s%s%s%s", "0011000B914336575652F60002AA", "33", data, "\x1A");
-
-  // for (int x = 0; x < sizeof(pdu); x++ ) {
-  //   ca[0] = pdu[x];
-  //   // mavio::log(LOG_INFO, "pdu byte: %s", ca);
-  // }
-
-  // // mavio::log(LOG_INFO, "pdu size: %d", sizeof(pdu));
-  
   if (txData && txDataSize) {  
-    
-    send("AT+CMGS=");
-    send(pdu_size);
-    send("\r");
 
-    if(waitForATResponse(NULL, 0, NULL, "> ")) {
+    // set text mode
+    if (pdu_mode_active) {
+      send("AT+CMGF=1\r");
+      if(!waitForATResponse()) {
+        return cancelled() ? GSM_CANCELLED : GSM_PROTOCOL_ERROR;
+      }
+      pdu_mode_active = false;
+    }
+
+    send("AT+CMGS=\"");
+    send(tlfstr);
+    send("\"\r");
+
+    if(waitForATResponseDebug(NULL, 0, NULL, "> ")) {
       // mavio::log(LOG_INFO, "at > ok");
     } else {
       // mavio::log(LOG_INFO, "at > NOT ok");
     }
 
-    send("0011000C91");
-    send(tlfstr);    
-    send("0004AA");
-    send(data_size_str);
     stream.write(data, data_size_int*2);
     send("\x1A");
 
-    if (!waitForATResponse(NULL, 0, NULL, "OK\r\n")) {
+    if (!waitForATResponseDebug(NULL, 0, NULL, "OK\r\n")) {
       return cancelled() ? GSM_CANCELLED : GSM_PROTOCOL_ERROR;
     }
     return GSM_SUCCESS;
@@ -744,6 +748,15 @@ int SMS::internalsendSMSText(const uint8_t* txData, size_t txDataSize, std::stri
 
 int SMS::internalreceiveSMSBinary(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_empty) {
 
+  // set pdu mode
+  if (!pdu_mode_active) {
+    send("AT+CMGF=0\r");
+    if(!waitForATResponse()) {
+      return cancelled() ? GSM_CANCELLED : GSM_PROTOCOL_ERROR;
+    }
+    pdu_mode_active = true;
+  }
+
   send("AT+CMGL\r");
   int ret;
   ret = waitforSMSlistBin(rxBuffer, rxBufferSize, inbox_empty);
@@ -751,6 +764,15 @@ int SMS::internalreceiveSMSBinary(uint8_t* rxBuffer, size_t& rxBufferSize, bool&
 }
 
 int SMS::internalreceiveSMSText(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_empty) {
+
+  // set text mode
+  if (pdu_mode_active) {
+    send("AT+CMGF=1\r");
+    if(!waitForATResponse()) {
+      return cancelled() ? GSM_CANCELLED : GSM_PROTOCOL_ERROR;
+    }
+    pdu_mode_active = false;
+  }
 
   send("AT+CMGL\r");
   int ret;

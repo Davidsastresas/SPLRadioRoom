@@ -139,6 +139,8 @@ class SMS {
   // State variables
   bool reentrant;
 
+  bool pdu_mode_active;
+
   sms_struct buffersms;
 };
 
