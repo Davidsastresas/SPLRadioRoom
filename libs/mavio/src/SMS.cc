@@ -786,8 +786,6 @@ bool SMS::waitforSMSlistBin(uint8_t* response, size_t& responseSize, bool& inbox
     memset(response, 0, responseSize);
   }
 
-  sms_struct _buffer_sms;
-
   char indexresponse[3]; 
   memset(indexresponse, 0, sizeof(indexresponse));  // allow for 3 digits indexes
   int indexresponse_pos = 0;
@@ -1115,28 +1113,19 @@ bool SMS::waitforSMSlistText(uint8_t* response, size_t& responseSize, bool& inbo
     memset(response, 0, responseSize);
   }
 
-  sms_struct _buffer_sms;
   buffersms.data_lenght = 0;
 
   char indexresponse[3]; 
   memset(indexresponse, 0, sizeof(indexresponse));  // allow for 3 digits indexes
   int indexresponse_pos = 0;
+  
   uint8_t index;
   
-  // uint8_t pdu_size;
-  char pdu_size_response[3]; // allow for 3 digits size, we need more than 100
-  memset(pdu_size_response, 0, sizeof(pdu_size_response));  
-  int pdu_size_response_pos = 0;
-
   char bytechar[2];
   memset(bytechar, 0, sizeof(bytechar));  
+
   int counterbyte = 0;
   int counter = 0;
-
-  uint8_t smsc_size;
-  char smsc_size_response[2]; // allow for 3 digits size, we need more than 100
-  memset(smsc_size_response, 0, sizeof(smsc_size_response));  
-  int smsc_size_response_pos = 0;
 
   int _step = 0;
 
