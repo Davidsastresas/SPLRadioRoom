@@ -50,7 +50,9 @@ constexpr char isbd_serial_speed_property[] = "serial_speed";
 constexpr char isbd_get_noticed_property[] = "get_noticed";
 
 constexpr char gsm_config_section[] = "gsm";
-constexpr char gsm_serial_property[] = "serial";
+constexpr char gsm_serial1_property[] = "serial1";
+constexpr char gsm_serial2_property[] = "serial2";
+constexpr char gsm_serial3_property[] = "serial3";
 constexpr char gsm_serial_speed_property[] = "serial_speed";
 constexpr char gsm_pin1_property[] = "pin1";
 constexpr char gsm_pin2_property[] = "pin2";
@@ -136,7 +138,11 @@ int Config::init(const std::string& config_file) {
 
   /* [gsm] config section */
 
-  set_gsm_serial(conf.Get(gsm_config_section, gsm_serial_property, default_string));
+  set_gsm_serial1(conf.Get(gsm_config_section, gsm_serial1_property, default_string));
+  
+  set_gsm_serial2(conf.Get(gsm_config_section, gsm_serial2_property, default_string));
+  
+  set_gsm_serial3(conf.Get(gsm_config_section, gsm_serial3_property, default_string));
 
   set_gsm_serial_speed(conf.GetInteger(
       gsm_config_section, gsm_serial_speed_property, default_int));
@@ -360,8 +366,14 @@ void Config::set_isbd_get_noticed(bool get_noticed) {isbd_get_noticed = get_noti
 int Config::get_gsm_serial_speed() const { return gsm_serial_speed; }
 void Config::set_gsm_serial_speed(int speed) { gsm_serial_speed = speed; }
 
-std::string Config::get_gsm_serial() const { return gsm_serial; }
-void Config::set_gsm_serial(const std::string& path) { gsm_serial = path; }
+std::string Config::get_gsm_serial1() const { return gsm_serial1; }
+void Config::set_gsm_serial1(const std::string& path) { gsm_serial1 = path; }
+
+std::string Config::get_gsm_serial2() const { return gsm_serial2; }
+void Config::set_gsm_serial2(const std::string& path) { gsm_serial2 = path; }
+
+std::string Config::get_gsm_serial3() const { return gsm_serial3; }
+void Config::set_gsm_serial3(const std::string& path) { gsm_serial3 = path; }
 
 std::string Config::get_gsm_pin1() const { return gsm_pin1; }
 void Config::set_gsm_pin1(const std::string& path) { gsm_pin1 = path; }

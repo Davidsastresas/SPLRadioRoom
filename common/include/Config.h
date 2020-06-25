@@ -84,8 +84,14 @@ class Config {
 
   /* gsm comm link configuration properties */
 
-  std::string get_gsm_serial() const;
-  void set_gsm_serial(const std::string& path);
+  std::string get_gsm_serial1() const;
+  void set_gsm_serial1(const std::string& path);
+  
+  std::string get_gsm_serial2() const;
+  void set_gsm_serial2(const std::string& path);
+  
+  std::string get_gsm_serial3() const;
+  void set_gsm_serial3(const std::string& path);
 
   int get_gsm_serial_speed() const;
   void set_gsm_serial_speed(int speed);
@@ -275,7 +281,9 @@ class Config {
   bool isbd_get_noticed = false;
 
   // gsm
-  std::string gsm_serial = "0";
+  std::string gsm_serial1 = "0";
+  std::string gsm_serial2 = "0";
+  std::string gsm_serial3 = "0";
   int gsm_serial_speed = 0;
   std::string gsm_pin1 = "0";
   std::string gsm_pin2 = "0";
