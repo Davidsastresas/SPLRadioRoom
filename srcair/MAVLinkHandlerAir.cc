@@ -126,7 +126,7 @@ void MAVLinkHandlerAir::update_active_channel() {
   } else if ( isbd_active ) { 
     if ( current_time - rfd.last_receive_time() <= rfd_timeout ) {
       set_rfd_active();
-    } else if ( current_time - sms_channel.last_receive_time() <= sms_timeout ) {
+    } else if ( current_time - last_sms_time <= sms_timeout ) {
       set_gsm_active();
     }
 
@@ -255,7 +255,8 @@ bool MAVLinkHandlerAir::set_gsm_active() {
     rfd_active = false;
     isbd_active = false;
     gsm_active = true;
-    sms_channel.reset_timer();
+    // sms_channel.reset_timer();
+    last_sms_time = timelib::time_since_epoch();
     primary_report_timer.reset();
     log(LOG_INFO, "GSM active");
   } else {
@@ -415,7 +416,8 @@ bool MAVLinkHandlerAir::init() {
   log(LOG_INFO,"sms_report_period %d", sms_report_period);
   log(LOG_INFO,"isbd_report_period %d", isbd_report_period);
 
-  sms_channel.reset_timer();
+  // sms_channel.reset_timer();
+  last_sms_time = timelib::time_since_epoch();
   rfd.reset_timer();
   
   log(LOG_INFO, "UV Radio Room initialization succeeded.");
