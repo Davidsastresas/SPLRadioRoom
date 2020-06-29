@@ -146,6 +146,7 @@ void MAVLinkHandlerGround::handle_mo_message(const mavlink_message_t& msg) {
     if (msg.msgid == MAVLINK_MSG_ID_HIGH_LATENCY) {
       last_base_mode = mavlink_msg_high_latency_get_base_mode(&msg);
       last_custom_mode = mavlink_msg_high_latency_get_custom_mode(&msg);
+      last_high_latency = msg;
     }
   }
 }
@@ -160,6 +161,7 @@ void MAVLinkHandlerGround::handle_mo_sms(mavio::SMSmessage& sms) {
   if (sms.get_mavlink_msg().msgid == MAVLINK_MSG_ID_HIGH_LATENCY) {
     last_base_mode = mavlink_msg_high_latency_get_base_mode(&msg);
     last_custom_mode = mavlink_msg_high_latency_get_custom_mode(&msg);
+    last_high_latency = msg;
   }
 
   last_sms_time = timelib::time_since_epoch();
@@ -200,6 +202,7 @@ void MAVLinkHandlerGround::send_heartbeats() {
   if (heartbeat_timer.elapsed_time() >= heartbeat_period) {
     heartbeat_timer.reset();
     send_hearbeat_tcp();
+    tcp_channel.send_message(last_high_latency);
   }
 }
 

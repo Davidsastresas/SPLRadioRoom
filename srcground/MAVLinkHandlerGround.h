@@ -192,6 +192,8 @@ class MAVLinkHandlerGround {
   std::chrono::milliseconds isbd_alive_period; // 5 minutes
 
   std::string last_aircraft_number = "";
+
+  mavlink_message_t last_high_latency;
 };
 
 }  // namespace radioroom
