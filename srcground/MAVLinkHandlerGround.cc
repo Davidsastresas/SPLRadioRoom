@@ -151,9 +151,16 @@ void MAVLinkHandlerGround::handle_mo_message(const mavlink_message_t& msg) {
 }
 
 void MAVLinkHandlerGround::handle_mo_sms(mavio::SMSmessage& sms) {
+  
   mavlink_message_t msg = sms.get_mavlink_msg();
   last_aircraft_number = sms.get_number();
+
   tcp_channel.send_message(msg);
+
+  if (sms.get_mavlink_msg().msgid == MAVLINK_MSG_ID_HIGH_LATENCY) {
+    last_base_mode = mavlink_msg_high_latency_get_base_mode(&msg);
+    last_custom_mode = mavlink_msg_high_latency_get_custom_mode(&msg);
+  }
 }
 
 void MAVLinkHandlerGround::handle_mt_message(const mavlink_message_t& msg) {
