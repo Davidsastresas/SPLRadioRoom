@@ -115,14 +115,14 @@ void MAVLinkHandlerGround::update_active_channel() {
   } else if (gsm_active) {
     if ( current_time - rfd.last_receive_time() < rfd_timeout ) {
       set_rfd_active();
-    } else if ( current_time - sms_channel.last_receive_time() > sms_timeout ) {
+    } else if ( current_time - last_sms_time > sms_timeout ) {
       handle_gsm_out();
     }
 
   } else if (isbd_active) {
     if ( current_time - rfd.last_receive_time() < rfd_timeout ) {
       set_rfd_active();
-    } else if ( current_time - sms_channel.last_receive_time() < sms_timeout ) {
+    } else if ( current_time - last_sms_time < sms_timeout ) {
       set_gsm_active();
     }
      
@@ -161,6 +161,8 @@ void MAVLinkHandlerGround::handle_mo_sms(mavio::SMSmessage& sms) {
     last_base_mode = mavlink_msg_high_latency_get_base_mode(&msg);
     last_custom_mode = mavlink_msg_high_latency_get_custom_mode(&msg);
   }
+
+  last_sms_time = timelib::time_since_epoch();
 }
 
 void MAVLinkHandlerGround::handle_mt_message(const mavlink_message_t& msg) {
@@ -315,7 +317,8 @@ bool MAVLinkHandlerGround::init() {
   }
 
   heartbeat_timer.reset();
-  sms_channel.reset_timer();
+  // sms_channel.reset_timer();
+  last_sms_time = timelib::time_since_epoch();
   rfd.reset_timer();
 
   active_update_interval = timelib::sec2ms(0.1);
@@ -412,7 +415,8 @@ bool MAVLinkHandlerGround::set_gsm_active() {
     rfd_active = false;
     isbd_active = false;
     gsm_active = true;
-    sms_channel.reset_timer();
+    // sms_channel.reset_timer();
+    last_sms_time = timelib::time_since_epoch();
     sms_alive_timer.reset();
     log(LOG_INFO, "GSM active");
 

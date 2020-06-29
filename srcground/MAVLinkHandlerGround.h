@@ -139,6 +139,7 @@ class MAVLinkHandlerGround {
 
   //
   std::chrono::milliseconds current_time;
+  std::chrono::milliseconds last_sms_time;
 
   timelib::Stopwatch last_rfd_heartbeat_timer;
   timelib::Stopwatch update_report_timer;
