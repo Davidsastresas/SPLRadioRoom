@@ -352,7 +352,7 @@ bool MAVLinkHandlerAir::init() {
   if (config.get_gsm_enabled()) {  
     if (sms_channel.init(config.get_gsm_serial1(), config.get_gsm_serial2(), config.get_gsm_serial3(),
                          config.get_gsm_pin1(), config.get_gsm_pin2(), config.get_gsm_pin3(),
-                         config.get_gsm_serial_speed(), config.get_gsm_pdu_enabled())) {
+                         config.get_gsm_serial_speed(), false)) {
       log(LOG_INFO, "GSM channel initialized.");
       gsm_initialized = true;
     } else {
