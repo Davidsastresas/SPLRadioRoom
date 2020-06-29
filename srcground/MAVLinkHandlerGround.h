@@ -72,6 +72,8 @@ class MAVLinkHandlerGround {
    */
   void handle_mo_message(const mavlink_message_t& msg);
 
+  void handle_mo_sms(mavio::SMSmessage& sms);
+
   /*
    * Handle mobile-terminated message received from a comm channel.
    */
@@ -187,6 +189,8 @@ class MAVLinkHandlerGround {
 
   timelib::Stopwatch isbd_alive_timer;
   std::chrono::milliseconds isbd_alive_period; // 5 minutes
+
+  std::string last_aircraft_number = "";
 };
 
 }  // namespace radioroom

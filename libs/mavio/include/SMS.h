@@ -65,9 +65,9 @@ class SMS {
   
   int sendSMSText(const uint8_t* txData, size_t txDataSize, std::string tlf);
   
-  int receiveSMSBinary(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_empty);
+  int receiveSMSBinary(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_empty,  std::string& str_number);
   
-  int receiveSMSText(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_empty);
+  int receiveSMSText(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_empty,  std::string& str_number);
 
   int deleteSMSlist(void);
 
@@ -101,9 +101,9 @@ class SMS {
                          const char* prompt = NULL,
                          const char* terminator = "OK\r\n");
 
-  bool waitforSMSlistBin(uint8_t* response, size_t& responseSize, bool& inbox_empty);
+  bool waitforSMSlistBin(uint8_t* response, size_t& responseSize, bool& inbox_empty,  std::string& str_number);
   
-  bool waitforSMSlistText(uint8_t* response, size_t& responseSize, bool& inbox_empty);
+  bool waitforSMSlistText(uint8_t* response, size_t& responseSize, bool& inbox_empty, std::string& str_number);
 
   int internalBegin(std::string pin);
 
@@ -116,9 +116,9 @@ class SMS {
   
   int internalsendSMSText(const uint8_t* txData, size_t txDataSize, std::string tlf);
   
-  int internalreceiveSMSBinary(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_empty);
+  int internalreceiveSMSBinary(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_empty,  std::string& str_number);
   
-  int internalreceiveSMSText(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_empty);
+  int internalreceiveSMSText(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_empty,  std::string& str_number);
 
   int internaldeleteSMSlist(void);
 

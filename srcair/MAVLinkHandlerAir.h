@@ -77,6 +77,8 @@ class MAVLinkHandlerAir {
    */
   void handle_mt_message(const mavlink_message_t& msg);
 
+  void handle_mt_sms(mavio::SMSmessage& msg);
+
   /**
    * Sends report message to one of the comm channels if the channel report
    * period has elapsed.
@@ -139,6 +141,7 @@ class MAVLinkHandlerAir {
 
   //
   std::chrono::milliseconds current_time;
+  std::chrono::milliseconds last_sms_time;
 
   // mavio::MAVLinkTCPChannel tcp_channel;
   timelib::Stopwatch update_active_timer;
@@ -176,6 +179,8 @@ class MAVLinkHandlerAir {
 
   std::chrono::milliseconds sms_report_period;
   std::chrono::milliseconds isbd_report_period;
+
+  std::string last_gcs_number = "";
 };
 
 }  // namespace radioroom

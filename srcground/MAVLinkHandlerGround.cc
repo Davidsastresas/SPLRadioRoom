@@ -66,6 +66,7 @@ MAVLinkHandlerGround::MAVLinkHandlerGround()
 bool MAVLinkHandlerGround::loop() {
   mavlink_message_t mo_msg;
   mavlink_message_t mt_msg;
+  mavio::SMSmessage mo_sms;
   bool sleep = true;
 
   if (rfd.receive_message(mo_msg)) {
@@ -73,8 +74,8 @@ bool MAVLinkHandlerGround::loop() {
     sleep = false; 
   }
 
-  if (sms_channel.receive_message(mo_msg)) {
-    handle_mo_message(mo_msg);
+  if (sms_channel.receive_message(mo_sms)) {
+    handle_mo_sms(mo_sms);
     sleep = false;
   }
 
@@ -149,6 +150,12 @@ void MAVLinkHandlerGround::handle_mo_message(const mavlink_message_t& msg) {
   }
 }
 
+void MAVLinkHandlerGround::handle_mo_sms(mavio::SMSmessage& sms) {
+  mavlink_message_t msg = sms.get_mavlink_msg();
+  last_aircraft_number = sms.get_number();
+  tcp_channel.send_message(msg);
+}
+
 void MAVLinkHandlerGround::handle_mt_message(const mavlink_message_t& msg) {
 
   rfd.send_message(msg);
@@ -203,12 +210,15 @@ bool MAVLinkHandlerGround::send_hearbeat_isbd() {
 bool MAVLinkHandlerGround::send_hearbeat_sms() {
 
   mavlink_message_t sms_heartbeat_msg;
+  mavio::SMSmessage sms_msg;
 
   mavlink_msg_heartbeat_pack(255, 0,
                            &sms_heartbeat_msg, MAV_TYPE_GCS,
                            MAV_AUTOPILOT_INVALID, 0, 0, 0);
 
-  sms_channel.send_message(sms_heartbeat_msg);
+  sms_msg.set_mavlink_msg(sms_heartbeat_msg);
+  sms_msg.set_number(last_aircraft_number);
+  sms_channel.send_message(sms_msg);
 
   return true;
 }
@@ -259,8 +269,10 @@ bool MAVLinkHandlerGround::init() {
 
   // GSM -------------------------------------------------------------------------------------------------
   if (config.get_gsm_enabled()) {  
-    if (sms_channel.init(config.get_gsm_serial(), config.get_gsm_serial_speed(),
-                          config.get_gsm_pdu_enabled(), config.get_gsm_pin1(), config.get_aircraft1_tlf_number1())) {
+    if (sms_channel.init(config.get_gsm_serial1(), config.get_gsm_serial2(), config.get_gsm_serial3(),
+                         config.get_gsm_pin1(), config.get_gsm_pin2(), config.get_gsm_pin3(),
+                         config.get_gsm_serial_speed(), config.get_gsm_pdu_enabled())) {
+                           
       log(LOG_INFO, "SMS channel initialized.");
       gsm_initialized = true;
     } else {
@@ -303,6 +315,9 @@ bool MAVLinkHandlerGround::init() {
   isbd_alive_period = timelib::sec2ms(600);
   
   // configurable options
+
+  last_aircraft_number = config.get_aircraft1_tlf_number1();
+
   heartbeat_period = timelib::sec2ms(1);
   rfd_timeout = timelib::sec2ms(2);
   sms_timeout = timelib::sec2ms(25);
@@ -324,6 +339,7 @@ bool MAVLinkHandlerGround::init() {
     sms_alive_period = timelib::sec2ms((double)config.get_sms_heartbeat_period());
   }
 
+  log(LOG_INFO,"aircraft1 number1 %s", last_aircraft_number.c_str());
   log(LOG_INFO,"rfd_timeout %d", rfd_timeout);
   log(LOG_INFO,"sms_timeout %d", sms_timeout);
   log(LOG_INFO,"sms_alive_period %d", sms_alive_period);

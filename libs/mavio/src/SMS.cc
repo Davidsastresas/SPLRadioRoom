@@ -116,25 +116,25 @@ int SMS::sendSMSText(const uint8_t* txData, size_t txDataSize, std::string tlf) 
 }
 
 // Transmit and receive a binary message
-int SMS::receiveSMSBinary(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_emtpy) {
+int SMS::receiveSMSBinary(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_emtpy,  std::string& str_number) {
   if (this->reentrant) {
     return GSM_REENTRANT;
   }
 
   this->reentrant = true;
-  int ret = internalreceiveSMSBinary(rxBuffer, rxBufferSize, inbox_emtpy);
+  int ret = internalreceiveSMSBinary(rxBuffer, rxBufferSize, inbox_emtpy, str_number);
   this->reentrant = false;
   return ret;
 }
 
 // Transmit and receive a binary message
-int SMS::receiveSMSText(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_emtpy) {
+int SMS::receiveSMSText(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_emtpy,  std::string& str_number) {
   if (this->reentrant) {
     return GSM_REENTRANT;
   }
 
   this->reentrant = true;
-  int ret = internalreceiveSMSText(rxBuffer, rxBufferSize, inbox_emtpy);
+  int ret = internalreceiveSMSText(rxBuffer, rxBufferSize, inbox_emtpy, str_number);
   this->reentrant = false;
   return ret;
 }
@@ -746,7 +746,8 @@ int SMS::internalsendSMSText(const uint8_t* txData, size_t txDataSize, std::stri
   return GSM_MSG_TO_SEND_EMPTY;
 }
 
-int SMS::internalreceiveSMSBinary(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_empty) {
+// currently not implemented sender number
+int SMS::internalreceiveSMSBinary(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_empty,  std::string& str_number) {
 
   // set pdu mode
   if (!pdu_mode_active) {
@@ -759,11 +760,11 @@ int SMS::internalreceiveSMSBinary(uint8_t* rxBuffer, size_t& rxBufferSize, bool&
 
   send("AT+CMGL\r");
   int ret;
-  ret = waitforSMSlistBin(rxBuffer, rxBufferSize, inbox_empty);
+  ret = waitforSMSlistBin(rxBuffer, rxBufferSize, inbox_empty, str_number);
   return ret;
 }
 
-int SMS::internalreceiveSMSText(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_empty) {
+int SMS::internalreceiveSMSText(uint8_t* rxBuffer, size_t& rxBufferSize, bool& inbox_empty,  std::string& str_number) {
 
   // set text mode
   if (pdu_mode_active) {
@@ -776,11 +777,12 @@ int SMS::internalreceiveSMSText(uint8_t* rxBuffer, size_t& rxBufferSize, bool& i
 
   send("AT+CMGL\r");
   int ret;
-  ret = waitforSMSlistText(rxBuffer, rxBufferSize, inbox_empty);
+  ret = waitforSMSlistText(rxBuffer, rxBufferSize, inbox_empty, str_number);
   return ret;
 }
 
-bool SMS::waitforSMSlistBin(uint8_t* response, size_t& responseSize, bool& inbox_empty) {
+// currently not implemented sender number
+bool SMS::waitforSMSlistBin(uint8_t* response, size_t& responseSize, bool& inbox_empty,  std::string& str_number) {
 
   if (response) {
     memset(response, 0, responseSize);
@@ -1107,13 +1109,14 @@ bool SMS::waitforSMSlistBin(uint8_t* response, size_t& responseSize, bool& inbox
   return GSM_PROTOCOL_ERROR;
 }
 
-bool SMS::waitforSMSlistText(uint8_t* response, size_t& responseSize, bool& inbox_empty) {
+bool SMS::waitforSMSlistText(uint8_t* response, size_t& responseSize, bool& inbox_empty,  std::string& str_number) {
 
   if (response) {
     memset(response, 0, responseSize);
   }
 
   buffersms.data_lenght = 0;
+  std::string sender_number_string = "";
 
   char indexresponse[3]; 
   memset(indexresponse, 0, sizeof(indexresponse));  // allow for 3 digits indexes
@@ -1194,16 +1197,19 @@ bool SMS::waitforSMSlistText(uint8_t* response, size_t& responseSize, bool& inbo
                         // mavio::log(LOG_INFO, "SMS index: %d", index);
                         indexresponse_pos = 0;
                         _step++;
-                        [[fallthrough]];
+                        break;
                       } 
                     case 1: // label ( REC, UNREAD, ETC )
+                      // mavio::log(LOG_INFO, "SMS reading misc");
                       if ( c == ',' ) {
                         _step++;
                       }
                       break;
                     case 2: // sender number
+                      // mavio::log(LOG_INFO, "SMS reading number");
                       if ( isdigit(c) ) {
                         buffersms.sender_number[counter] = c;
+                        sender_number_string = sender_number_string + c; // copy sender number
                         counter++;
                       }
                       if ( c == ',' ) {
@@ -1212,17 +1218,20 @@ bool SMS::waitforSMSlistText(uint8_t* response, size_t& responseSize, bool& inbo
                       }
                       break;
                     case 3: // whatever, not used
+                      // mavio::log(LOG_INFO, "SMS reading whatever");
                       if ( c == ',' ) {
                         _step++;
                       }
                       break;
                     case 4: // timestamp, not used by the moment
+                      // mavio::log(LOG_INFO, "SMS reading timestamp");
                       if ( c == '\r' ) {
                         // mavio::log(LOG_INFO, "going to read now");
                         _step++;
                       }
                       break;
                     case 5:
+                      // mavio::log(LOG_INFO, "SMS reading payload");
                       if ( isxdigit(c) ) {
                         bytechar[counterbyte] = c;
                         counterbyte++;
@@ -1284,6 +1293,7 @@ bool SMS::waitforSMSlistText(uint8_t* response, size_t& responseSize, bool& inbo
               // mavio::log(LOG_INFO, "ok");
             }
             inbox_empty = false;
+            str_number = sender_number_string;
             return GSM_SUCCESS;
         }
       }

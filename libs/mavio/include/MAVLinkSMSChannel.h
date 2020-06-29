@@ -35,6 +35,31 @@
 
 namespace mavio {
 
+  class SMSmessage {
+  public:
+
+  SMSmessage();
+  SMSmessage(mavlink_message_t msg, std::string numb, std::chrono::milliseconds time);
+  ~SMSmessage();
+
+  mavlink_message_t get_mavlink_msg();
+  void set_mavlink_msg(mavlink_message_t msg);
+
+  std::string get_number();
+  void set_number(std::string numb);
+
+  std::chrono::milliseconds get_time();
+  void set_time(std::chrono::milliseconds time);
+
+  private:
+
+  mavlink_message_t message;
+  std::string number;
+  std::chrono::milliseconds receive_time;
+
+};
+
+
 /**
  * MAVLinkSMSChannel asynchronously sends and receives MAVLink messages to/from
  * a GSM modem using sms messaging.
@@ -52,7 +77,9 @@ class MAVLinkSMSChannel : public MAVLinkChannel {
    *
    * Returns true if connection was successful.
    */
-  bool init(std::string path, int speed, bool pdu_enabled, std::string pin, std::string numb1);
+  bool init(std::string path1, std::string path2, std::string path3, 
+            std::string pin1, std::string pin2, std::string pin3,
+            int speed, bool pdu_enabled);
 
   /*
    * Closes the serial device used to connect to gsm.
@@ -64,14 +91,14 @@ class MAVLinkSMSChannel : public MAVLinkChannel {
    *
    * Returns true if the message was sent successfully.
    */
-  bool send_message(const mavlink_message_t& msg);
+  bool send_message(const mavlink_message_t& msg) { std::ignore = msg; return false; }
+  
+  bool send_message(SMSmessage& msg);
 
-  /**
-   * Receives MAVLink message from gsm transceiver.
-   *
-   * Returns true if a message was received.
-   */
-  bool receive_message(mavlink_message_t& msg);
+  // dummy for abstract class
+  bool receive_message(mavlink_message_t& msg) { std::ignore = msg; return false; }
+
+  bool receive_message(SMSmessage& msg);
 
   /**
    * Checks if data is available in gsm transceiver.
@@ -116,7 +143,9 @@ class MAVLinkSMSChannel : public MAVLinkChannel {
   // variables
   bool pdu_mode_enabled;
 
-  MAVLinkSMS sms;
+  MAVLinkSMS sms[3];
+
+  int initialized_instances = 0;
   
   std::atomic<bool> running;
   
@@ -124,17 +153,16 @@ class MAVLinkSMSChannel : public MAVLinkChannel {
   std::thread send_receive_thread;
   
   // Queue that buffers messages to be sent to the socket
-  CircularBuffer<mavlink_message_t> send_queue;
+  CircularBuffer<SMSmessage> send_queue;
   
   // Queue that buffers messages received from the socket
-  CircularBuffer<mavlink_message_t> receive_queue;
+  CircularBuffer<SMSmessage> receive_queue;
   
   std::chrono::milliseconds send_time;  // Last send epoch time
   std::chrono::milliseconds receive_time;  // Last receive epoch time
   
   std::atomic<int> signal_quality;
 
-  std::string tlf1 = "000000000000";
 };
 
 }  // namespace mavio

@@ -48,7 +48,7 @@ class MAVLinkSMS {
    *
    * Returns true if connection was successful.
    */
-  bool init(std::string path, int speed, std::string pin);
+  bool init(std::string path, int speed, std::string pin, int instance);
 
   /*
    * Closes the serial device used to connect to gsm.
@@ -59,9 +59,11 @@ class MAVLinkSMS {
 
   bool send_message_text(const mavlink_message_t& mo_msg, std::string tlf);
 
-  bool receive_message_bin(mavlink_message_t& mt_msg, bool& inbox_empty);
+  bool receive_message_bin(mavlink_message_t& mt_msg, bool& inbox_empty, std::string& sender_number);
 
-  bool receive_message_text(mavlink_message_t& mt_msg, bool& inbox_empty);
+  bool receive_message_text(mavlink_message_t& mt_msg, bool& inbox_empty, std::string& sender_number);
+
+  bool get_initialized();
 
   /**
    * Returns true if gsm transceiver detected at the specified serial device.
@@ -78,6 +80,8 @@ class MAVLinkSMS {
  private:
   Serial stream;
   SMS sms;
+  std::string last_number;
+  bool initialized = false;
 };
 
 }  // namespace mavio

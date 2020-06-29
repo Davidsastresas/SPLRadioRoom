@@ -67,6 +67,7 @@ MAVLinkHandlerAir::MAVLinkHandlerAir()
 bool MAVLinkHandlerAir::loop() {
   mavlink_message_t mo_msg;
   mavlink_message_t mt_msg;
+  mavio::SMSmessage mt_sms;
   _sleep = true;
 
   if (rfd.receive_message(mt_msg)) {
@@ -74,8 +75,8 @@ bool MAVLinkHandlerAir::loop() {
     _sleep = false; 
   }
 
-  if (sms_channel.receive_message(mt_msg)) {
-    handle_mt_message(mt_msg);
+  if (sms_channel.receive_message(mt_sms)) {
+    handle_mt_sms(mt_sms);
     _sleep = false;
   }
 
@@ -85,7 +86,6 @@ bool MAVLinkHandlerAir::loop() {
       _sleep = false;
     }
   }
-
 
   if (autopilot.receive_message(mo_msg)) {
     handle_mo_message(mo_msg);
@@ -119,7 +119,7 @@ void MAVLinkHandlerAir::update_active_channel() {
     if ( current_time - rfd.last_receive_time() <= rfd_timeout ) {
       set_rfd_active();
 
-    } else if ( current_time - sms_channel.last_receive_time() >= sms_timeout ) {
+    } else if ( current_time - last_sms_time >= sms_timeout ) {
       handle_gsm_out();
     }
 
@@ -162,10 +162,13 @@ bool MAVLinkHandlerAir::send_report() {
     if (primary_report_timer.elapsed_time() >= sms_report_period) {
       primary_report_timer.reset();
 
+      mavio::SMSmessage sms_report;
       mavlink_message_t sms_report_msg;
       report.get_message(sms_report_msg);
+      sms_report.set_mavlink_msg(sms_report_msg);
+      sms_report.set_number(last_gcs_number);
 
-      return sms_channel.send_message(sms_report_msg);
+      return sms_channel.send_message(sms_report);
     }
   }
   if (isbd_initialized && isbd_active) {
@@ -180,6 +183,14 @@ bool MAVLinkHandlerAir::send_report() {
   }
 
   return false;
+}
+
+void MAVLinkHandlerAir::handle_mt_sms(mavio::SMSmessage& sms) {
+
+  mavlink_message_t msg = sms.get_mavlink_msg();
+  last_gcs_number = sms.get_number();
+  last_sms_time = sms.get_time();
+  autopilot.send_message(msg);
 }
 
 bool MAVLinkHandlerAir::send_heartbeat() {
@@ -339,7 +350,9 @@ bool MAVLinkHandlerAir::init() {
 
   // ------------------- GSM -------------------
   if (config.get_gsm_enabled()) {  
-    if (sms_channel.init(config.get_gsm_serial(), config.get_gsm_serial_speed(), config.get_gsm_pdu_enabled(), config.get_gsm_pin1(), config.get_groundstation_tlf_number1())) {
+    if (sms_channel.init(config.get_gsm_serial1(), config.get_gsm_serial2(), config.get_gsm_serial3(),
+                         config.get_gsm_pin1(), config.get_gsm_pin2(), config.get_gsm_pin3(),
+                         config.get_gsm_serial_speed(), config.get_gsm_pdu_enabled())) {
       log(LOG_INFO, "GSM channel initialized.");
       gsm_initialized = true;
     } else {
@@ -394,6 +407,9 @@ bool MAVLinkHandlerAir::init() {
     isbd_report_period = timelib::sec2ms((double)config.get_sbd_period());
   }
 
+  last_gcs_number = config.get_groundstation_tlf_number1();
+
+  log(LOG_INFO,"GCS number %s", last_gcs_number.c_str());
   log(LOG_INFO,"rfd_timeout %d", rfd_timeout);
   log(LOG_INFO,"sms_timeout %d", sms_timeout);
   log(LOG_INFO,"sms_report_period %d", sms_report_period);
