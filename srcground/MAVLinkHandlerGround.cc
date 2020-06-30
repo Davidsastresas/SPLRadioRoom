@@ -147,6 +147,7 @@ void MAVLinkHandlerGround::handle_mo_message(const mavlink_message_t& msg) {
       last_base_mode = mavlink_msg_high_latency_get_base_mode(&msg);
       last_custom_mode = mavlink_msg_high_latency_get_custom_mode(&msg);
       last_high_latency = msg;
+      last_high_latency_valid = true;
     }
   }
 }
@@ -162,6 +163,7 @@ void MAVLinkHandlerGround::handle_mo_sms(mavio::SMSmessage& sms) {
     last_base_mode = mavlink_msg_high_latency_get_base_mode(&msg);
     last_custom_mode = mavlink_msg_high_latency_get_custom_mode(&msg);
     last_high_latency = msg;
+    last_high_latency_valid = true;
   }
 
   last_sms_time = timelib::time_since_epoch();
@@ -200,9 +202,10 @@ void MAVLinkHandlerGround::send_heartbeats() {
   // }
   // hearbeat to GCS, for not showing fail safe
   if (heartbeat_timer.elapsed_time() >= heartbeat_period) {
-    heartbeat_timer.reset();
-    send_hearbeat_tcp();
-    tcp_channel.send_message(last_high_latency);
+    if (!rfd_active) {
+      heartbeat_timer.reset();
+      send_hearbeat_tcp();
+    }
   }
 }
 
@@ -244,6 +247,10 @@ bool MAVLinkHandlerGround::send_hearbeat_tcp() {
                              MAV_AUTOPILOT_ARDUPILOTMEGA, last_base_mode, last_custom_mode, 0);
   
   tcp_channel.send_message(heartbeat_msg);
+
+  if (last_high_latency_valid) {
+    tcp_channel.send_message(last_high_latency);
+  }
 
   return true;
 }
@@ -326,13 +333,15 @@ bool MAVLinkHandlerGround::init() {
 
   active_update_interval = timelib::sec2ms(0.1);
   isbd_alive_period = timelib::sec2ms(600);
+
+  last_high_latency_valid = false;
   
   // configurable options
 
   last_aircraft_number = config.get_aircraft1_tlf_number1();
 
-  heartbeat_period = timelib::sec2ms(1);
-  rfd_timeout = timelib::sec2ms(2);
+  heartbeat_period = timelib::sec2ms(2);
+  rfd_timeout = timelib::sec2ms(3);
   sms_timeout = timelib::sec2ms(25);
   sms_alive_period = timelib::sec2ms(20);
 
@@ -439,6 +448,8 @@ bool MAVLinkHandlerGround::set_rfd_active() {
     gsm_active = false;
     rfd_active = true;
     log(LOG_INFO, "RFD active");
+
+    last_high_latency_valid = false;
 
     mavlink_message_t status_msg;
     mavlink_msg_statustext_pack(1,1, &status_msg, MAV_SEVERITY_NOTICE, "RFD active", 0, 0);

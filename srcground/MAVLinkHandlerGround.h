@@ -172,6 +172,9 @@ class MAVLinkHandlerGround {
   bool radio_initialized = false;
   bool gsm_initialized = false;
 
+  bool last_high_latency_valid = false;
+  uint8_t last_seq = 0;
+
   // Period of heartbeat sent to GCS if no hearbeat received from radio
   std::chrono::milliseconds heartbeat_period;
 
