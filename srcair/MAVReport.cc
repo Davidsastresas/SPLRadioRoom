@@ -65,7 +65,11 @@ bool MAVReport::update(const mavlink_message_t& msg) {
       report.battery_remaining =
           mavlink_msg_sys_status_get_battery_remaining(&msg);
       report.temperature =
-          mavlink_msg_sys_status_get_voltage_battery(&msg) / 1000;
+          mavlink_msg_sys_status_get_voltage_battery(&msg) >> 8;
+      report.temperature_air =
+          mavlink_msg_sys_status_get_voltage_battery(&msg);
+      report.landed_state = 
+          mavlink_msg_sys_status_get_current_battery(&msg) / 100;
       mask |= mavlink_msg_mask_sys_status;
       return true;
     case MAVLINK_MSG_ID_GPS_RAW_INT:  // 24
@@ -111,11 +115,6 @@ bool MAVReport::update(const mavlink_message_t& msg) {
       report.climb_rate = mavlink_msg_vfr_hud_get_climb(&msg);
       report.throttle = mavlink_msg_vfr_hud_get_throttle(&msg);
       mask |= mavlink_msg_mask_vfr_hud;
-      return true;
-    case MAVLINK_MSG_ID_BATTERY2:  // 147
-      uint16_t batt2_voltage = mavlink_msg_battery2_get_voltage(&msg);
-      report.temperature_air = batt2_voltage / 1000;
-      mask |= mavlink_msg_mask_battery2;
       return true;
   }
 
