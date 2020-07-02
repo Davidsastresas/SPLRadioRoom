@@ -221,6 +221,8 @@ void MAVLinkHandlerGround::handle_mt_message(const mavlink_message_t& msg) {
         ack_prep.result = 0;
         mavlink_msg_command_ack_encode(config.get_aircraft1_mav_id(), 1, &ack_cmd_long, &ack_prep);
         tcp_channel.send_message(ack_cmd_long);
+
+        sms_alive_timer.reset();
         
         break;
       }  
@@ -235,6 +237,8 @@ void MAVLinkHandlerGround::handle_mt_message(const mavlink_message_t& msg) {
         ack_prep.seq = mavlink_msg_mission_current_get_seq(&msg);
         mavlink_msg_mission_current_encode(config.get_aircraft1_mav_id(), 1, &ack_mission_set_current, &ack_prep);
         tcp_channel.send_message(ack_mission_set_current);
+
+        sms_alive_timer.reset();
         break;
       }
       case MAVLINK_MSG_ID_MISSION_ITEM: {
@@ -251,6 +255,8 @@ void MAVLinkHandlerGround::handle_mt_message(const mavlink_message_t& msg) {
         ack_prep.type = 0;
         mavlink_msg_mission_ack_encode(config.get_aircraft1_mav_id(), 1, &ack_mission_item, &ack_prep);
         tcp_channel.send_message(ack_mission_item);
+
+        sms_alive_timer.reset();
         break;
       }
       case MAVLINK_MSG_ID_SET_MODE: {
@@ -265,6 +271,8 @@ void MAVLinkHandlerGround::handle_mt_message(const mavlink_message_t& msg) {
         ack_prep.result = 0;
         mavlink_msg_command_ack_encode(config.get_aircraft1_mav_id(), 1, &ack_cmd_set_current, &ack_prep);
         tcp_channel.send_message(ack_cmd_set_current);
+
+        sms_alive_timer.reset();
         break;
       }
       default:
