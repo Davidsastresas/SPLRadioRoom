@@ -165,6 +165,16 @@ class MAVLinkHandlerGround {
   // save state of vehicle for heartbeat
   uint8_t last_base_mode = 0;
   uint32_t last_custom_mode = 0;
+  uint16_t last_sys_errors_com = 0;
+  uint16_t last_sys_errors_count1 = 0;
+  uint16_t last_sys_errors_count2 = 0;
+  uint16_t last_sys_errors_count3 = 0;
+  uint16_t last_sys_errors_count4 = 0;
+  uint16_t last_sys_drop_rate_com = 0;
+  uint16_t last_sys_load = 0;
+  uint32_t last_sys_sensors_present = 0;
+  uint32_t last_sys_sensors_enabled = 0;
+  uint32_t last_sys_sensors_health = 0;
 
   bool isbd_first_contact = false;
 

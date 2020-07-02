@@ -142,6 +142,20 @@ void MAVLinkHandlerGround::handle_mo_message(const mavlink_message_t& msg) {
     last_custom_mode = mavlink_msg_heartbeat_get_custom_mode(&msg);
   }
 
+  // prepare for the extended battery message from High_latency
+  if (msg.msgid == MAVLINK_MSG_ID_SYS_STATUS) {
+    last_sys_drop_rate_com = mavlink_msg_sys_status_get_drop_rate_comm(&msg);
+    last_sys_errors_com = mavlink_msg_sys_status_get_errors_comm(&msg);
+    last_sys_errors_count1 = mavlink_msg_sys_status_get_errors_count1(&msg);
+    last_sys_errors_count2 = mavlink_msg_sys_status_get_errors_count2(&msg);
+    last_sys_errors_count3 = mavlink_msg_sys_status_get_errors_count3(&msg);
+    last_sys_errors_count4 = mavlink_msg_sys_status_get_errors_count4(&msg);
+    last_sys_load = mavlink_msg_sys_status_get_load(&msg);
+    last_sys_sensors_enabled = mavlink_msg_sys_status_get_onboard_control_sensors_enabled(&msg);
+    last_sys_sensors_health = mavlink_msg_sys_status_get_onboard_control_sensors_health(&msg);
+    last_sys_sensors_present = mavlink_msg_sys_status_get_onboard_control_sensors_present(&msg);
+  }
+
   if (!rfd_active) {
     if (msg.msgid == MAVLINK_MSG_ID_HIGH_LATENCY) {
       last_base_mode = mavlink_msg_high_latency_get_base_mode(&msg);
@@ -164,6 +178,26 @@ void MAVLinkHandlerGround::handle_mo_sms(mavio::SMSmessage& sms) {
     last_custom_mode = mavlink_msg_high_latency_get_custom_mode(&msg);
     last_high_latency = msg;
     last_high_latency_valid = true;
+
+    mavlink_message_t sys_status;
+    mavlink_sys_status_t status_mavlink_msg;
+    status_mavlink_msg.battery_remaining = mavlink_msg_high_latency_get_battery_remaining(&msg);
+    status_mavlink_msg.current_battery = mavlink_msg_high_latency_get_landed_state(&msg) * 100;
+    status_mavlink_msg.voltage_battery = mavlink_msg_high_latency_get_temperature(&msg);
+    status_mavlink_msg.voltage_battery = status_mavlink_msg.voltage_battery << 8;
+    status_mavlink_msg.voltage_battery += mavlink_msg_high_latency_get_temperature_air(&msg);
+    status_mavlink_msg.drop_rate_comm = last_sys_drop_rate_com;
+    status_mavlink_msg.errors_comm = last_sys_errors_com;
+    status_mavlink_msg.errors_count1 = last_sys_errors_count1;
+    status_mavlink_msg.errors_count2 = last_sys_errors_count2;
+    status_mavlink_msg.errors_count3 = last_sys_errors_count3;
+    status_mavlink_msg.errors_count4 = last_sys_errors_count4;
+    status_mavlink_msg.load = last_sys_load;
+    status_mavlink_msg.onboard_control_sensors_enabled = last_sys_sensors_enabled;
+    status_mavlink_msg.onboard_control_sensors_health = last_sys_sensors_health;
+    status_mavlink_msg.onboard_control_sensors_present = last_sys_sensors_present;
+    mavlink_msg_sys_status_encode(config.get_aircraft1_mav_id(), 1, &sys_status, &status_mavlink_msg);
+    tcp_channel.send_message(sys_status);
   }
 
   last_sms_time = timelib::time_since_epoch();
