@@ -290,6 +290,11 @@ SMSmessage::SMSmessage(mavlink_message_t msg, std::string numb, std::chrono::mil
   receive_time = time;
 }
 
+SMSmessage::SMSmessage(mavlink_message_t msg, std::string numb) {
+  message = msg;
+  number = numb;
+}
+
 SMSmessage::~SMSmessage() {
   
 }

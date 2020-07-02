@@ -40,6 +40,7 @@ namespace mavio {
 
   SMSmessage();
   SMSmessage(mavlink_message_t msg, std::string numb, std::chrono::milliseconds time);
+  SMSmessage(mavlink_message_t msg, std::string numb);
   ~SMSmessage();
 
   mavlink_message_t get_mavlink_msg();
