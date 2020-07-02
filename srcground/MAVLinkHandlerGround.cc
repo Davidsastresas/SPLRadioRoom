@@ -172,6 +172,72 @@ void MAVLinkHandlerGround::handle_mo_sms(mavio::SMSmessage& sms) {
 void MAVLinkHandlerGround::handle_mt_message(const mavlink_message_t& msg) {
 
   rfd.send_message(msg);
+
+  if (!rfd_active) {
+    switch (msg.msgid) {
+      case MAVLINK_MSG_ID_COMMAND_LONG:{  
+        mavio::log(LOG_INFO, "command long!!");
+
+        mavio::SMSmessage sms_msg_cmd_long(msg, last_aircraft_number);
+        sms_channel.send_message(sms_msg_cmd_long);
+
+        mavlink_message_t ack_cmd_long;
+        mavlink_command_ack_t ack_prep;
+        ack_prep.command = mavlink_msg_command_long_get_command(&msg);
+        ack_prep.result = 0;
+        mavlink_msg_command_ack_encode(config.get_aircraft1_mav_id(), 1, &ack_cmd_long, &ack_prep);
+        tcp_channel.send_message(ack_cmd_long);
+        
+        break;
+      }  
+      case MAVLINK_MSG_ID_MISSION_SET_CURRENT: {
+        mavio::log(LOG_INFO, "set current!!");
+
+        mavio::SMSmessage sms_msg_set_current(msg, last_aircraft_number);
+        sms_channel.send_message(sms_msg_set_current);
+
+        mavlink_message_t ack_mission_set_current;
+        mavlink_mission_current_t ack_prep;
+        ack_prep.seq = mavlink_msg_mission_current_get_seq(&msg);
+        mavlink_msg_mission_current_encode(config.get_aircraft1_mav_id(), 1, &ack_mission_set_current, &ack_prep);
+        tcp_channel.send_message(ack_mission_set_current);
+        break;
+      }
+      case MAVLINK_MSG_ID_MISSION_ITEM: {
+        mavio::log(LOG_INFO, "mission item!!");
+
+        mavio::SMSmessage sms_msg_mission_item(msg, last_aircraft_number);
+        sms_channel.send_message(sms_msg_mission_item);
+
+        mavlink_message_t ack_mission_item;
+        mavlink_mission_ack_t ack_prep;
+        ack_prep.mission_type = 0;
+        ack_prep.target_component = msg.compid;
+        ack_prep.target_system = msg.sysid;
+        ack_prep.type = 0;
+        mavlink_msg_mission_ack_encode(config.get_aircraft1_mav_id(), 1, &ack_mission_item, &ack_prep);
+        tcp_channel.send_message(ack_mission_item);
+        break;
+      }
+      case MAVLINK_MSG_ID_SET_MODE: {
+        mavio::log(LOG_INFO, "set mode!!");
+
+        mavio::SMSmessage sms_msg_cmd_set_current(msg, last_aircraft_number);
+        sms_channel.send_message(sms_msg_cmd_set_current);
+
+        mavlink_message_t ack_cmd_set_current;
+        mavlink_command_ack_t ack_prep;
+        ack_prep.command = mavlink_msg_command_long_get_command(&msg);
+        ack_prep.result = 0;
+        mavlink_msg_command_ack_encode(config.get_aircraft1_mav_id(), 1, &ack_cmd_set_current, &ack_prep);
+        tcp_channel.send_message(ack_cmd_set_current);
+        break;
+      }
+      default:
+        break;
+
+    }
+  }
 }
 
 void MAVLinkHandlerGround::send_heartbeats() {
