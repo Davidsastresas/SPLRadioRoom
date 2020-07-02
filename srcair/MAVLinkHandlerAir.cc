@@ -166,9 +166,29 @@ bool MAVLinkHandlerAir::send_report() {
       mavlink_message_t sms_report_msg;
       report.get_message(sms_report_msg);
       sms_report.set_mavlink_msg(sms_report_msg);
-      sms_report.set_number(last_gcs_number);
 
-      return sms_channel.send_message(sms_report);
+      // send sms to all ground numbers configured for ground to pick the best signal
+      if (!ground_sms_all) {
+        if (config.get_groundstation_tlf_number2().size() > 5) {
+          sms_report.set_number(config.get_groundstation_tlf_number2());
+          sms_channel.send_message(sms_report);
+        }
+        if (config.get_groundstation_tlf_number3().size() > 5) {
+          sms_report.set_number(config.get_groundstation_tlf_number3());
+          sms_channel.send_message(sms_report);
+        }
+        if (config.get_groundstation_tlf_number1().size() > 5) {
+          sms_report.set_number(config.get_groundstation_tlf_number1());
+          sms_channel.send_message(sms_report);
+        }
+        ground_sms_all = true;
+      
+      // just regular loop, send to last known number of gcs, which gcs will pick best rssi
+      } else {
+        sms_report.set_number(last_gcs_number);
+        return sms_channel.send_message(sms_report);
+      }
+
     }
   }
   if (isbd_initialized && isbd_active) {
@@ -187,6 +207,9 @@ bool MAVLinkHandlerAir::send_report() {
 
 void MAVLinkHandlerAir::handle_mt_sms(mavio::SMSmessage& sms) {
 
+  if (!ground_sms_all) {
+    ground_sms_all = true;
+  }
   mavlink_message_t msg = sms.get_mavlink_msg();
   last_gcs_number = sms.get_number();
   last_sms_time = sms.get_time();
@@ -384,6 +407,9 @@ bool MAVLinkHandlerAir::init() {
 
   // set gcs id for the hearbeat back to autopilot
   gcs_id = config.get_groundstation_mav_id();
+  
+  // send at first contact sms to all 3 numbers of ground
+  ground_sms_all = false;
 
   // configurable options, set limits
 
