@@ -176,6 +176,15 @@ class MAVLinkHandlerGround {
   uint32_t last_sys_sensors_enabled = 0;
   uint32_t last_sys_sensors_health = 0;
 
+  // command parameters
+  int last_cmd_id;
+  timelib::Stopwatch timer_last_cmd_long;
+  timelib::Stopwatch timer_last_cmd_set_current;
+  timelib::Stopwatch timer_last_cmd_mission_item;
+  timelib::Stopwatch timer_last_cmd_set_mode;
+  std::chrono::milliseconds cmd_timer_default = timelib::sec2ms(2);
+
+
   bool isbd_first_contact = false;
 
   bool isbd_initialized = false;

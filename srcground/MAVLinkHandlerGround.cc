@@ -210,7 +210,9 @@ void MAVLinkHandlerGround::handle_mt_message(const mavlink_message_t& msg) {
   if (!rfd_active) {
     switch (msg.msgid) {
       case MAVLINK_MSG_ID_COMMAND_LONG:{  
-        mavio::log(LOG_INFO, "command long!!");
+        if ( timer_last_cmd_long.elapsed_time() < cmd_timer_default ) {
+          return;
+        }
 
         mavio::SMSmessage sms_msg_cmd_long(msg, last_aircraft_number);
         sms_channel.send_message(sms_msg_cmd_long);
@@ -223,11 +225,14 @@ void MAVLinkHandlerGround::handle_mt_message(const mavlink_message_t& msg) {
         tcp_channel.send_message(ack_cmd_long);
 
         sms_alive_timer.reset();
+        timer_last_cmd_long.reset();
         
         break;
       }  
       case MAVLINK_MSG_ID_MISSION_SET_CURRENT: {
-        mavio::log(LOG_INFO, "set current!!");
+        if ( timer_last_cmd_set_current.elapsed_time() < cmd_timer_default ) {
+          return;
+        }
 
         mavio::SMSmessage sms_msg_set_current(msg, last_aircraft_number);
         sms_channel.send_message(sms_msg_set_current);
@@ -239,10 +244,14 @@ void MAVLinkHandlerGround::handle_mt_message(const mavlink_message_t& msg) {
         tcp_channel.send_message(ack_mission_set_current);
 
         sms_alive_timer.reset();
+        timer_last_cmd_set_current.reset();
+
         break;
       }
       case MAVLINK_MSG_ID_MISSION_ITEM: {
-        mavio::log(LOG_INFO, "mission item!!");
+        if ( timer_last_cmd_mission_item.elapsed_time() < cmd_timer_default ) {
+          return;
+        }
 
         mavio::SMSmessage sms_msg_mission_item(msg, last_aircraft_number);
         sms_channel.send_message(sms_msg_mission_item);
@@ -257,10 +266,14 @@ void MAVLinkHandlerGround::handle_mt_message(const mavlink_message_t& msg) {
         tcp_channel.send_message(ack_mission_item);
 
         sms_alive_timer.reset();
+        timer_last_cmd_mission_item.reset();
+
         break;
       }
       case MAVLINK_MSG_ID_SET_MODE: {
-        mavio::log(LOG_INFO, "set mode!!");
+        if ( timer_last_cmd_set_mode.elapsed_time() < cmd_timer_default ) {
+          return;
+        }
 
         mavio::SMSmessage sms_msg_cmd_set_current(msg, last_aircraft_number);
         sms_channel.send_message(sms_msg_cmd_set_current);
@@ -273,6 +286,8 @@ void MAVLinkHandlerGround::handle_mt_message(const mavlink_message_t& msg) {
         tcp_channel.send_message(ack_cmd_set_current);
 
         sms_alive_timer.reset();
+        timer_last_cmd_set_mode.reset();
+        
         break;
       }
       default:
