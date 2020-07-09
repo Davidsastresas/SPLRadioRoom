@@ -323,30 +323,29 @@ void MAVLinkHandlerGround::handle_mt_message(const mavlink_message_t& msg) {
 
 void MAVLinkHandlerGround::send_heartbeats() {
 
-  // if ( isbd_alive_timer.elapsed_time() >= isbd_alive_period ) {
-  //    isbd_alive_timer.reset();
-  //    log(LOG_INFO, "send_hearbeat_isbd");
-  //    send_hearbeat_isbd();
-  //  }
-  
   // if ( rfd_active ) {
   //   return;
   // }
+
+  if ( isbd_initialized && isbd_active ) { 
+    if ( !gsm_rehook_sent ) {
+      send_hearbeat_sms(config.get_aircraft1_tlf_number1());
+      send_hearbeat_sms(config.get_aircraft1_tlf_number2());
+      send_hearbeat_sms(config.get_aircraft1_tlf_number3());
+
+      gsm_rehook_sent = true;
+    
+    }
+  }
 
   // heartbeat from SMS system, for air not to change to isbd
   if ( gsm_initialized && gsm_active ) {
     if ( sms_alive_timer.elapsed_time() >= sms_alive_period ) {
       sms_alive_timer.reset();
-      send_hearbeat_sms();
+      send_hearbeat_sms(last_aircraft_number);
     }
   }
-  // hearbeat from isbd, for the air unit to know ground is ok
-  // if ( isbd_active ) {
-  //   if ( isbd_alive_timer.elapsed_time() >= isbd_alive_period ) {
-  //     isbd_alive_timer.reset();
-  //     send_hearbeat_isbd();
-  //   }
-  // }
+
   // hearbeat to GCS, for not showing fail safe
   if (heartbeat_timer.elapsed_time() >= heartbeat_period) {
     if (!rfd_active) {
@@ -369,7 +368,7 @@ bool MAVLinkHandlerGround::send_hearbeat_isbd() {
   return true;
 }
 
-bool MAVLinkHandlerGround::send_hearbeat_sms() {
+bool MAVLinkHandlerGround::send_hearbeat_sms(std::string number) {
 
   mavlink_message_t sms_heartbeat_msg;
   mavio::SMSmessage sms_msg;
@@ -379,7 +378,7 @@ bool MAVLinkHandlerGround::send_hearbeat_sms() {
                            MAV_AUTOPILOT_INVALID, 0, 0, 0);
 
   sms_msg.set_mavlink_msg(sms_heartbeat_msg);
-  sms_msg.set_number(last_aircraft_number);
+  sms_msg.set_number(number);
   sms_channel.send_message(sms_msg);
 
   return true;
@@ -557,6 +556,9 @@ bool MAVLinkHandlerGround::set_isbd_active() {
     rfd_active = false;
     gsm_active = false;
     isbd_active = true;
+
+    gsm_rehook_sent = false;
+
     log(LOG_INFO, "ISBD active");
 
     mavlink_message_t status_msg;

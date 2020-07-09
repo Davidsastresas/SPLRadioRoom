@@ -91,7 +91,7 @@ class MAVLinkHandlerGround {
 
   bool send_hearbeat_isbd();
 
-  bool send_hearbeat_sms();
+  bool send_hearbeat_sms(std:: string number);
 
   bool send_hearbeat_tcp();
 
@@ -151,11 +151,14 @@ class MAVLinkHandlerGround {
   // mavlink_message_t missions[max_mission_count];
   size_t missions_received;
 
-  //
+  // switching logic variables
   bool rfd_active = true;
   bool gsm_active = false;
   bool isbd_active = false;
 
+  bool gsm_rehook_sent = false;
+
+  //
   timelib::Stopwatch retry_timer;
   mavlink_message_t retry_msg;
   std::chrono::milliseconds retry_timeout;
