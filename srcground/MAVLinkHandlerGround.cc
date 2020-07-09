@@ -214,8 +214,14 @@ void MAVLinkHandlerGround::handle_mt_message(const mavlink_message_t& msg) {
           return;
         }
 
-        mavio::SMSmessage sms_msg_cmd_long(msg, last_aircraft_number);
-        sms_channel.send_message(sms_msg_cmd_long);
+        if (gsm_active) {
+          mavio::SMSmessage sms_msg_cmd_long(msg, last_aircraft_number);
+          sms_channel.send_message(sms_msg_cmd_long);
+        }
+
+        if (isbd_active) {
+          isbd_channel.send_message(msg);
+        }
 
         mavlink_message_t ack_cmd_long;
         mavlink_command_ack_t ack_prep;
@@ -234,8 +240,14 @@ void MAVLinkHandlerGround::handle_mt_message(const mavlink_message_t& msg) {
           return;
         }
 
-        mavio::SMSmessage sms_msg_set_current(msg, last_aircraft_number);
-        sms_channel.send_message(sms_msg_set_current);
+        if (gsm_active) {
+          mavio::SMSmessage sms_msg_set_current(msg, last_aircraft_number);
+          sms_channel.send_message(sms_msg_set_current);
+        }
+
+        if (isbd_active) {
+          isbd_channel.send_message(msg);
+        }
 
         mavlink_message_t ack_mission_set_current;
         mavlink_mission_current_t ack_prep;
@@ -253,8 +265,14 @@ void MAVLinkHandlerGround::handle_mt_message(const mavlink_message_t& msg) {
           return;
         }
 
-        mavio::SMSmessage sms_msg_mission_item(msg, last_aircraft_number);
-        sms_channel.send_message(sms_msg_mission_item);
+        if (gsm_active) {
+          mavio::SMSmessage sms_msg_mission_item(msg, last_aircraft_number);
+          sms_channel.send_message(sms_msg_mission_item);
+        }
+
+        if (isbd_active) {
+          isbd_channel.send_message(msg);
+        }
 
         mavlink_message_t ack_mission_item;
         mavlink_mission_ack_t ack_prep;
@@ -275,8 +293,14 @@ void MAVLinkHandlerGround::handle_mt_message(const mavlink_message_t& msg) {
           return;
         }
 
-        mavio::SMSmessage sms_msg_cmd_set_current(msg, last_aircraft_number);
-        sms_channel.send_message(sms_msg_cmd_set_current);
+        if (gsm_active) {
+          mavio::SMSmessage sms_msg_cmd_set_current(msg, last_aircraft_number);
+          sms_channel.send_message(sms_msg_cmd_set_current);
+        }
+
+        if (isbd_active) {
+          isbd_channel.send_message(msg);
+        }
 
         mavlink_message_t ack_cmd_set_current;
         mavlink_command_ack_t ack_prep;
