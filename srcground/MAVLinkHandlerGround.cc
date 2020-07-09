@@ -370,6 +370,10 @@ bool MAVLinkHandlerGround::send_hearbeat_isbd() {
 
 bool MAVLinkHandlerGround::send_hearbeat_sms(std::string number) {
 
+  if ( number.size() < 10 ) {
+    return false;
+  }
+
   mavlink_message_t sms_heartbeat_msg;
   mavio::SMSmessage sms_msg;
 
