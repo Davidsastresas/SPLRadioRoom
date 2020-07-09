@@ -175,9 +175,9 @@ bool MAVLinkISBD::send_receive_message(const mavlink_message_t& mo_msg,
   if (mo_msg.len != 0 && mo_msg.msgid != 0) {
     len = mavlink_msg_to_send_buffer(buforiginal, &mo_msg);
   
-    buf[0] = buforiginal[4];
-    buf[1] = buforiginal[5];
-    buf[2] = buforiginal[7];
+    buf[0] = buforiginal[4]; // seq
+    buf[1] = buforiginal[5]; // sysid
+    buf[2] = buforiginal[7]; // first byte of msg id
 
     for (uint16_t i = 3; i < len - 7; i++) {
       buf[i] = buforiginal[i + 7];
@@ -213,16 +213,23 @@ bool MAVLinkISBD::send_receive_message(const mavlink_message_t& mo_msg,
 
     mavio::log(LOG_INFO, "mavlink lenght: %x", mavlink_size);
 
-    bufdecoded[0] = 0xFD;
-    bufdecoded[1] = mavlink_size;
-    bufdecoded[2] = 0x00;
-    bufdecoded[3] = 0x00;
-    bufdecoded[4] = buf[0 + 5]; // 0 init message plus 5 rockblock prefix
-    bufdecoded[5] = buf[1 + 5]; // 0 init message plus 5 rockblock prefix
-    bufdecoded[6] = 0x01;
-    bufdecoded[7] = buf[2 + 5]; // 0 init message plus 5 rockblock prefix
-    bufdecoded[8] = 0x00;
-    bufdecoded[9] = 0x00;
+    bufdecoded[0] = 0xFD; // packet start 
+    bufdecoded[1] = mavlink_size; // payload lenght
+    bufdecoded[2] = 0x00; // inc flags
+    bufdecoded[3] = 0x00; // cmp flags
+    bufdecoded[4] = buf[0 + 5]; // seq 0 init message plus 5 rockblock prefix
+    bufdecoded[5] = buf[1 + 5]; // sys id 0 init message plus 5 rockblock prefix
+
+    // ugly workaround for cmds to work 
+    if ( buf[2 + 5] == MAVLINK_MSG_ID_HIGH_LATENCY ) { // air to ground high latency message
+      bufdecoded[6] = 0x01; // comp id autopilot
+    } else {                                           // GCS to air mission command
+      bufdecoded[6] = 0xBE; // comp id autopilot
+    }
+
+    bufdecoded[7] = buf[2 + 5]; // first msgid byte 0 init message plus 5 rockblock prefix
+    bufdecoded[8] = 0x00; // second msgid byte
+    bufdecoded[9] = 0x00; // third msgid byte
 
     for (size_t i_dec = 8; i_dec < buf_size; i_dec++) {
       bufdecoded[i_dec + 2] = buf[i_dec];
@@ -232,6 +239,8 @@ bool MAVLinkISBD::send_receive_message(const mavlink_message_t& mo_msg,
     //--------------------------------------------------------------------
 
     for (size_t i = 0; i < buf_size; i++) {
+      // mavio::log(LOG_INFO, "mavlink parse state: %d", mavlink_status.parse_state);
+      // mavio::log(LOG_INFO, "buffer %d read: %x", i, bufdecoded[i]);
       if (mavlink_parse_char(MAVLINK_COMM_3, bufdecoded[i], &mt_msg,
                              &mavlink_status)) {
         received = true;
@@ -247,7 +256,9 @@ bool MAVLinkISBD::send_receive_message(const mavlink_message_t& mo_msg,
     }
   }
 
-  MAVLinkLogger::log(LOG_INFO, "SBD <<", mo_msg);
+  if (mo_msg.len != 0 && mo_msg.msgid != 0) {
+    MAVLinkLogger::log(LOG_INFO, "SBD <<", mo_msg);
+  }
 
   return true;
 }
