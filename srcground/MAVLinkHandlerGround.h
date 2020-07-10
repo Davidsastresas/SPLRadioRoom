@@ -105,6 +105,8 @@ class MAVLinkHandlerGround {
 
   void handle_gsm_out();
 
+  void send_signal_quality();
+
   /*
    * Requests autopilot data streams required to compose report message.
    */
@@ -178,6 +180,14 @@ class MAVLinkHandlerGround {
   uint32_t last_sys_sensors_present = 0;
   uint32_t last_sys_sensors_enabled = 0;
   uint32_t last_sys_sensors_health = 0;
+
+  // link status
+  int gsm_quality = 0;
+  int sbd_quality = 0;
+  int rem_gsm_quality = 0;
+  int rem_sbd_quality = 0;
+  timelib::Stopwatch timer_send_link_status;
+  std::chrono::milliseconds timer_send_link_status_period = timelib::sec2ms(5);
 
   // command parameters
   int last_cmd_id;

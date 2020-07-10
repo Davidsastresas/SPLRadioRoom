@@ -95,6 +95,8 @@ bool MAVLinkHandlerGround::loop() {
 
   send_heartbeats();
 
+  send_signal_quality();
+
   return sleep;
 }
 
@@ -198,6 +200,8 @@ void MAVLinkHandlerGround::handle_mo_sms(mavio::SMSmessage& sms) {
     status_mavlink_msg.onboard_control_sensors_present = last_sys_sensors_present;
     mavlink_msg_sys_status_encode(config.get_aircraft1_mav_id(), 1, &sys_status, &status_mavlink_msg);
     tcp_channel.send_message(sys_status);
+
+    rem_gsm_quality = mavlink_msg_high_latency_get_throttle(&msg);
   }
 
   last_sms_time = timelib::time_since_epoch();
@@ -352,6 +356,23 @@ void MAVLinkHandlerGround::send_heartbeats() {
       heartbeat_timer.reset();
       send_hearbeat_tcp();
     }
+  }
+}
+
+// this is really ugly, need to refactor 
+void MAVLinkHandlerGround::send_signal_quality() {
+  if ( timer_send_link_status.elapsed_time() >= timer_send_link_status_period ) {
+    mavlink_message_t sms_status_msg;
+    if (!gsm_active) {
+      rem_gsm_quality = 0;
+    }
+    
+    sms_channel.get_signal_quality(gsm_quality);
+    mavlink_msg_radio_status_pack(249, 1, &sms_status_msg, 
+                                  gsm_quality, rem_gsm_quality, gsm_active, 0, 0, 0, 0);
+
+  tcp_channel.send_message(sms_status_msg);    
+  timer_send_link_status.reset();
   }
 }
 
