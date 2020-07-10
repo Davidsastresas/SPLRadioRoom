@@ -159,6 +159,9 @@ class MAVLinkHandlerAir {
   bool gsm_active;
   bool isbd_active;
 
+  // link quality
+  int gsm_signal_quality = 0;
+
   timelib::Stopwatch retry_timer;
   mavlink_message_t retry_msg;
   std::chrono::milliseconds retry_timeout;

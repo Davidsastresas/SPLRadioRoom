@@ -168,8 +168,6 @@ bool MAVLinkSMSChannel::get_signal_quality(int& quality) {
   return true;
 }
 
-// this is a nonworking shit. need to completely redo
-
 void MAVLinkSMSChannel::send_receive_task_text() {
   while (running) {
     bool sleeping = true;
@@ -210,6 +208,8 @@ void MAVLinkSMSChannel::send_receive_task_text() {
       }
 
     }
+
+    signal_quality = active_instance_quality;
 
     if ( !send_queue.empty() ) {
       SMSmessage mo_sms;

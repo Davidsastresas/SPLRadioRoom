@@ -37,7 +37,7 @@ class MAVReport {
   bool update(const mavlink_message_t& msg);
 
   // Retrieves HIGH_LATENCY report message
-  void get_message(mavlink_message_t& msg) const;
+  void get_message(mavlink_message_t& msg, uint8_t link_quality);
 
  private:
   mavlink_high_latency_t report;

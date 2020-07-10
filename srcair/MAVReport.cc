@@ -121,7 +121,8 @@ bool MAVReport::update(const mavlink_message_t& msg) {
   return false;
 }
 
-void MAVReport::get_message(mavlink_message_t& msg) const {
+void MAVReport::get_message(mavlink_message_t& msg, uint8_t link_quality) {
+  report.throttle = link_quality;
   mavlink_msg_high_latency_encode(sysid, compid, &msg, &report);
 }
 
