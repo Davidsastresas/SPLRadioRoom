@@ -357,12 +357,13 @@ bool MAVLinkHandlerAir::init() {
       rfd_serial_string = config.get_rfd_serial();
     }
     if (!rfd.init(rfd_serial_string, config.get_rfd_serial_speed(), devices, config.get_rfd_id())) {
-      log(LOG_ERR, "UV Radio Room initialization failed: cannot connect to Radio");
+      log(LOG_ERR, "Radio initialization failed: cannot connect to Radio");
       radio_initialized = false;
       // return false;
+    } else {
+      log(LOG_INFO,"Radio initialization succesful.");
     }
-
-    log(LOG_INFO,"Radio initialization succesful.");
+    
     // Exclude the serial device used by rfd 
     for (vector<string>::iterator iter = devices.begin(); iter != devices.end();
          ++iter) {
