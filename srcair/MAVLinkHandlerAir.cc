@@ -296,7 +296,7 @@ bool MAVLinkHandlerAir::set_isbd_active() {
     rfd_active = false;
     gsm_active = false;
     isbd_active = true;
-    secondary_report_timer.reset();
+    // secondary_report_timer.reset();
     log(LOG_INFO, "ISBD active");
   } else {
     isbd_active = false;
