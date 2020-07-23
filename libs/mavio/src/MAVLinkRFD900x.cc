@@ -63,7 +63,7 @@ bool MAVLinkRFD900x::init(const string& path, int speed,
                             const vector<string>& devices, int id) {
   bool ret = connect(path, speed, devices, id);
 
-  if (!running) {
+  if (!running && ret) {
     running = true;
 
     std::thread send_th(&MAVLinkRFD900x::send_task, this);
