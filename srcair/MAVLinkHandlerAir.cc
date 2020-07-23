@@ -350,6 +350,7 @@ bool MAVLinkHandlerAir::init() {
   // if autopilot serial was switched, switch back now
   if (config.get_rfd_enabled()) {
     string rfd_serial_string;
+    radio_initialized = true;
     if ( autopilot.get_path() == config.get_rfd_serial() ) {
       rfd_serial_string = config.get_autopilot_serial();
     } else {
@@ -357,11 +358,11 @@ bool MAVLinkHandlerAir::init() {
     }
     if (!rfd.init(rfd_serial_string, config.get_rfd_serial_speed(), devices, config.get_rfd_id())) {
       log(LOG_ERR, "UV Radio Room initialization failed: cannot connect to Radio");
-      return false;
+      radio_initialized = false;
+      // return false;
     }
 
     log(LOG_INFO,"Radio initialization succesful.");
-    radio_initialized = true;
     // Exclude the serial device used by rfd 
     for (vector<string>::iterator iter = devices.begin(); iter != devices.end();
          ++iter) {
@@ -384,7 +385,8 @@ bool MAVLinkHandlerAir::init() {
       gsm_initialized = true;
     } else {
       log(LOG_WARNING, "GSM channel initialization failed.");
-      return false;
+      gsm_initialized = false;
+      // return false;
     }
   } else {
     log(LOG_INFO,"GSM disabled.");
@@ -398,7 +400,8 @@ bool MAVLinkHandlerAir::init() {
       isbd_initialized = true;
     } else {
       log(LOG_WARNING, "ISBD channel initialization failed.");
-      return false;
+      isbd_initialized = false;
+      // return false;
     }
   } else {
     log(LOG_INFO,"SBD disabled");
