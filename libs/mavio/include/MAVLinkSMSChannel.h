@@ -35,7 +35,7 @@
 
 namespace mavio {
 
-  class SMSmessage {
+class SMSmessage {
   public:
 
   SMSmessage();
@@ -54,9 +54,9 @@ namespace mavio {
 
   private:
 
-  mavlink_message_t message;
-  std::string number;
-  std::chrono::milliseconds receive_time;
+  mavlink_message_t _message;
+  std::string _number;
+  std::chrono::milliseconds _receive_time;
 
 };
 
@@ -87,11 +87,7 @@ class MAVLinkSMSChannel : public MAVLinkChannel {
    */
   void close();
 
-  /**
-   * Sends the specified MAVLink message to gsm.
-   *
-   * Returns true if the message was sent successfully.
-   */
+  // dummy for abstract class
   bool send_message(const mavlink_message_t& msg) { std::ignore = msg; return false; }
   
   bool send_message(SMSmessage& msg);
@@ -123,7 +119,11 @@ class MAVLinkSMSChannel : public MAVLinkChannel {
    * 
    * Returns true if the operation succeeded. 
    */
+  bool get_signal_quality(int& quality, int link);
+  
   bool get_signal_quality(int& quality);
+
+  bool  get_active_link(int& activelink);
 
   void reset_timer();
 
@@ -162,7 +162,8 @@ class MAVLinkSMSChannel : public MAVLinkChannel {
   std::chrono::milliseconds send_time;  // Last send epoch time
   std::chrono::milliseconds receive_time;  // Last receive epoch time
   
-  std::atomic<int> signal_quality;
+  std::atomic<int> signal_quality[3];
+  std::atomic<int> active_link;
 
 };
 

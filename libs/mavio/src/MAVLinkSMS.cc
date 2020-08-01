@@ -117,6 +117,10 @@ bool MAVLinkSMS::send_message_text(const mavlink_message_t& mo_msg, std::string 
   if (!initialized) {
     return false;
   }
+
+  if ( tlf.size() < 10 ) {
+    return false;
+  }
   
   uint8_t buf[GSM_MAX_MT_MGS_SIZE];
   uint16_t len = 0;
@@ -182,6 +186,10 @@ bool MAVLinkSMS::receive_message_text(mavlink_message_t& mt_msg, bool& inbox_emp
 bool MAVLinkSMS::send_message_bin(const mavlink_message_t& mo_msg, std::string tlf) {
  
   if (!initialized) {
+    return false;
+  }
+
+  if ( tlf.size() < 10 ) {
     return false;
   }
   

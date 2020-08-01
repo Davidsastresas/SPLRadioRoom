@@ -44,8 +44,11 @@ MAVLinkSMSChannel::MAVLinkSMSChannel()
       send_queue(max_sms_channel_queue_size),
       receive_queue(max_sms_channel_queue_size),
       send_time(0),
-      receive_time(0),
-      signal_quality(0) {
+      receive_time(0) {
+
+      for ( int i = 0; i < 3; i++ ) {
+        signal_quality[i] = 0;
+      }
 
       receive_time = timelib::time_since_epoch();
 }
@@ -162,9 +165,23 @@ std::chrono::milliseconds MAVLinkSMSChannel::last_receive_time() {
   return receive_time;
 }
 
-// not used
 bool MAVLinkSMSChannel::get_signal_quality(int& quality) {
-  quality = signal_quality;
+  return get_signal_quality(quality, active_link);
+}
+
+
+bool MAVLinkSMSChannel::get_signal_quality(int& quality, int link) {
+  if ( link > 2 ) {
+    return false;
+  }
+
+  quality = signal_quality[link];
+  return true;
+}
+
+// return false if gsm is not active??
+bool MAVLinkSMSChannel::get_active_link(int& activelink) {
+  activelink = active_link;
   return true;
 }
 
@@ -172,7 +189,6 @@ void MAVLinkSMSChannel::send_receive_task_text() {
   while (running) {
     bool sleeping = true;
     int quality = 0;
-    int active_instance = 0;
     int active_instance_quality = 0;
     int i = 0;
 
@@ -182,14 +198,14 @@ void MAVLinkSMSChannel::send_receive_task_text() {
       }
 
       if (sms[i].get_signal_quality(quality)) {
-        signal_quality = quality;
+        signal_quality[i] = quality;
       } else {
-        signal_quality = 0;
+        signal_quality[i] = 0;
       }
 
-      if (signal_quality > active_instance_quality) {
-        active_instance = i;
-        active_instance_quality = signal_quality;
+      if (signal_quality[i] > active_instance_quality) {
+        active_link = i;
+        active_instance_quality = signal_quality[i];
       }
 
       bool inbox_empty_instance;
@@ -209,15 +225,13 @@ void MAVLinkSMSChannel::send_receive_task_text() {
 
     }
 
-    signal_quality = active_instance_quality;
-
     if ( !send_queue.empty() ) {
       SMSmessage mo_sms;
       if ( !send_queue.pop(mo_sms) ) {
         mavio::log(LOG_INFO, "SMS: send_queue error!");
       } else {
-        mavio::log(LOG_INFO, "SMS: sending message from modem %d ...", active_instance);
-        if ( sms[active_instance].send_message_text(mo_sms.get_mavlink_msg(), mo_sms.get_number()) ) {
+        mavio::log(LOG_INFO, "SMS: sending message from modem %d ...", (int)active_link);
+        if ( sms[active_link].send_message_text(mo_sms.get_mavlink_msg(), mo_sms.get_number()) ) {
           send_time = timelib::time_since_epoch();
         } else {
           mavio::log(LOG_INFO, "SMS: error sending sms");
@@ -245,9 +259,9 @@ void MAVLinkSMSChannel::send_receive_task_pdu() {
       }
 
       if (sms[i].get_signal_quality(quality)) {
-        signal_quality = quality;
+        signal_quality[i] = quality;
       } else {
-        signal_quality = 0;
+        signal_quality[i] = 0;
       }
   
       if ( !send_queue.empty() ) {
@@ -285,14 +299,14 @@ SMSmessage::SMSmessage() {
 }
 
 SMSmessage::SMSmessage(mavlink_message_t msg, std::string numb, std::chrono::milliseconds time) {
-  message = msg;
-  number = numb;
-  receive_time = time;
+  _message = msg;
+  _number = numb;
+  _receive_time = time;
 }
 
 SMSmessage::SMSmessage(mavlink_message_t msg, std::string numb) {
-  message = msg;
-  number = numb;
+  _message = msg;
+  _number = numb;
 }
 
 SMSmessage::~SMSmessage() {
@@ -300,27 +314,27 @@ SMSmessage::~SMSmessage() {
 }
 
 mavlink_message_t SMSmessage::get_mavlink_msg() {
-  return message;
+  return _message;
 }
 
 void SMSmessage::set_mavlink_msg(mavlink_message_t msg) {
-  message = msg;
+  _message = msg;
 }
 
 std::string SMSmessage::get_number() {
-  return number;
+  return _number;
 }
 
 void SMSmessage::set_number(std::string numb) {
-  number = numb;
+  _number = numb;
 }
 
 std::chrono::milliseconds SMSmessage::get_time() {
-  return receive_time;
+  return _receive_time;
 }
 
 void SMSmessage::set_time(std::chrono::milliseconds time) {
-  receive_time = time;
+  _receive_time = time;
 }
 
 }  // namespace mavio
