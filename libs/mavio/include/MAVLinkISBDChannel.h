@@ -35,10 +35,31 @@
 
 namespace mavio {
 
-/**
- * MAVLinkISBDChannel asynchronously sends and receives MAVLink messages to/from
- * an ISBD transceiver.
- */
+class SBDmessage {
+  public:
+
+  SBDmessage();
+  SBDmessage(mavlink_message_t msg, int address, std::chrono::milliseconds time);
+  SBDmessage(mavlink_message_t msg, int address);
+  ~SBDmessage();
+
+  mavlink_message_t get_mavlink_msg();
+  void set_mavlink_msg(mavlink_message_t msg);
+
+  int get_address();
+  void set_address(int address);
+
+  std::chrono::milliseconds get_time();
+  void set_time(std::chrono::milliseconds time);
+
+  private:
+
+  mavlink_message_t _message;
+  int _address;
+  std::chrono::milliseconds _receive_time;
+
+};
+
 class MAVLinkISBDChannel : public MAVLinkChannel {
  public:
   MAVLinkISBDChannel();
@@ -60,19 +81,15 @@ class MAVLinkISBDChannel : public MAVLinkChannel {
    */
   void close();
 
-  /**
-   * Sends the specified MAVLink message to ISBD.
-   *
-   * Returns true if the message was sent successfully.
-   */
-  bool send_message(const mavlink_message_t& msg);
+  // dummy for abstract class 
+  bool send_message(const mavlink_message_t& msg) { std::ignore = msg; return false; }
 
-  /**
-   * Receives MAVLink message from ISBD transceiver.
-   *
-   * Returns true if a message was received.
-   */
-  bool receive_message(mavlink_message_t& msg);
+  bool send_message(SBDmessage& msg);
+
+  // dummy for abstract class
+  bool receive_message(mavlink_message_t& msg) { std::ignore = msg; return false; }
+
+  bool receive_message(SBDmessage& msg);
 
   /**
    * Checks if data is available in ISBD transceiver.
@@ -109,9 +126,9 @@ class MAVLinkISBDChannel : public MAVLinkChannel {
   // Thread of send_receive_task
   std::thread send_receive_thread;
   // Queue that buffers messages to be sent to the socket
-  CircularBuffer<mavlink_message_t> send_queue;
+  CircularBuffer<SBDmessage> send_queue;
   // Queue that buffers messages received from the socket
-  CircularBuffer<mavlink_message_t> receive_queue;
+  CircularBuffer<SBDmessage> receive_queue;
   std::chrono::milliseconds send_time;  // Last send epoch time
   std::chrono::milliseconds receive_time;  // Last receive epoch time
   std::atomic<int> signal_quality;

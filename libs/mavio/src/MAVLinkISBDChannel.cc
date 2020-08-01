@@ -72,8 +72,8 @@ void MAVLinkISBDChannel::close() {
   isbd.close();
 }
 
-bool MAVLinkISBDChannel::send_message(const mavlink_message_t& msg) {
-  if (msg.len == 0 && msg.msgid == 0) {
+bool MAVLinkISBDChannel::send_message(SBDmessage& msg) {
+  if (msg.get_mavlink_msg().len == 0 && msg.get_mavlink_msg().msgid == 0) {
     return true;
   }
 
@@ -82,7 +82,7 @@ bool MAVLinkISBDChannel::send_message(const mavlink_message_t& msg) {
   return true;
 }
 
-bool MAVLinkISBDChannel::receive_message(mavlink_message_t& msg) {
+bool MAVLinkISBDChannel::receive_message(SBDmessage& msg) {
   return receive_queue.pop(msg);
 }
 
@@ -116,24 +116,75 @@ void MAVLinkISBDChannel::send_receive_task() {
     }
 
     if (!send_queue.empty() || isbd.message_available()) {
-      mavlink_message_t mo_msg, mt_msg;
-      if (!send_queue.pop(mo_msg)) {
+      mavlink_message_t mt_msg;
+      SBDmessage mo_sbd_msg;
+
+      if (!send_queue.pop(mo_sbd_msg)) {
+        mavlink_message_t mo_msg;
         mo_msg.len = 0;
         mo_msg.msgid = 0;
+        mo_sbd_msg.set_mavlink_msg(mo_msg);
       }
 
       bool received = false;
-      if (isbd.send_receive_message(mo_msg, mt_msg, received)) {
+      if (isbd.send_receive_message(mo_sbd_msg.get_mavlink_msg(), mt_msg, received, mo_sbd_msg.get_address())) {
         send_time = timelib::time_since_epoch();
         if (received) {
           receive_time = send_time;
-          receive_queue.push(mt_msg);
+
+          SBDmessage mt_sbd_msg(mt_msg, 0, receive_time);
+          receive_queue.push(mt_sbd_msg);
         }
       }
     }
 
     sleep(isbd_channel_poll_interval);
   }
+}
+
+// SBDmessage definitions
+
+SBDmessage::SBDmessage() {
+
+}
+
+SBDmessage::SBDmessage(mavlink_message_t msg, int address, std::chrono::milliseconds time) {
+  _message = msg;
+  _address = address;
+  _receive_time = time;
+}
+
+SBDmessage::SBDmessage(mavlink_message_t msg, int address) {
+  _message = msg;
+  _address = address;
+}
+
+SBDmessage::~SBDmessage() {
+  
+}
+
+mavlink_message_t SBDmessage::get_mavlink_msg() {
+  return _message;
+}
+
+void SBDmessage::set_mavlink_msg(mavlink_message_t msg) {
+  _message = msg;
+}
+
+int SBDmessage::get_address() {
+  return _address;
+}
+
+void SBDmessage::set_address(int address) {
+  _address = address;
+}
+
+std::chrono::milliseconds SBDmessage::get_time() {
+  return _receive_time;
+}
+
+void SBDmessage::set_time(std::chrono::milliseconds time) {
+  _receive_time = time;
 }
 
 }  // namespace mavio

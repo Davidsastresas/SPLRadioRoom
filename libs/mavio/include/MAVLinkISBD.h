@@ -82,7 +82,8 @@ class MAVLinkISBD {
    * Returns true if the ISBD session succeeded.
    */
   bool send_receive_message(const mavlink_message_t& mo_msg,
-                            mavlink_message_t& mt_msg, bool& received);
+                            mavlink_message_t& mt_msg, bool& received,
+                            uint32_t remoteid);
 
   /**
    * Returns true if ISBD transceiver detected at the specified serial device.
@@ -99,7 +100,7 @@ class MAVLinkISBD {
  private:
   Serial stream;
   IridiumSBD isbd;
-  uint32_t remoteid;
+  // uint32_t remoteid;
 };
 
 }  // namespace mavio

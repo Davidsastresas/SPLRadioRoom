@@ -95,7 +95,7 @@ bool MAVLinkISBD::init(string path, int speed, const vector<string>& devices, ui
   mavio::log(LOG_INFO, "Connecting to ISBD transceiver (%s %d)...", path.data(),
              speed);
 
-  remoteid = remid;
+  // remoteid = remid;
 
   // mavio::log(LOG_INFO, "remote id: %d", remoteid);
 
@@ -163,7 +163,7 @@ bool MAVLinkISBD::message_available() {
 
 bool MAVLinkISBD::send_receive_message(const mavlink_message_t& mo_msg,
                                        mavlink_message_t& mt_msg,
-                                       bool& received) {
+                                       bool& received, uint32_t remoteid) {
   uint8_t buforiginal[ISBD_MAX_MT_MGS_SIZE];
   uint8_t buf[ISBD_MAX_MT_MGS_SIZE];
   size_t buf_size = sizeof(buforiginal);
