@@ -538,4 +538,118 @@ void Config::set_aircraft5_rock_address(int address) { aircraft5_rock_address = 
 int Config::get_aircraft5_mav_id() const { return aircraft5_mav_id; }
 void Config::set_aircraft5_mav_id(int mavid) { aircraft5_mav_id = mavid; }
 
+/* global aircraft getter functions */
+
+std::string Config::get_groundstation_tlfx(int tlfindex) const {
+    switch (tlfindex) {
+        case 1:
+            return groundstation_tlf_number1;
+        case 2:
+            return groundstation_tlf_number2;
+        case 3:
+            return groundstation_tlf_number3;
+        default:
+            return groundstation_tlf_number1;
+    }
+}
+
+bool Config::get_aircraftx_enabled(int index) const {
+    switch (index) {
+    case 1:
+        return aircraft1_enabled;
+    case 2:
+        return aircraft2_enabled;
+    case 3:
+        return aircraft3_enabled;
+    case 4:
+        return aircraft4_enabled;
+    case 5:
+        return aircraft5_enabled;
+    default:
+        return aircraft1_enabled;
+    }
+}
+
+std::string Config::get_aircraftx_tlfx(int index, int tlfindex) const {
+    switch (index) {
+    case 1:
+        switch (tlfindex) {
+        case 1: return aircraft1_tlf_number1; 
+        case 2: return aircraft1_tlf_number2;
+        case 3: return aircraft1_tlf_number3;
+        default: return aircraft1_tlf_number1;
+        }
+    case 2:
+        switch (tlfindex) {
+        case 1: return aircraft2_tlf_number1; 
+        case 2: return aircraft2_tlf_number2;
+        case 3: return aircraft2_tlf_number3;
+        default: return aircraft2_tlf_number1;
+        }
+    case 3:
+        switch (tlfindex) {
+        case 1: return aircraft3_tlf_number1; 
+        case 2: return aircraft3_tlf_number2;
+        case 3: return aircraft3_tlf_number3;
+        default: return aircraft3_tlf_number1;
+        }
+    case 4:
+        switch (tlfindex) {
+        case 1: return aircraft4_tlf_number1; 
+        case 2: return aircraft4_tlf_number2;
+        case 3: return aircraft4_tlf_number3;
+        default: return aircraft4_tlf_number1;
+        }
+    case 5:
+        switch (tlfindex) {
+        case 1: return aircraft5_tlf_number1; 
+        case 2: return aircraft5_tlf_number2;
+        case 3: return aircraft5_tlf_number3;
+        default: return aircraft5_tlf_number1;
+        }
+    default:
+        switch (tlfindex) {
+        case 1: return aircraft1_tlf_number1; 
+        case 2: return aircraft1_tlf_number2;
+        case 3: return aircraft1_tlf_number3;
+        default: return aircraft1_tlf_number1;
+        }
+    }
+
+}
+
+int Config::get_aircraftx_rock_address(int index) const {
+    switch (index) {
+    case 1:
+        return aircraft1_rock_address;
+    case 2:
+        return aircraft2_rock_address;
+    case 3:
+        return aircraft3_rock_address;
+    case 4:
+        return aircraft4_rock_address;
+    case 5:
+        return aircraft5_rock_address;
+    default:
+        return aircraft1_rock_address;
+    }
+}
+
+int Config::get_aircraftx_mav_id(int index) const {
+    switch (index) {
+    case 1:
+        return aircraft1_mav_id;
+    case 2:
+        return aircraft2_mav_id;
+    case 3:
+        return aircraft3_mav_id;
+    case 4:
+        return aircraft4_mav_id;
+    case 5:
+        return aircraft5_mav_id;
+    default:
+        return aircraft1_mav_id;
+    }
+}
+
 }  // namespace radioroom

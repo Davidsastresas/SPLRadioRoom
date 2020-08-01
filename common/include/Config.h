@@ -259,6 +259,18 @@ class Config {
   int get_aircraft5_mav_id() const;
   void set_aircraft5_mav_id(int mavid);
 
+  /* global aircraft getter functions */
+
+  std::string get_groundstation_tlfx(int tlfindex) const;
+
+  bool get_aircraftx_enabled(int index) const;
+
+  std::string get_aircraftx_tlfx(int index, int tlfindex) const;
+
+  int get_aircraftx_rock_address(int index) const;
+
+  int get_aircraftx_mav_id(int index) const;
+
 
 
  private:
