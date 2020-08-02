@@ -7,6 +7,7 @@
 #include "MAVLinkSMSChannel.h"
 #include "MAVLinkTCPChannelServer.h"
 #include "VehicleManager.h"
+#include "SystemManager.h"
 #include "timelib.h"
 
 namespace radioroom {
@@ -38,6 +39,7 @@ class MAVLinkHandlerGround {
   mavio::MAVLinkISBDChannel isbd_channel;
   mavio::MAVLinkTCPChannelServer tcp_channel;
   mavio::MAVLinkSMSChannel gsm_channel;
+  mavio::SystemManager system_manager;
 
   // link status
   int gsm_quality = 0;

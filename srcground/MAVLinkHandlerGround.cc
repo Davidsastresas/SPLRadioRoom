@@ -19,6 +19,7 @@ MAVLinkHandlerGround::MAVLinkHandlerGround()
       isbd_channel(),
       tcp_channel(),
       gsm_channel(),
+      system_manager(),
       timer_send_link_status() {
 }
 
@@ -181,6 +182,14 @@ bool MAVLinkHandlerGround::init() {
     log(LOG_ERR, "Vehicle manager initialization failed");
   } else {
     log(LOG_INFO, "Vehicle manager initialization succesfull");
+  }
+
+  // Syste manager --------------------------------------------------------------------------------------
+
+  if (!system_manager.init()) {
+    log(LOG_ERR, "System manager initialization failed");
+  } else {
+    log(LOG_INFO, "System manager initialization succesfull");
   }
 
   // TCP --------------------------------------------------------------------------------------------------
