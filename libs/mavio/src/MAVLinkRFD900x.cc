@@ -116,9 +116,7 @@ bool MAVLinkRFD900x::connect(const string& path, int speed,
     radio_id = detect_radio(path);
 
     if (radio_id) {
-      if (radio_id == id) {
-        return true;
-      }
+      return true;
     }
 
     serial.close();
