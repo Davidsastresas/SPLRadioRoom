@@ -166,7 +166,7 @@ bool MAVLinkHandlerAir::send_report() {
       mavlink_message_t sms_report_msg;
 
       sms_channel.get_signal_quality(gsm_signal_quality);
-      report.get_message(sms_report_msg, gsm_signal_quality);
+      report.get_message_sms(sms_report_msg, gsm_signal_quality);
       
       sms_report.set_mavlink_msg(sms_report_msg);
 
@@ -199,7 +199,7 @@ bool MAVLinkHandlerAir::send_report() {
       secondary_report_timer.reset();
 
       mavlink_message_t isbd_report_msg;
-      report.get_message(isbd_report_msg, 0);
+      report.get_message_sbd(isbd_report_msg, 0);
 
       return isbd_channel.send_message(isbd_report_msg);
     }
