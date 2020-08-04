@@ -83,9 +83,6 @@ void MAVLinkHandlerGround::handle_mo_message(const mavlink_message_t& msg) {
 
 void MAVLinkHandlerGround::handle_mo_sms(mavio::SMSmessage& sms) {
 
-  mavlink_message_t msg = sms.get_mavlink_msg();
-  tcp_channel.send_message(msg);
-
   vehicle_manager.push_queue_gsm(sms);
 }
 
