@@ -39,59 +39,197 @@ using radioroom::Config;
 namespace radioroom {
 
 MAVLinkHandlerAir::MAVLinkHandlerAir()
-    : rfd(),
-      autopilot(),
-      isbd_channel(),
-      sms_channel(),
+    : rfd_channel(),
+      autopilot_channel(),
+      sbd_channel(),
+      gsm_channel(),
       system_manager(),
-      current_time(0),
-      update_active_timer(),
-      update_report_timer(),
+      timer_update_active(),
       heartbeat_timer(),
-      primary_report_timer(),
-      secondary_report_timer(),
-      rfd_status_timer(),
-      missions_received(0),
-      rfd_active(true),
-      gsm_active(false),
-      isbd_active(false),
-      retry_timer(),
-      retry_msg(),
-      retry_timeout(0),
-      retry_count(0),
-      _sleep(false) {}
+      timer_report_sms(),
+      timer_report_sbd(),
+      timer_rfd_status() {}
 
-/**
- * One iteration of the message handler.
- *
- * NOTE: Must not use blocking calls.
- */
+bool MAVLinkHandlerAir::init() {
+
+  vector<string> devices;
+  Serial::get_serial_devices(devices);
+
+    // ----------------- Autopilot ------------------
+  if (!autopilot_channel.init(config.get_autopilot_serial(), config.get_autopilot_serial_speed(), devices, config.get_autopilot_id())) {
+    log(LOG_ERR,"UV Radio Room initialization failed: cannot connect to autopilot_channel.");
+    return false;
+  }
+
+  log(LOG_INFO,"Autopilot initialization succesful.");
+  // Exclude the serial device used by autopilot 
+  for (vector<string>::iterator iter = devices.begin(); iter != devices.end();
+       ++iter) {
+    if (*iter == autopilot_channel.get_path()) {
+      devices.erase(iter);
+      break;
+    }
+  }
+
+  // ----------------- RFD ------------------
+  // if autopilot serial was switched, switch back now
+  if (config.get_rfd_enabled()) {
+    string rfd_serial_string;
+    radio_initialized = true;
+    if ( autopilot_channel.get_path() == config.get_rfd_serial() ) {
+      rfd_serial_string = config.get_autopilot_serial();
+    } else {
+      rfd_serial_string = config.get_rfd_serial();
+    }
+    if (!rfd_channel.init(rfd_serial_string, config.get_rfd_serial_speed(), devices, config.get_rfd_id())) {
+      log(LOG_ERR, "Radio initialization failed: cannot connect to Radio");
+      radio_initialized = false;
+      // return false;
+    } else {
+      log(LOG_INFO,"Radio initialization succesful.");
+    }
+    
+    // Exclude the serial device used by rfd 
+    for (vector<string>::iterator iter = devices.begin(); iter != devices.end();
+         ++iter) {
+      if (*iter == rfd_channel.get_path()) {
+        devices.erase(iter);
+        break;
+      }
+    }
+  } else {
+    log(LOG_INFO,"Radio disabled.");
+    radio_initialized = false;
+  }
+
+  // ------------------- GSM -------------------
+  if (config.get_gsm_enabled()) {  
+    if (gsm_channel.init(config.get_gsm_serial1(), config.get_gsm_serial2(), config.get_gsm_serial3(),
+                         config.get_gsm_pin1(), config.get_gsm_pin2(), config.get_gsm_pin3(),
+                         config.get_gsm_serial_speed(), false)) {
+      log(LOG_INFO, "GSM channel initialized.");
+      gsm_initialized = true;
+    } else {
+      log(LOG_WARNING, "GSM channel initialization failed.");
+      gsm_initialized = false;
+      // return false;
+    }
+  } else {
+    log(LOG_INFO,"GSM disabled.");
+    gsm_initialized = false;
+  }
+
+  // ----------------- ISBD ------------------
+  if (config.get_isbd_enabled()) {  
+    if (sbd_channel.init(config.get_isbd_serial(), config.get_isbd_serial_speed(), devices, config.get_groundstation_rock_address())) {
+      log(LOG_INFO, "ISBD channel initialized.");
+      isbd_initialized = true;
+    } else {
+      log(LOG_WARNING, "ISBD channel initialization failed.");
+      isbd_initialized = false;
+      // return false;
+    }
+  } else {
+    log(LOG_INFO,"SBD disabled");
+    isbd_initialized = false;
+  }
+
+  // Syste manager --------------------------------------------------------------------------------------
+
+  if (!system_manager.init()) {
+    log(LOG_ERR, "System manager initialization failed");
+  } else {
+    log(LOG_INFO, "System manager initialization succesfull");
+  }
+
+  period_rfd_status = timelib::sec2ms(2);
+  timer_rfd_status.reset();
+
+  _mav_id = config.get_autopilot_id();
+
+  period_autopilot_heartbeat = timelib::sec2ms(1);
+  period_update_act_channel = timelib::sec2ms(0.1);
+
+  // set gcs id for the hearbeat back to autopilot
+  gcs_id = config.get_groundstation_mav_id();
+  
+  // send at first contact sms to all 3 numbers of ground
+  ground_sms_all = false;
+
+  // configurable options, set limits
+
+  timeout_rfd = timelib::sec2ms(2);
+  timeout_gsm = timelib::sec2ms(20);
+  period_sms_report = timelib::sec2ms(14);
+  period_sbd_report = timelib::sec2ms(40);
+  
+  if ( config.get_rfd_timeout() > 2 ) {
+    timeout_rfd = timelib::sec2ms((double)config.get_rfd_timeout());
+  }
+
+  if ( config.get_sms_timeout() > 20 ) {
+    timeout_gsm = timelib::sec2ms((double)config.get_sms_timeout());
+  }
+
+  if ( config.get_sms_period() > 14 ) {
+    period_sms_report = timelib::sec2ms((double)config.get_sms_period());
+  }
+
+  if ( config.get_sbd_period() > 40 ) {
+    period_sbd_report = timelib::sec2ms((double)config.get_sbd_period());
+  }
+
+  last_gcs_number = config.get_groundstation_tlf_number1();
+
+  log(LOG_INFO,"GCS number %s", last_gcs_number.c_str());
+  log(LOG_INFO,"timeout_rfd %d", timeout_rfd);
+  log(LOG_INFO,"timeout_gsm %d", timeout_gsm);
+  log(LOG_INFO,"period_sms_report %d", period_sms_report);
+  log(LOG_INFO,"period_sbd_report %d", period_sbd_report);
+
+  // gsm_channel.reset_timer();
+  time_last_sms = timelib::time_since_epoch();
+  rfd_channel.reset_timer();
+  
+  log(LOG_INFO, "UV Radio Room initialization succeeded.");
+
+  return true;
+}
+
+void MAVLinkHandlerAir::close() {
+  sbd_channel.close();
+  autopilot_channel.close();
+  rfd_channel.close();
+  gsm_channel.close();
+  system_manager.close();
+}
+
 bool MAVLinkHandlerAir::loop() {
   mavlink_message_t mo_msg;
   mavlink_message_t mt_msg;
   mavio::SMSmessage mt_sms;
-  _sleep = true;
+  bool sleep = true;
 
-  if (rfd.receive_message(mt_msg)) {
+  if (rfd_channel.receive_message(mt_msg)) {
     handle_mt_message(mt_msg);
-    _sleep = false; 
+    sleep = false; 
   }
 
-  if (sms_channel.receive_message(mt_sms)) {
+  if (gsm_channel.receive_message(mt_sms)) {
     handle_mt_sms(mt_sms);
-    _sleep = false;
+    sleep = false;
   }
 
   if (isbd_initialized) {
-    if (isbd_channel.receive_message(mt_msg)) {
+    if (sbd_channel.receive_message(mt_msg)) {
       handle_mt_message(mt_msg);
-      _sleep = false;
+      sleep = false;
     }
   }
 
-  if (autopilot.receive_message(mo_msg)) {
+  if (autopilot_channel.receive_message(mo_msg)) {
     handle_mo_message(mo_msg);
-    _sleep = false;
+    sleep = false;
   }
 
   update_active_channel();
@@ -102,35 +240,35 @@ bool MAVLinkHandlerAir::loop() {
 
   send_status_rfd();
 
-  return _sleep;
+  return sleep;
 }
 
 void MAVLinkHandlerAir::update_active_channel() {
 
-  if (update_active_timer.elapsed_time() < active_update_interval) {
+  if (timer_update_active.elapsed_time() < period_update_act_channel) {
     return;
   }
   
-  update_active_timer.reset();
-  current_time = timelib::time_since_epoch();
+  timer_update_active.reset();
+  time_current = timelib::time_since_epoch();
 
   if ( rfd_active ) {
-    if ( current_time - rfd.last_receive_time() > rfd_timeout ) {
+    if ( time_current - rfd_channel.last_receive_time() > timeout_rfd ) {
       handle_rfd_out();
     }
   
   } else if ( gsm_active ) {
-    if ( current_time - rfd.last_receive_time() <= rfd_timeout ) {
+    if ( time_current - rfd_channel.last_receive_time() <= timeout_rfd ) {
       set_rfd_active();
 
-    } else if ( current_time - last_sms_time >= sms_timeout ) {
+    } else if ( time_current - time_last_sms >= timeout_gsm ) {
       handle_gsm_out();
     }
 
   } else if ( isbd_active ) { 
-    if ( current_time - rfd.last_receive_time() <= rfd_timeout ) {
+    if ( time_current - rfd_channel.last_receive_time() <= timeout_rfd ) {
       set_rfd_active();
-    } else if ( current_time - last_sms_time <= sms_timeout ) {
+    } else if ( time_current - time_last_sms <= timeout_gsm ) {
       set_gsm_active();
     }
 
@@ -141,7 +279,7 @@ void MAVLinkHandlerAir::update_active_channel() {
 
 void MAVLinkHandlerAir::handle_mo_message(const mavlink_message_t& msg) {
 
-  rfd.send_message(msg);
+  rfd_channel.send_message(msg);
   
   if ( rfd_active ) {
     return;
@@ -153,12 +291,12 @@ void MAVLinkHandlerAir::handle_mo_message(const mavlink_message_t& msg) {
 
 void MAVLinkHandlerAir::handle_mt_message(const mavlink_message_t& msg) {
 
-  autopilot.send_message(msg);
+  autopilot_channel.send_message(msg);
 }
 
 void MAVLinkHandlerAir::send_status_rfd() {
-  if ( rfd_status_timer.elapsed_time() > rfd_status_period ) {
-    rfd_status_timer.reset();
+  if ( timer_rfd_status.elapsed_time() > period_rfd_status ) {
+    timer_rfd_status.reset();
 
     // get system status
     uint8_t status_bitmask;
@@ -171,14 +309,14 @@ void MAVLinkHandlerAir::send_status_rfd() {
     int sms_quality2 = 0;
     int sms_quality3 = 0;
     int active_sms = 0;
-    sms_channel.get_signal_quality(sms_quality1, 0);
-    sms_channel.get_signal_quality(sms_quality2, 1);
-    sms_channel.get_signal_quality(sms_quality3, 2);
-    sms_channel.get_active_link(active_sms);
+    gsm_channel.get_signal_quality(sms_quality1, 0);
+    gsm_channel.get_signal_quality(sms_quality2, 1);
+    gsm_channel.get_signal_quality(sms_quality3, 2);
+    gsm_channel.get_active_link(active_sms);
 
     // get sbd link quality
     int sbd_quality = 0;
-    isbd_channel.get_signal_quality(sbd_quality);
+    sbd_channel.get_signal_quality(sbd_quality);
 
       uint8_t sys_bitmask = 0;
   
@@ -218,7 +356,7 @@ void MAVLinkHandlerAir::send_status_rfd() {
 
     mavlink_msg_radio_status_encode(_mav_id, _mav_id + 10, &radio_status, &radio_status_msg);
 
-    rfd.send_message(radio_status);
+    rfd_channel.send_message(radio_status);
   }
 }
 
@@ -229,14 +367,12 @@ bool MAVLinkHandlerAir::send_report() {
   }
 
   if (gsm_initialized && gsm_active) {
-    if (primary_report_timer.elapsed_time() >= sms_report_period) {
-      primary_report_timer.reset();
+    if (timer_report_sms.elapsed_time() >= period_sms_report) {
+      timer_report_sms.reset();
 
       mavio::SMSmessage sms_report;
       mavlink_message_t sms_report_msg;
 
-      sms_channel.get_signal_quality(gsm_signal_quality);
-      
       // get system status
       uint8_t status_bitmask;
       if ( !system_manager.get_status_bitmask(status_bitmask) ) {
@@ -248,17 +384,17 @@ bool MAVLinkHandlerAir::send_report() {
       int sms_quality2 = 0;
       int sms_quality3 = 0;
       int active_sms = 0;
-      sms_channel.get_signal_quality(sms_quality1, 0);
-      sms_channel.get_signal_quality(sms_quality2, 1);
-      sms_channel.get_signal_quality(sms_quality3, 2);
-      sms_channel.get_active_link(active_sms);
+      gsm_channel.get_signal_quality(sms_quality1, 0);
+      gsm_channel.get_signal_quality(sms_quality2, 1);
+      gsm_channel.get_signal_quality(sms_quality3, 2);
+      gsm_channel.get_active_link(active_sms);
 
       // get sbd link quality
       int sbd_quality = 0;
-      isbd_channel.get_signal_quality(sbd_quality);
+      sbd_channel.get_signal_quality(sbd_quality);
 
-      report.get_message_sms(sms_report_msg, gsm_signal_quality, status_bitmask, 
-                             sms_quality1, sms_quality2, sms_quality3, active_sms, 
+      report.get_message_sms(sms_report_msg, status_bitmask, sms_quality1, 
+                             sms_quality2, sms_quality3, active_sms, 
                              sbd_quality, rfd_active, gsm_active, isbd_active);
       
       sms_report.set_mavlink_msg(sms_report_msg);
@@ -267,36 +403,36 @@ bool MAVLinkHandlerAir::send_report() {
       if (!ground_sms_all) {
         if (config.get_groundstation_tlf_number2().size() > 5) {
           sms_report.set_number(config.get_groundstation_tlf_number2());
-          sms_channel.send_message(sms_report);
+          gsm_channel.send_message(sms_report);
         }
         if (config.get_groundstation_tlf_number3().size() > 5) {
           sms_report.set_number(config.get_groundstation_tlf_number3());
-          sms_channel.send_message(sms_report);
+          gsm_channel.send_message(sms_report);
         }
         if (config.get_groundstation_tlf_number1().size() > 5) {
           sms_report.set_number(config.get_groundstation_tlf_number1());
-          sms_channel.send_message(sms_report);
+          gsm_channel.send_message(sms_report);
         }
         ground_sms_all = true;
       
       // just regular loop, send to last known number of gcs, which gcs will pick best rssi
       } else {
         sms_report.set_number(last_gcs_number);
-        return sms_channel.send_message(sms_report);
+        return gsm_channel.send_message(sms_report);
       }
 
     }
   }
   if (isbd_initialized && isbd_active) {
-    if (secondary_report_timer.elapsed_time() >= isbd_report_period) {
-      secondary_report_timer.reset();
+    if (timer_report_sbd.elapsed_time() >= period_sbd_report) {
+      timer_report_sbd.reset();
 
       mavlink_message_t isbd_report_msg;
       int sbd_quality;
-      isbd_channel.get_signal_quality(sbd_quality);
+      sbd_channel.get_signal_quality(sbd_quality);
       report.get_message_sbd(isbd_report_msg, sbd_quality);
 
-      return isbd_channel.send_message(isbd_report_msg);
+      return sbd_channel.send_message(isbd_report_msg);
     }
   }
 
@@ -310,8 +446,8 @@ void MAVLinkHandlerAir::handle_mt_sms(mavio::SMSmessage& sms) {
   }
   mavlink_message_t msg = sms.get_mavlink_msg();
   last_gcs_number = sms.get_number();
-  last_sms_time = sms.get_time();
-  autopilot.send_message(msg);
+  time_last_sms = sms.get_time();
+  autopilot_channel.send_message(msg);
 }
 
 bool MAVLinkHandlerAir::send_heartbeat() {
@@ -320,7 +456,7 @@ bool MAVLinkHandlerAir::send_heartbeat() {
     return false;
   }
 
-  if (heartbeat_timer.elapsed_time() >= heartbeat_period) {
+  if (heartbeat_timer.elapsed_time() >= period_autopilot_heartbeat) {
     heartbeat_timer.reset();
 
     mavlink_message_t heartbeat_msg;
@@ -328,35 +464,10 @@ bool MAVLinkHandlerAir::send_heartbeat() {
                                &heartbeat_msg, MAV_TYPE_GCS,
                                MAV_AUTOPILOT_INVALID, 0, 0, 0);
 
-    return autopilot.send_message(heartbeat_msg);
+    return autopilot_channel.send_message(heartbeat_msg);
   }
 
   return false;
-}
-
-
-
-void MAVLinkHandlerAir::set_retry_send_timer(const mavlink_message_t& msg,
-                                       const std::chrono::milliseconds& timeout,
-                                       int retries) {
-  retry_timer.reset();
-  retry_msg = msg;
-  retry_timeout = timeout;
-  retry_count = retries;
-}
-
-void MAVLinkHandlerAir::cancel_retry_send_timer(int msgid) {
-  if (retry_msg.msgid == msgid) {
-    retry_count = 0;
-  }
-}
-
-void MAVLinkHandlerAir::check_retry_send_timer() {
-  if (retry_count > 0 && retry_timer.elapsed_time() >= retry_timeout) {
-    rfd.send_message(retry_msg);
-    retry_count--;
-    retry_timer.reset();
-  }
 }
 
 bool MAVLinkHandlerAir::set_rfd_active() {
@@ -376,9 +487,9 @@ bool MAVLinkHandlerAir::set_gsm_active() {
     rfd_active = false;
     isbd_active = false;
     gsm_active = true;
-    // sms_channel.reset_timer();
-    last_sms_time = timelib::time_since_epoch();
-    primary_report_timer.reset();
+    // gsm_channel.reset_timer();
+    time_last_sms = timelib::time_since_epoch();
+    timer_report_sms.reset();
     log(LOG_INFO, "GSM active");
   } else {
     gsm_active = false;
@@ -391,7 +502,7 @@ bool MAVLinkHandlerAir::set_isbd_active() {
     rfd_active = false;
     gsm_active = false;
     isbd_active = true;
-    // secondary_report_timer.reset();
+    // timer_report_sbd.reset();
     log(LOG_INFO, "ISBD active");
   } else {
     isbd_active = false;
@@ -415,165 +526,6 @@ void MAVLinkHandlerAir::handle_gsm_out() {
   } else {
     set_rfd_active();
   }
-}
-
-/**
- * Initializes autopilot and comm channels.
- */
-bool MAVLinkHandlerAir::init() {
-
-  vector<string> devices;
-  Serial::get_serial_devices(devices);
-
-    // ----------------- Autopilot ------------------
-  if (!autopilot.init(config.get_autopilot_serial(), config.get_autopilot_serial_speed(), devices, config.get_autopilot_id())) {
-    log(LOG_ERR,"UV Radio Room initialization failed: cannot connect to autopilot.");
-    return false;
-  }
-
-  log(LOG_INFO,"Autopilot initialization succesful.");
-  // Exclude the serial device used by autopilot 
-  for (vector<string>::iterator iter = devices.begin(); iter != devices.end();
-       ++iter) {
-    if (*iter == autopilot.get_path()) {
-      devices.erase(iter);
-      break;
-    }
-  }
-
-  // ----------------- RFD ------------------
-  // if autopilot serial was switched, switch back now
-  if (config.get_rfd_enabled()) {
-    string rfd_serial_string;
-    radio_initialized = true;
-    if ( autopilot.get_path() == config.get_rfd_serial() ) {
-      rfd_serial_string = config.get_autopilot_serial();
-    } else {
-      rfd_serial_string = config.get_rfd_serial();
-    }
-    if (!rfd.init(rfd_serial_string, config.get_rfd_serial_speed(), devices, config.get_rfd_id())) {
-      log(LOG_ERR, "Radio initialization failed: cannot connect to Radio");
-      radio_initialized = false;
-      // return false;
-    } else {
-      log(LOG_INFO,"Radio initialization succesful.");
-    }
-    
-    // Exclude the serial device used by rfd 
-    for (vector<string>::iterator iter = devices.begin(); iter != devices.end();
-         ++iter) {
-      if (*iter == rfd.get_path()) {
-        devices.erase(iter);
-        break;
-      }
-    }
-  } else {
-    log(LOG_INFO,"Radio disabled.");
-    radio_initialized = false;
-  }
-
-  // ------------------- GSM -------------------
-  if (config.get_gsm_enabled()) {  
-    if (sms_channel.init(config.get_gsm_serial1(), config.get_gsm_serial2(), config.get_gsm_serial3(),
-                         config.get_gsm_pin1(), config.get_gsm_pin2(), config.get_gsm_pin3(),
-                         config.get_gsm_serial_speed(), false)) {
-      log(LOG_INFO, "GSM channel initialized.");
-      gsm_initialized = true;
-    } else {
-      log(LOG_WARNING, "GSM channel initialization failed.");
-      gsm_initialized = false;
-      // return false;
-    }
-  } else {
-    log(LOG_INFO,"GSM disabled.");
-    gsm_initialized = false;
-  }
-
-  // ----------------- ISBD ------------------
-  if (config.get_isbd_enabled()) {  
-    if (isbd_channel.init(config.get_isbd_serial(), config.get_isbd_serial_speed(), devices, config.get_groundstation_rock_address())) {
-      log(LOG_INFO, "ISBD channel initialized.");
-      isbd_initialized = true;
-    } else {
-      log(LOG_WARNING, "ISBD channel initialization failed.");
-      isbd_initialized = false;
-      // return false;
-    }
-  } else {
-    log(LOG_INFO,"SBD disabled");
-    isbd_initialized = false;
-  }
-
-  // Syste manager --------------------------------------------------------------------------------------
-
-  if (!system_manager.init()) {
-    log(LOG_ERR, "System manager initialization failed");
-  } else {
-    log(LOG_INFO, "System manager initialization succesfull");
-  }
-
-  rfd_status_period = timelib::sec2ms(2);
-  rfd_status_timer.reset();
-
-  _mav_id = config.get_autopilot_id();
-
-  heartbeat_period = timelib::sec2ms(1);
-  active_update_interval = timelib::sec2ms(0.1);
-
-  // set gcs id for the hearbeat back to autopilot
-  gcs_id = config.get_groundstation_mav_id();
-  
-  // send at first contact sms to all 3 numbers of ground
-  ground_sms_all = false;
-
-  // configurable options, set limits
-
-  rfd_timeout = timelib::sec2ms(2);
-  sms_timeout = timelib::sec2ms(20);
-  sms_report_period = timelib::sec2ms(14);
-  isbd_report_period = timelib::sec2ms(40);
-  
-  if ( config.get_rfd_timeout() > 2 ) {
-    rfd_timeout = timelib::sec2ms((double)config.get_rfd_timeout());
-  }
-
-  if ( config.get_sms_timeout() > 20 ) {
-    sms_timeout = timelib::sec2ms((double)config.get_sms_timeout());
-  }
-
-  if ( config.get_sms_period() > 14 ) {
-    sms_report_period = timelib::sec2ms((double)config.get_sms_period());
-  }
-
-  if ( config.get_sbd_period() > 40 ) {
-    isbd_report_period = timelib::sec2ms((double)config.get_sbd_period());
-  }
-
-  last_gcs_number = config.get_groundstation_tlf_number1();
-
-  log(LOG_INFO,"GCS number %s", last_gcs_number.c_str());
-  log(LOG_INFO,"rfd_timeout %d", rfd_timeout);
-  log(LOG_INFO,"sms_timeout %d", sms_timeout);
-  log(LOG_INFO,"sms_report_period %d", sms_report_period);
-  log(LOG_INFO,"isbd_report_period %d", isbd_report_period);
-
-  // sms_channel.reset_timer();
-  last_sms_time = timelib::time_since_epoch();
-  rfd.reset_timer();
-  
-  log(LOG_INFO, "UV Radio Room initialization succeeded.");
-
-  return true;
-}
-
-/**
- * Closes all opened connections.
- */
-void MAVLinkHandlerAir::close() {
-  isbd_channel.close();
-  autopilot.close();
-  rfd.close();
-  sms_channel.close();
 }
 
 }  // namespace radioroom

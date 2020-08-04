@@ -154,7 +154,7 @@ bool MAVReport::update(const mavlink_message_t& msg) {
   return false;
 }
 
-void MAVReport::get_message_sms(mavlink_message_t& msg, uint8_t link_quality, uint8_t system_status_bitmask,
+void MAVReport::get_message_sms(mavlink_message_t& msg, uint8_t system_status_bitmask,
                                 int quality1, int quality2, int quality3, int active_link, int sbd_quality,
                                 bool rfd_active, bool gsm_active, bool sbd_active) {
 
@@ -164,9 +164,6 @@ void MAVReport::get_message_sms(mavlink_message_t& msg, uint8_t link_quality, ui
   report_sms.rssi_gsm3 = quality3;
   report_sms.rssi_sbd = sbd_quality;
   
-  // probably not needed after all
-  report_sms.throttle = link_quality;
-
   // make telemetry bitmask
   //
   // bit 1 rfd active

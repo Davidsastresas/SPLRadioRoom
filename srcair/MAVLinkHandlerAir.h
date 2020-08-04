@@ -41,87 +41,26 @@ namespace radioroom {
  */
 class MAVLinkHandlerAir {
  public:
-  /**
-   * Default constructor.
-   */
+
   MAVLinkHandlerAir();
 
-  /**
-   * Initializes enabled comm channels and autopilot connections.
-   *
-   * Returns true if autopilot and enabled comm link connections were configured
-   * successfully.
-   */
   bool init();
 
-  /*
-   * Closes all opened connections.
-   */
   void close();
 
-  /**
-   * Single turn of the main message pump that timers, routes and processes
-   * messages received from autopilot and comm channels.
-   *
-   * The pump must run in a tight loop started after init().
-   */
   bool loop();
 
  private:
-  /*
-   * Hanlde mobile-originated message received from autopilot.
-   */
+
   void handle_mo_message(const mavlink_message_t& msg);
 
-  /*
-   * Handle mobile-terminated message received from a comm channel.
-   */
   void handle_mt_message(const mavlink_message_t& msg);
 
   void handle_mt_sms(mavio::SMSmessage& msg);
 
-  /**
-   * Sends report message to one of the comm channels if the channel report
-   * period has elapsed.
-   *
-   * returns true if report was sent.
-   */
   bool send_report();
 
-  /*
-   * Sends heartbeat message to autopilot if hearbeat period has elapsed and
-   * the comm channels are not at faulted state (one of the channels successfuly
-   * sent a message during it's report period).
-   *
-   * This allows autopilots to handle lost link gracefully if heartbeats are not
-   * received.
-   */
   bool send_heartbeat();
-
-  /*
-   * Requests autopilot data streams required to compose report message.
-   */
-  // void request_data_streams();
-
-  /*
-   * Sets send retry timer in milliseconds for the specified message.
-   */
-  void set_retry_send_timer(const mavlink_message_t& msg, 
-                         const std::chrono::milliseconds& timeout,
-                         int retries);
-
-  /*
-   * Cancels send retry timer for the specified message id.
-   */
-  void cancel_retry_send_timer(int msgid);
-
-  /*
-   * Retries sending message specifif in set_retry_send_timer() call if
-   * the retry timeout elapses and the retry counter iz nonzero.
-   *
-   * Decrements the retries counter.
-   */
-  void check_retry_send_timer();
 
   void update_active_channel();
 
@@ -137,65 +76,57 @@ class MAVLinkHandlerAir {
 
   void send_status_rfd();
 
-  mavio::MAVLinkRFD900x rfd;
-  mavio::MAVLinkAutopilotAir autopilot;
-  mavio::MAVLinkISBDChannel isbd_channel;
-  mavio::MAVLinkSMSChannel sms_channel;
+  MAVReport report;
+  
+  // channels
+  mavio::MAVLinkRFD900x rfd_channel;
+  mavio::MAVLinkAutopilotAir autopilot_channel;
+  mavio::MAVLinkISBDChannel sbd_channel;
+  mavio::MAVLinkSMSChannel gsm_channel;
   mavio::SystemManager system_manager;
 
-  //
-  std::chrono::milliseconds current_time;
-  std::chrono::milliseconds last_sms_time;
-
-  // mavio::MAVLinkTCPChannel tcp_channel;
-  timelib::Stopwatch update_active_timer;
-  timelib::Stopwatch update_report_timer;
+  // timers
+  timelib::Stopwatch timer_update_active;
   timelib::Stopwatch heartbeat_timer;
-  timelib::Stopwatch primary_report_timer;
-  timelib::Stopwatch secondary_report_timer;
-  timelib::Stopwatch rfd_status_timer;
+  timelib::Stopwatch timer_report_sms;
+  timelib::Stopwatch timer_report_sbd;
+  timelib::Stopwatch timer_rfd_status;
 
-  MAVReport report;
-  mavlink_message_t mission_count_msg;
-  // mavlink_message_t missions[max_mission_count];
-  size_t missions_received;
 
-  //
+  // active links
   bool rfd_active;
   bool gsm_active;
   bool isbd_active;
 
-  // link quality
-  int gsm_signal_quality = 0;
-
-  timelib::Stopwatch retry_timer;
-  mavlink_message_t retry_msg;
-  std::chrono::milliseconds retry_timeout;
-  int retry_count;
-  bool _sleep;
-
+  // links initialization
   bool radio_initialized = false;
   bool gsm_initialized = false;
   bool isbd_initialized = false;
 
+  // if false, first sms is sent to all 3 ground numbers
   bool ground_sms_all = false;
 
+  // mavlink ids
   uint8_t gcs_id = 255;
+  int _mav_id = 0;
 
-  std::chrono::milliseconds heartbeat_period;
+  // time measurements
+  std::chrono::milliseconds time_current;
+  std::chrono::milliseconds time_last_sms;
 
-  std::chrono::milliseconds active_update_interval;
-  std::chrono::milliseconds rfd_timeout;
-  std::chrono::milliseconds sms_timeout;
+  std::chrono::milliseconds timeout_rfd;
+  std::chrono::milliseconds timeout_gsm;
 
-  std::chrono::milliseconds sms_report_period;
-  std::chrono::milliseconds isbd_report_period;
+  std::chrono::milliseconds period_autopilot_heartbeat;
+  std::chrono::milliseconds period_update_act_channel;
 
-  std::chrono::milliseconds rfd_status_period;
+  std::chrono::milliseconds period_sms_report;
+  std::chrono::milliseconds period_sbd_report;
+  std::chrono::milliseconds period_rfd_status;
 
+  // number from last GCS SMS
   std::string last_gcs_number = "";
 
-  int _mav_id;
 };
 
 }  // namespace radioroom
