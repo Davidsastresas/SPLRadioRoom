@@ -149,9 +149,6 @@ class Vehicle {
     mavlink_message_t last_high_latency;
     bool last_high_latency_valid = false;
 
-    // vehicle link status
-
-    int gsm_quality = 0;
 };
 
 } // namespace mavio

@@ -602,12 +602,36 @@ void Vehicle::process_message(mavio::SMSmessage& sms) {
     high_latency_msg.failsafe = mavlink_msg_am_telemetry_high_lat_get_failsafe(&msg);
     high_latency_msg.wp_num = mavlink_msg_am_telemetry_high_lat_get_wp_num(&msg);
 
+
     mavlink_msg_high_latency_encode(_mav_id, 1, &high_lat, &high_latency_msg);
 
     _outgoing_queue_gcsmavmsg.push(high_lat);
 
-    // probably not needed with new fields
-    gsm_quality = mavlink_msg_am_telemetry_high_lat_get_throttle(&msg);
+    // encode link_status on radio_status as follows
+    //
+    // rxerros - sbd rssi
+    // fixed - not used
+    // rssi - gsm 1 rssi
+    // remrsssi - gsm 2 rssi
+    // txbuf - gsm 3 rssi
+    // noise - comp bitmask
+    // remnoise - telemetry bitmask
+    // 
+    // compid is mav_id plus 10
+
+    mavlink_message_t radio_status;
+    mavlink_radio_status_t radio_status_msg;
+
+    radio_status_msg.rxerrors = mavlink_msg_am_telemetry_high_lat_get_rssi_sbd(&msg);
+    radio_status_msg.rssi = mavlink_msg_am_telemetry_high_lat_get_rssi_gsm1(&msg);
+    radio_status_msg.remrssi = mavlink_msg_am_telemetry_high_lat_get_rssi_gsm2(&msg);
+    radio_status_msg.txbuf = mavlink_msg_am_telemetry_high_lat_get_rssi_gsm3(&msg);
+    radio_status_msg.noise = mavlink_msg_am_telemetry_high_lat_get_comp_status_bitmask(&msg);
+    radio_status_msg.remnoise = mavlink_msg_am_telemetry_high_lat_get_telem_status_bitmask(&msg);
+
+    mavlink_msg_radio_status_encode(_mav_id, _mav_id + 10, &radio_status, &radio_status_msg);
+
+    _outgoing_queue_gcsmavmsg.push(radio_status);
   }
 
   time_last_sms = timelib::time_since_epoch();
