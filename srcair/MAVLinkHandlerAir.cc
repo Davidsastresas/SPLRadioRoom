@@ -295,55 +295,14 @@ void MAVLinkHandlerAir::handle_mt_message(const mavlink_message_t& msg) {
 }
 
 void MAVLinkHandlerAir::send_status_rfd() {
+
   if ( timer_rfd_status.elapsed_time() > period_rfd_status ) {
     timer_rfd_status.reset();
 
-    // get system status
-    uint8_t status_bitmask;
-    if ( !system_manager.get_status_bitmask(status_bitmask) ) {
-      status_bitmask = 255;
-    }
+    // update variables
+    update_telem_status();
 
-    // get sms channel link quality
-    int sms_quality1 = 0;
-    int sms_quality2 = 0;
-    int sms_quality3 = 0;
-    int active_sms = 0;
-    gsm_channel.get_signal_quality(sms_quality1, 0);
-    gsm_channel.get_signal_quality(sms_quality2, 1);
-    gsm_channel.get_signal_quality(sms_quality3, 2);
-    gsm_channel.get_active_link(active_sms);
-
-    // get sbd link quality
-    int sbd_quality = 0;
-    sbd_channel.get_signal_quality(sbd_quality);
-
-      uint8_t sys_bitmask = 0;
-  
-    if ( rfd_active ) {
-      sys_bitmask += 1;
-    }
-    if ( gsm_active ) {
-      sys_bitmask += 2;
-    } 
-    if ( isbd_active ) {
-      sys_bitmask += 4;
-    }
-
-    switch(active_sms) {
-      case 0:
-        sys_bitmask += 8;
-        break;
-      case 1:
-        sys_bitmask += 16;
-        break;
-      case 2:
-        sys_bitmask += 32;
-        break;
-      default:
-        break;
-    }
-
+    // prepare message
     mavlink_message_t radio_status;
     mavlink_radio_status_t radio_status_msg;
 
@@ -352,10 +311,11 @@ void MAVLinkHandlerAir::send_status_rfd() {
     radio_status_msg.remrssi = sms_quality2;
     radio_status_msg.txbuf = sms_quality3;
     radio_status_msg.noise = status_bitmask;
-    radio_status_msg.remnoise = sys_bitmask;
+    radio_status_msg.remnoise = link_bitmask;
 
     mavlink_msg_radio_status_encode(_mav_id, _mav_id + 10, &radio_status, &radio_status_msg);
 
+    // send message
     rfd_channel.send_message(radio_status);
   }
 }
@@ -370,33 +330,17 @@ bool MAVLinkHandlerAir::send_report() {
     if (timer_report_sms.elapsed_time() >= period_sms_report) {
       timer_report_sms.reset();
 
+      // prepare sms
       mavio::SMSmessage sms_report;
       mavlink_message_t sms_report_msg;
 
-      // get system status
-      uint8_t status_bitmask;
-      if ( !system_manager.get_status_bitmask(status_bitmask) ) {
-        status_bitmask = 255;
-      }
-
-      // get sms channel link quality
-      int sms_quality1 = 0;
-      int sms_quality2 = 0;
-      int sms_quality3 = 0;
-      int active_sms = 0;
-      gsm_channel.get_signal_quality(sms_quality1, 0);
-      gsm_channel.get_signal_quality(sms_quality2, 1);
-      gsm_channel.get_signal_quality(sms_quality3, 2);
-      gsm_channel.get_active_link(active_sms);
-
-      // get sbd link quality
-      int sbd_quality = 0;
-      sbd_channel.get_signal_quality(sbd_quality);
-
-      report.get_message_sms(sms_report_msg, status_bitmask, sms_quality1, 
-                             sms_quality2, sms_quality3, active_sms, 
-                             sbd_quality, rfd_active, gsm_active, isbd_active);
+      // update system variables and get report
+      update_telem_status();
+      report.get_message_sms(sms_report_msg, sbd_quality, sms_quality1,
+                             sms_quality2, sms_quality3, status_bitmask,
+                             link_bitmask);
       
+      // attach message to SMS
       sms_report.set_mavlink_msg(sms_report_msg);
 
       // send sms to all ground numbers configured for ground to pick the best signal
@@ -423,6 +367,7 @@ bool MAVLinkHandlerAir::send_report() {
 
     }
   }
+
   if (isbd_initialized && isbd_active) {
     if (timer_report_sbd.elapsed_time() >= period_sbd_report) {
       timer_report_sbd.reset();
@@ -526,6 +471,61 @@ void MAVLinkHandlerAir::handle_gsm_out() {
   } else {
     set_rfd_active();
   }
+}
+
+void MAVLinkHandlerAir::update_telem_status() {
+    // get system status
+    if ( !system_manager.get_status_bitmask(status_bitmask) ) {
+      status_bitmask = 255;
+    }
+
+    // get sms channel link quality and active channel
+    gsm_channel.get_signal_quality(sms_quality1, 0);
+    gsm_channel.get_signal_quality(sms_quality2, 1);
+    gsm_channel.get_signal_quality(sms_quality3, 2);
+
+    int active_sms = 0;
+    gsm_channel.get_active_link(active_sms);
+
+    // get sbd link quality
+    sbd_quality = 0;
+    sbd_channel.get_signal_quality(sbd_quality);
+
+    // get telemetry_bitmask, 
+    //
+    // bit 1 rfd active
+    // bit 2 gsm active
+    // bit 3 sbd active
+    // bit 4 gsm1 active
+    // bit 5 gsm2 active
+    // bit 6 gsm3 active
+    // bit 7,8 unused
+
+    link_bitmask = 0;
+  
+    if ( rfd_active ) {
+      link_bitmask += 1;
+    }
+    if ( gsm_active ) {
+      link_bitmask += 2;
+    } 
+    if ( isbd_active ) {
+      link_bitmask += 4;
+    }
+
+    switch(active_sms) {
+      case 0:
+        link_bitmask += 8;
+        break;
+      case 1:
+        link_bitmask += 16;
+        break;
+      case 2:
+        link_bitmask += 32;
+        break;
+      default:
+        break;
+    }
 }
 
 }  // namespace radioroom

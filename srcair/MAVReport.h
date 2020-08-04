@@ -37,9 +37,10 @@ class MAVReport {
   bool update(const mavlink_message_t& msg);
 
   // Retrieves HIGH_LATENCY report message
-  void get_message_sms(mavlink_message_t& msg, uint8_t system_status_bitmask, int quality1, 
-                      int quality2, int quality3, int active_gsm_link, int sbd_quality,
-                      bool rfd_active, bool gsm_active, bool sbd_active);
+  void get_message_sms(mavlink_message_t& msg, uint8_t sbd_quality, 
+                       uint8_t sms_quality1, uint8_t sms_quality2, 
+                       uint8_t sms_quality3, uint8_t status_bitmask,
+                       uint8_t sys_bitmask);
   
   void get_message_sbd(mavlink_message_t& msg, uint8_t link_quality);
 

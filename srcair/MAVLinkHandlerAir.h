@@ -76,6 +76,8 @@ class MAVLinkHandlerAir {
 
   void send_status_rfd();
 
+  void update_telem_status();
+
   MAVReport report;
   
   // channels
@@ -126,6 +128,14 @@ class MAVLinkHandlerAir {
 
   // number from last GCS SMS
   std::string last_gcs_number = "";
+
+  // radio_status
+  int sbd_quality = 0;
+  int sms_quality1 = 0;
+  int sms_quality2 = 0;
+  int sms_quality3 = 0;
+  uint8_t status_bitmask = 255; // uninitialized value
+  uint8_t link_bitmask = 0;
 
 };
 

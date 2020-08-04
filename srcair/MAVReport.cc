@@ -154,53 +154,17 @@ bool MAVReport::update(const mavlink_message_t& msg) {
   return false;
 }
 
-void MAVReport::get_message_sms(mavlink_message_t& msg, uint8_t system_status_bitmask,
-                                int quality1, int quality2, int quality3, int active_link, int sbd_quality,
-                                bool rfd_active, bool gsm_active, bool sbd_active) {
+void MAVReport::get_message_sms(mavlink_message_t& msg, uint8_t sbd_quality,
+                                uint8_t sms_quality1, uint8_t sms_quality2,
+                                uint8_t sms_quality3, uint8_t status_bitmask,
+                                uint8_t link_bitmask) {
 
-  report_sms.comp_status_bitmask = system_status_bitmask;
-  report_sms.rssi_gsm1 = quality1;
-  report_sms.rssi_gsm2 = quality2;
-  report_sms.rssi_gsm3 = quality3;
+  report_sms.comp_status_bitmask = status_bitmask;
+  report_sms.rssi_gsm1 = sms_quality1;
+  report_sms.rssi_gsm2 = sms_quality2;
+  report_sms.rssi_gsm3 = sms_quality3;
   report_sms.rssi_sbd = sbd_quality;
-  
-  // make telemetry bitmask
-  //
-  // bit 1 rfd active
-  // bit 2 gsm active
-  // bit 3 sbd active
-  // bit 4 gsm1 active
-  // bit 5 gsm2 active
-  // bit 6 gsm3 active
-  // bit 7,8 unused
-
-  uint8_t sys_bitmask = 0;
-  
-  if ( rfd_active ) {
-    sys_bitmask += 1;
-  }
-  if ( gsm_active ) {
-    sys_bitmask += 2;
-  }
-  if ( sbd_active ) {
-    sys_bitmask += 4;
-  }
-  
-  switch(active_link) {
-    case 0:
-      sys_bitmask += 8;
-      break;
-    case 1:
-      sys_bitmask += 16;
-      break;
-    case 2:
-      sys_bitmask += 32;
-      break;
-    default:
-      break;
-  }
-
-  report_sms.telem_status_bitmask = sys_bitmask; 
+  report_sms.telem_status_bitmask = link_bitmask; 
 
   mavlink_msg_am_telemetry_high_lat_encode(sysid, compid, &msg, &report_sms);
 }
