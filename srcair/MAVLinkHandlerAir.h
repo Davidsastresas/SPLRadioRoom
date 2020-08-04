@@ -27,6 +27,7 @@
 #include "MAVLinkRFD900x.h"
 #include "MAVLinkISBDChannel.h"
 #include "MAVLinkSMSChannel.h"
+#include "SystemManager.h"
 // #include "MAVLinkTCPChannel.h"
 #include "MAVReport.h"
 #include "timelib.h"
@@ -134,10 +135,13 @@ class MAVLinkHandlerAir {
 
   void handle_gsm_out();
 
+  void send_status_rfd();
+
   mavio::MAVLinkRFD900x rfd;
   mavio::MAVLinkAutopilotAir autopilot;
   mavio::MAVLinkISBDChannel isbd_channel;
   mavio::MAVLinkSMSChannel sms_channel;
+  mavio::SystemManager system_manager;
 
   //
   std::chrono::milliseconds current_time;
@@ -149,6 +153,8 @@ class MAVLinkHandlerAir {
   timelib::Stopwatch heartbeat_timer;
   timelib::Stopwatch primary_report_timer;
   timelib::Stopwatch secondary_report_timer;
+  timelib::Stopwatch rfd_status_timer;
+
   MAVReport report;
   mavlink_message_t mission_count_msg;
   // mavlink_message_t missions[max_mission_count];
@@ -185,7 +191,11 @@ class MAVLinkHandlerAir {
   std::chrono::milliseconds sms_report_period;
   std::chrono::milliseconds isbd_report_period;
 
+  std::chrono::milliseconds rfd_status_period;
+
   std::string last_gcs_number = "";
+
+  int _mav_id;
 };
 
 }  // namespace radioroom

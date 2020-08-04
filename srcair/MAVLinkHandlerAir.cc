@@ -43,12 +43,14 @@ MAVLinkHandlerAir::MAVLinkHandlerAir()
       autopilot(),
       isbd_channel(),
       sms_channel(),
+      system_manager(),
       current_time(0),
       update_active_timer(),
       update_report_timer(),
       heartbeat_timer(),
       primary_report_timer(),
       secondary_report_timer(),
+      rfd_status_timer(),
       missions_received(0),
       rfd_active(true),
       gsm_active(false),
@@ -97,6 +99,8 @@ bool MAVLinkHandlerAir::loop() {
   send_report();
 
   send_heartbeat();
+
+  send_status_rfd();
 
   return _sleep;
 }
@@ -152,6 +156,72 @@ void MAVLinkHandlerAir::handle_mt_message(const mavlink_message_t& msg) {
   autopilot.send_message(msg);
 }
 
+void MAVLinkHandlerAir::send_status_rfd() {
+  if ( rfd_status_timer.elapsed_time() > rfd_status_period ) {
+    rfd_status_timer.reset();
+
+    // get system status
+    uint8_t status_bitmask;
+    if ( !system_manager.get_status_bitmask(status_bitmask) ) {
+      status_bitmask = 255;
+    }
+
+    // get sms channel link quality
+    int sms_quality1 = 0;
+    int sms_quality2 = 0;
+    int sms_quality3 = 0;
+    int active_sms = 0;
+    sms_channel.get_signal_quality(sms_quality1, 0);
+    sms_channel.get_signal_quality(sms_quality2, 1);
+    sms_channel.get_signal_quality(sms_quality3, 2);
+    sms_channel.get_active_link(active_sms);
+
+    // get sbd link quality
+    int sbd_quality = 0;
+    isbd_channel.get_signal_quality(sbd_quality);
+
+      uint8_t sys_bitmask = 0;
+  
+    if ( rfd_active ) {
+      sys_bitmask += 1;
+    }
+    if ( gsm_active ) {
+      sys_bitmask += 2;
+    } 
+    if ( isbd_active ) {
+      sys_bitmask += 4;
+    }
+
+    switch(active_sms) {
+      case 0:
+        sys_bitmask += 8;
+        break;
+      case 1:
+        sys_bitmask += 16;
+        break;
+      case 2:
+        sys_bitmask += 32;
+        break;
+      default:
+        break;
+    }
+
+    mavlink_message_t radio_status;
+    mavlink_radio_status_t radio_status_msg;
+
+    radio_status_msg.rxerrors = sbd_quality;
+    radio_status_msg.rssi = sms_quality1;
+    radio_status_msg.remrssi = sms_quality2;
+    radio_status_msg.txbuf = sms_quality3;
+    radio_status_msg.noise = status_bitmask;
+    radio_status_msg.remnoise = sys_bitmask;
+
+    mavlink_msg_radio_status_encode(_mav_id, _mav_id + 10, &radio_status, &radio_status_msg);
+
+    rfd.send_message(radio_status);
+  }
+}
+
 bool MAVLinkHandlerAir::send_report() {
 
   if (radio_initialized && rfd_active) {
@@ -166,7 +236,30 @@ bool MAVLinkHandlerAir::send_report() {
       mavlink_message_t sms_report_msg;
 
       sms_channel.get_signal_quality(gsm_signal_quality);
-      report.get_message_sms(sms_report_msg, gsm_signal_quality);
+      
+      // get system status
+      uint8_t status_bitmask;
+      if ( !system_manager.get_status_bitmask(status_bitmask) ) {
+        status_bitmask = 255;
+      }
+
+      // get sms channel link quality
+      int sms_quality1 = 0;
+      int sms_quality2 = 0;
+      int sms_quality3 = 0;
+      int active_sms = 0;
+      sms_channel.get_signal_quality(sms_quality1, 0);
+      sms_channel.get_signal_quality(sms_quality2, 1);
+      sms_channel.get_signal_quality(sms_quality3, 2);
+      sms_channel.get_active_link(active_sms);
+
+      // get sbd link quality
+      int sbd_quality = 0;
+      isbd_channel.get_signal_quality(sbd_quality);
+
+      report.get_message_sms(sms_report_msg, gsm_signal_quality, status_bitmask, 
+                             sms_quality1, sms_quality2, sms_quality3, active_sms, 
+                             sbd_quality, rfd_active, gsm_active, isbd_active);
       
       sms_report.set_mavlink_msg(sms_report_msg);
 
@@ -199,7 +292,9 @@ bool MAVLinkHandlerAir::send_report() {
       secondary_report_timer.reset();
 
       mavlink_message_t isbd_report_msg;
-      report.get_message_sbd(isbd_report_msg, 0);
+      int sbd_quality;
+      isbd_channel.get_signal_quality(sbd_quality);
+      report.get_message_sbd(isbd_report_msg, sbd_quality);
 
       return isbd_channel.send_message(isbd_report_msg);
     }
@@ -408,6 +503,19 @@ bool MAVLinkHandlerAir::init() {
     log(LOG_INFO,"SBD disabled");
     isbd_initialized = false;
   }
+
+  // Syste manager --------------------------------------------------------------------------------------
+
+  if (!system_manager.init()) {
+    log(LOG_ERR, "System manager initialization failed");
+  } else {
+    log(LOG_INFO, "System manager initialization succesfull");
+  }
+
+  rfd_status_period = timelib::sec2ms(2);
+  rfd_status_timer.reset();
+
+  _mav_id = config.get_autopilot_id();
 
   heartbeat_period = timelib::sec2ms(1);
   active_update_interval = timelib::sec2ms(0.1);
