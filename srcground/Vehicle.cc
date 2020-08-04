@@ -330,7 +330,7 @@ bool Vehicle::init(int instance) {
       timeout_sms = timelib::sec2ms(30);
       period_gsm_gcs_hearbeat = timelib::sec2ms(30);
 
-      if (radioroom::config.get_heartbeat_period() > 1) {
+      if (radioroom::config.get_heartbeat_period() >= 1) {
         period_heartbeat_gcs = timelib::sec2ms((double)radioroom::config.get_heartbeat_period());
       }
 
