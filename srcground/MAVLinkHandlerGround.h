@@ -34,18 +34,24 @@ class MAVLinkHandlerGround {
 
   void send_gcs_signal_quality();
 
+  void update_telem_status();
+
   mavio::VehicleManager vehicle_manager;
   mavio::MAVLinkRFD900x rfd_channel;
-  mavio::MAVLinkISBDChannel isbd_channel;
+  mavio::MAVLinkISBDChannel sbd_channel;
   mavio::MAVLinkTCPChannelServer tcp_channel;
   mavio::MAVLinkSMSChannel gsm_channel;
   mavio::SystemManager system_manager;
 
   // link status
-  int gsm_quality = 0;
-  int sbd_quality = 0;
   timelib::Stopwatch timer_send_link_status;
-  std::chrono::milliseconds timer_send_link_status_period = timelib::sec2ms(5);
+  std::chrono::milliseconds timer_send_link_status_period = timelib::sec2ms(2);
+  int sbd_quality = 0;
+  int sms_quality1 = 0;
+  int sms_quality2 = 0;
+  int sms_quality3 = 0;
+  uint8_t status_bitmask = 255; // uninitialized value
+  uint8_t link_bitmask = 0;
 
   // hardware parameters
   bool _radio_initialized = false;
