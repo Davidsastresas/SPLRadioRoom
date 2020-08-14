@@ -137,6 +137,9 @@ class MAVLinkHandlerAir {
   uint8_t status_bitmask = 255; // uninitialized value
   uint8_t link_bitmask = 0;
 
+  // gcs rb address
+  int _gcs_rb_address;
+
 };
 
 }  // namespace radioroom

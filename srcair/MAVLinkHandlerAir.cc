@@ -152,6 +152,9 @@ bool MAVLinkHandlerAir::init() {
 
   // set gcs id for the hearbeat back to autopilot
   gcs_id = config.get_groundstation_mav_id();
+
+  // get rockblock address of ground
+  _gcs_rb_address = config.get_groundstation_rock_address();
   
   // send at first contact sms to all 3 numbers of ground
   ground_sms_all = false;
@@ -313,7 +316,7 @@ void MAVLinkHandlerAir::send_status_rfd() {
     radio_status_msg.noise = status_bitmask;
     radio_status_msg.remnoise = link_bitmask;
 
-    mavlink_msg_radio_status_encode(_mav_id, _mav_id + 10, &radio_status, &radio_status_msg);
+    mavlink_msg_radio_status_encode(_mav_id, 10, &radio_status, &radio_status_msg);
 
     // send message
     rfd_channel.send_message(radio_status);
@@ -373,11 +376,16 @@ bool MAVLinkHandlerAir::send_report() {
       timer_report_sbd.reset();
 
       mavlink_message_t isbd_report_msg;
+      mavio::SBDmessage isbd_report;
       int sbd_quality;
+
       sbd_channel.get_signal_quality(sbd_quality);
       report.get_message_sbd(isbd_report_msg, sbd_quality);
 
-      return sbd_channel.send_message(isbd_report_msg);
+      isbd_report.set_mavlink_msg(isbd_report_msg);
+      isbd_report.set_address(_gcs_rb_address);
+
+      return sbd_channel.send_message(isbd_report);
     }
   }
 
