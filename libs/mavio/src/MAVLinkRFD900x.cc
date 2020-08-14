@@ -113,6 +113,10 @@ bool MAVLinkRFD900x::connect(const string& path, int speed,
   radio_id = 0;
 
   if (serial.init(path, speed)) {
+
+    // workaround because rfd multipoint doesnt send radio status so this is needed
+    return true;
+
     radio_id = detect_radio(path);
 
     if (radio_id) {
