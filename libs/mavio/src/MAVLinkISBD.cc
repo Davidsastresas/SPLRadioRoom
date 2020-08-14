@@ -211,7 +211,7 @@ bool MAVLinkISBD::send_receive_message(const mavlink_message_t& mo_msg,
                                                  // minus 3 headers 
                                                  // (seq, id, msgid), minus crc
 
-    mavio::log(LOG_INFO, "mavlink lenght: %x", mavlink_size);
+    // mavio::log(LOG_INFO, "mavlink lenght: %x", mavlink_size);
 
     bufdecoded[0] = 0xFD; // packet start 
     bufdecoded[1] = mavlink_size; // payload lenght
