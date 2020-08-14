@@ -629,7 +629,7 @@ void Vehicle::process_message(mavio::SMSmessage& sms) {
     radio_status_msg.noise = mavlink_msg_am_telemetry_high_lat_get_comp_status_bitmask(&msg);
     radio_status_msg.remnoise = mavlink_msg_am_telemetry_high_lat_get_telem_status_bitmask(&msg);
 
-    mavlink_msg_radio_status_encode(_mav_id, _mav_id + 10, &radio_status, &radio_status_msg);
+    mavlink_msg_radio_status_encode(_mav_id, 10, &radio_status, &radio_status_msg);
 
     _outgoing_queue_gcsmavmsg.push(radio_status);
   }
@@ -646,10 +646,26 @@ void Vehicle::process_message(mavio::SBDmessage& sbdmsg) {
     mavlink_message_t msg = sbdmsg.get_mavlink_msg();
 
     if (msg.msgid == MAVLINK_MSG_ID_HIGH_LATENCY) {
-      last_base_mode = mavlink_msg_am_telemetry_high_lat_get_base_mode(&msg);
-      last_custom_mode = mavlink_msg_am_telemetry_high_lat_get_custom_mode(&msg);
+      // save for last state
+      last_base_mode = mavlink_msg_high_latency_get_base_mode(&msg);
+      last_custom_mode = mavlink_msg_high_latency_get_custom_mode(&msg);
       last_high_latency = msg;
       last_high_latency_valid = true;
+
+      // send telemetry status
+      mavlink_message_t radio_status;
+      mavlink_radio_status_t radio_status_msg;
+
+      radio_status_msg.rxerrors = mavlink_msg_high_latency_get_throttle(&msg);
+      radio_status_msg.rssi = 0;
+      radio_status_msg.remrssi = 0;
+      radio_status_msg.txbuf = 0;
+      radio_status_msg.noise = 0;
+      radio_status_msg.remnoise = 0;
+
+      mavlink_msg_radio_status_encode(_mav_id, 10, &radio_status, &radio_status_msg);
+
+      _outgoing_queue_gcsmavmsg.push(radio_status);
     }
   }
 }
