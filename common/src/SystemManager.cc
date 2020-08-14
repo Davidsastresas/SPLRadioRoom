@@ -95,10 +95,23 @@ bool SystemManager::get_status_bitmask_from_response(std::string result) {
         if ( result.c_str()[i] == 'x' ) {
             for ( int u = 0; u < 6; u++ ) {
                 prepared_answer[u] = result.c_str()[i + u + 1];
+                  // mavio::log(LOG_INFO, "prepared answer %d read: %c", u, prepared_answer[u]);
+                if ( !isxdigit(  prepared_answer[u] )) {
+                  // mavio::log(LOG_INFO, "prepared answer %d not digit: %c", u, prepared_answer[u]);
+                  for ( int y = u; y < 6; y++ ) {
+                    prepared_answer[y] = 48;
+                  } 
+                  break;
+                }
             }
+            // mavio::log(LOG_INFO, "out of loop");
             break;
         }
     }
+
+    // mavio::log(LOG_INFO, "prepared answer: %s", prepared_answer);
+    // mavio::log(LOG_INFO, "prepared answer size: %d", sizeof(prepared_answer));
+
     if ( text_to_bin_check(prepared_answer) >= 0 ) {
         
         hex_response = text_to_bin_check(prepared_answer);
