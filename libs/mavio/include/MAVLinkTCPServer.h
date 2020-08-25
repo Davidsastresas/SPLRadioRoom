@@ -26,6 +26,7 @@
 #include "MAVLinkLib.h"
 #include <netinet/in.h>
 #include <string>
+#include <atomic>
 
 namespace mavio {
 
@@ -77,11 +78,15 @@ class MAVLinkTCPServer {
    */
   bool accept_connection();
 
+  bool get_connected() { return _socketconnected; }
+  
  private:
   /**
    * Connects to the TCP/IP socket specified by the init() call.
    */
   bool connect();
+
+  std::atomic<bool> _socketconnected;
 
   struct sockaddr_in serv_addr, cli_addr;  // Socket address
   int socket_fd, newsocket_fd;             // Socket file descriptor

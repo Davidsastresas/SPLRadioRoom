@@ -40,7 +40,11 @@ namespace mavio {
 // TCP keepalive options values
 constexpr int so_keepalive_value  = 1;   // enabled
 
-MAVLinkTCPServer::MAVLinkTCPServer() : socket_fd(0) {}
+MAVLinkTCPServer::MAVLinkTCPServer() : 
+  _socketconnected(true), 
+  socket_fd(0)
+
+{}
 
 MAVLinkTCPServer::~MAVLinkTCPServer() { close(); }
 
@@ -53,7 +57,9 @@ bool MAVLinkTCPServer::init(uint16_t port) {
   
   serv_addr.sin_port = htons(port);
 
-  return connect();
+  // return connect();
+
+  return true;
 }
 
 bool MAVLinkTCPServer::connect() {
@@ -104,6 +110,7 @@ bool MAVLinkTCPServer::accept_connection() {
     return false;
   }
   mavio::log(LOG_INFO, "connection accepted");
+  _socketconnected = true;
   return true;
 }
 
@@ -140,6 +147,7 @@ bool MAVLinkTCPServer::send_message(const mavlink_message_t& msg) {
   MAVLinkLogger::log(LOG_WARNING, "TCP << FAILED", msg);
 
   // Re-connect to the socket.
+  _socketconnected = false;
   connect();
 
   return false;
@@ -147,6 +155,10 @@ bool MAVLinkTCPServer::send_message(const mavlink_message_t& msg) {
 
 bool MAVLinkTCPServer::receive_message(mavlink_message_t& msg) {
   if (newsocket_fd == 0) {
+    return false;
+  }
+
+  if (!_socketconnected) {
     return false;
   }
 

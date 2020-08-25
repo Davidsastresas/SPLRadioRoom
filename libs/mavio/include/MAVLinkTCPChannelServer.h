@@ -94,6 +94,8 @@ class MAVLinkTCPChannelServer : public MAVLinkChannel {
    */
   std::chrono::milliseconds last_receive_time();
 
+  bool get_connected() { return socket.get_connected(); }
+
  private:
   /**
    * While running is true, retrieves messages from send_queue and sends them to

@@ -30,6 +30,7 @@ using timelib::sleep;
 
 constexpr size_t max_tcp_channnel_queue_size = 1024;
 
+const std::chrono::milliseconds tcp_channel_sleep_interval(1000);
 const std::chrono::milliseconds tcp_channel_send_interval(1);
 const std::chrono::milliseconds tcp_channel_receive_interval(1);
 
@@ -70,6 +71,7 @@ void MAVLinkTCPChannelServer::close() {
     send_thread.join();
   }
 
+  // this is what is delaying the closing of the app?
   socket.close();
 }
 
