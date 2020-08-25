@@ -99,7 +99,7 @@ bool MAVReport::update(const mavlink_message_t& msg) {
       report_sms.heading =
           (rad_to_centidegrees(mavlink_msg_attitude_get_yaw(&msg)) + 36000) %
           36000;
-      report_sms.heading =
+      report_sbd.heading =
           (rad_to_centidegrees(mavlink_msg_attitude_get_yaw(&msg)) + 36000) %
           36000;
       report_sms.roll = rad_to_centidegrees(mavlink_msg_attitude_get_roll(&msg));
