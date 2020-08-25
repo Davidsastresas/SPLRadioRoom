@@ -617,7 +617,7 @@ void Vehicle::process_message(mavio::SMSmessage& sms) {
     // noise - comp bitmask
     // remnoise - telemetry bitmask
     // 
-    // compid is mav_id plus 10
+    // compid is 10
 
     mavlink_message_t radio_status;
     mavlink_radio_status_t radio_status_msg;
