@@ -28,7 +28,7 @@
 #include "MAVLinkISBDChannel.h"
 #include "MAVLinkSMSChannel.h"
 #include "SystemManager.h"
-// #include "MAVLinkTCPChannel.h"
+#include "MAVLinkTCPChannelServer.h"
 #include "MAVReport.h"
 #include "timelib.h"
 
@@ -86,6 +86,7 @@ class MAVLinkHandlerAir {
   mavio::MAVLinkISBDChannel sbd_channel;
   mavio::MAVLinkSMSChannel gsm_channel;
   mavio::SystemManager system_manager;
+  mavio::MAVLinkTCPChannelServer tcp_channel;
 
   // timers
   timelib::Stopwatch timer_update_active;

@@ -44,6 +44,7 @@ MAVLinkHandlerAir::MAVLinkHandlerAir()
       sbd_channel(),
       gsm_channel(),
       system_manager(),
+      tcp_channel(),
       timer_update_active(),
       heartbeat_timer(),
       timer_report_sms(),
@@ -134,7 +135,7 @@ bool MAVLinkHandlerAir::init() {
     isbd_initialized = false;
   }
 
-  // Syste manager --------------------------------------------------------------------------------------
+  // System manager --------------------------------------------------------------------------------------
 
   if (!system_manager.init()) {
     log(LOG_ERR, "System manager initialization failed");
@@ -196,6 +197,14 @@ bool MAVLinkHandlerAir::init() {
   
   log(LOG_INFO, "UV Radio Room initialization succeeded.");
 
+  // TCP channel -----------------------------------------------------------------------------------------
+
+  if (tcp_channel.init(config.get_tcp_port())) {
+    log(LOG_INFO, "TCP channel initialized.");
+  } else {
+    log(LOG_WARNING, "TCP channel initialization failed.");
+  }
+
   return true;
 }
 
@@ -205,6 +214,7 @@ void MAVLinkHandlerAir::close() {
   rfd_channel.close();
   gsm_channel.close();
   system_manager.close();
+  tcp_channel.close();
 }
 
 bool MAVLinkHandlerAir::loop() {
@@ -233,6 +243,16 @@ bool MAVLinkHandlerAir::loop() {
   if (autopilot_channel.receive_message(mo_msg)) {
     handle_mo_message(mo_msg);
     sleep = false;
+  }
+
+  // just active at close range, with wifi connected
+  if ( tcp_channel.get_connected() ) {
+    tcp_channel.send_message(mo_msg);
+    
+    if (tcp_channel.receive_message(mt_msg)) {
+      autopilot_channel.send_message(mt_msg);
+      sleep = false;
+    }
   }
 
   update_active_channel();
