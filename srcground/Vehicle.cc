@@ -181,7 +181,7 @@ bool Vehicle::set_isbd_active() {
     log(LOG_INFO, "ISBD active");
 
     mavlink_message_t status_msg;
-    mavlink_msg_statustext_pack(1,1, &status_msg, MAV_SEVERITY_NOTICE, "ISBD active", 0, 0);
+    mavlink_msg_statustext_pack(_mav_id, 1, &status_msg, MAV_SEVERITY_NOTICE, "ISBD active", 0, 0);
     _outgoing_queue_gcsmavmsg.push(status_msg);
     
     return true;
@@ -200,7 +200,7 @@ bool Vehicle::set_gsm_active() {
     log(LOG_INFO, "GSM active");
 
     mavlink_message_t status_msg;
-    mavlink_msg_statustext_pack(1,1, &status_msg, MAV_SEVERITY_NOTICE, "GSM active", 0, 0);
+    mavlink_msg_statustext_pack(_mav_id, 1, &status_msg, MAV_SEVERITY_NOTICE, "GSM active", 0, 0);
     _outgoing_queue_gcsmavmsg.push(status_msg);
 
     return true;
@@ -218,7 +218,7 @@ bool Vehicle::set_rfd_active() {
     last_high_latency_valid = false;
 
     mavlink_message_t status_msg;
-    mavlink_msg_statustext_pack(1,1, &status_msg, MAV_SEVERITY_NOTICE, "RFD active", 0, 0);
+    mavlink_msg_statustext_pack(_mav_id, 1, &status_msg, MAV_SEVERITY_NOTICE, "RFD active", 0, 0);
     _outgoing_queue_gcsmavmsg.push(status_msg);
     
     return true;
