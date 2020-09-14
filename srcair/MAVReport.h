@@ -23,6 +23,8 @@
 #define SRC_MAVREPORT_H_
 
 #include "MAVLinkLib.h"
+#include "timelib.h"
+#include "MAVLinkLogger.h"
 
 namespace radioroom {
 
@@ -44,12 +46,45 @@ class MAVReport {
   
   void get_message_sbd(mavlink_message_t& msg, uint8_t link_quality);
 
+  void zero_averages();
+
  private:
+
   mavlink_high_latency_t report_sbd;
   mavlink_am_telemetry_high_lat_t report_sms;
   uint8_t sysid;
   uint8_t compid;
   uint16_t mask;
+
+  // average variables
+  uint16_t heading_av = 0;
+  uint32_t heading_acum = 0;
+  uint16_t heading_samples = 0;
+
+  int16_t  altitude_amsl_av = 0;
+  int32_t  altitude_amsl_acum = 0;
+  int16_t  altitude_amsl_samples = 0;
+
+  uint8_t  current_av = 0;
+  uint16_t current_acum = 0;
+  uint16_t current_samples = 0;
+
+  uint16_t voltage_av = 0;
+  uint32_t voltage_acum = 0;
+  uint16_t voltage_samples = 0;
+
+  uint8_t  airspeed_av = 0;
+  uint16_t airspeed_acum = 0;
+  uint16_t airspeed_samples = 0;
+  
+  uint8_t  groundspeed_av = 0;
+  uint16_t groundspeed_acum = 0;
+  uint16_t groundspeed_samples = 0;
+
+  timelib::Stopwatch timer_averages;
+  std::chrono::milliseconds time_averages;
+
+
 };
 
 }  // namespace radioroom

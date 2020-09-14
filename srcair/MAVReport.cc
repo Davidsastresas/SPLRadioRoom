@@ -44,6 +44,78 @@ inline int16_t rad_to_centidegrees(float rad) {
 MAVReport::MAVReport() : sysid(1), compid(1), mask(0) {
   report_sms.failsafe = 0;
   report_sbd.failsafe = 0;
+  time_averages = timelib::sec2ms(10);
+  timer_averages.reset();
+}
+
+void MAVReport::zero_averages() {
+
+  if ( heading_samples > 1 ) {
+    heading_av = heading_acum / heading_samples;
+  } else {
+    heading_av = heading_acum;
+  }
+  heading_acum = 0;
+  heading_samples = 0;
+  report_sbd.heading = heading_av;
+  report_sms.heading = heading_av;
+
+  if ( altitude_amsl_samples > 1 ) {
+    altitude_amsl_av = altitude_amsl_acum / altitude_amsl_samples;
+  } else {
+    altitude_amsl_av = altitude_amsl_acum;
+  }
+  altitude_amsl_acum = 0;
+  altitude_amsl_samples = 0;
+  report_sbd.altitude_amsl = altitude_amsl_av;
+  report_sms.altitude_amsl = altitude_amsl_av;
+
+
+  if ( current_samples > 1 ) {
+    current_av = current_acum / current_samples;
+  } else {
+    current_av = current_acum;
+  }
+  current_acum = 0;
+  current_samples = 0;
+  report_sbd.landed_state = current_av;
+  report_sms.landed_state = current_av;
+
+
+  if ( voltage_samples > 1 ) {
+    voltage_av = voltage_acum / voltage_samples;
+  } else {
+    voltage_av = voltage_acum;
+  }
+  voltage_acum = 0;
+  voltage_samples = 0;
+  report_sbd.temperature = voltage_av >> 8;
+  report_sms.temperature = voltage_av >> 8;
+  report_sbd.temperature_air = voltage_av;
+  report_sms.temperature_air = voltage_av;
+
+
+  if ( airspeed_samples > 1 ) {
+    airspeed_av = airspeed_acum / airspeed_samples;
+  } else {
+    airspeed_av = airspeed_acum;
+  }
+  airspeed_acum = 0;
+  airspeed_samples = 0;
+  report_sbd.airspeed = airspeed_av;
+  report_sms.airspeed = airspeed_av;
+
+
+  if ( groundspeed_samples > 1 ) {
+    groundspeed_av = groundspeed_acum / groundspeed_samples;
+  } else {
+    groundspeed_av = groundspeed_acum;
+  }
+  groundspeed_acum = 0;
+  groundspeed_samples = 0;
+  report_sbd.groundspeed = groundspeed_av;
+  report_sms.groundspeed = groundspeed_av;
+
 }
 
 /**
@@ -54,6 +126,13 @@ bool MAVReport::update(const mavlink_message_t& msg) {
   if (msg.sysid > 250) {
     return false;
   }
+
+  if ( timer_averages.elapsed_time() >= time_averages ) {
+    
+    timer_averages.reset();
+    zero_averages();
+  }
+
   sysid = msg.sysid;
   switch (msg.msgid) {
     case MAVLINK_MSG_ID_HEARTBEAT:  // 0
@@ -69,26 +148,37 @@ bool MAVReport::update(const mavlink_message_t& msg) {
           mavlink_msg_sys_status_get_battery_remaining(&msg);
       report_sbd.battery_remaining =
           mavlink_msg_sys_status_get_battery_remaining(&msg);
-      report_sms.temperature =
-          mavlink_msg_sys_status_get_voltage_battery(&msg) >> 8;
-      report_sbd.temperature =
-          mavlink_msg_sys_status_get_voltage_battery(&msg) >> 8;
-      report_sms.temperature_air =
-          mavlink_msg_sys_status_get_voltage_battery(&msg);
-      report_sbd.temperature_air =
-          mavlink_msg_sys_status_get_voltage_battery(&msg);
-      report_sms.landed_state = 
-          mavlink_msg_sys_status_get_current_battery(&msg) / 100;
-      report_sbd.landed_state = 
-          mavlink_msg_sys_status_get_current_battery(&msg) / 100;
+      // report_sms.temperature =
+      //     mavlink_msg_sys_status_get_voltage_battery(&msg) >> 8;
+      // report_sbd.temperature =
+      //     mavlink_msg_sys_status_get_voltage_battery(&msg) >> 8;
+      // report_sms.temperature_air =
+      //     mavlink_msg_sys_status_get_voltage_battery(&msg);
+      // report_sbd.temperature_air =
+      //     mavlink_msg_sys_status_get_voltage_battery(&msg);
+      // report_sms.landed_state = 
+      //     mavlink_msg_sys_status_get_current_battery(&msg) / 100;
+      // report_sbd.landed_state = 
+      //     mavlink_msg_sys_status_get_current_battery(&msg) / 100;
+      voltage_acum += mavlink_msg_sys_status_get_voltage_battery(&msg);
+      voltage_samples ++;
+
+      current_acum += mavlink_msg_sys_status_get_current_battery(&msg) / 100;
+      current_samples ++;
+
       mask |= mavlink_msg_mask_sys_status;
       return true;
     case MAVLINK_MSG_ID_GPS_RAW_INT:  // 24
+      // timestamp here?
       // report_sms_sbdg.latitude = mavlink_msg_gps_raw_int_get_lat(&msg);
       // report_sms_msg.longitude = mavlink_msg_gps_raw_int_get_lon(&msg);
       // report_sbd.altitude_amsl = mavlink_msg_gps_raw_int_get_alt(&msg) / 1000;
-      report_sms.groundspeed = mavlink_msg_gps_raw_int_get_vel(&msg) / 100;
-      report_sbd.groundspeed = mavlink_msg_gps_raw_int_get_vel(&msg) / 100;
+
+      // report_sms.groundspeed = mavlink_msg_gps_raw_int_get_vel(&msg) / 100;
+      // report_sbd.groundspeed = mavlink_msg_gps_raw_int_get_vel(&msg) / 100;
+      groundspeed_acum += mavlink_msg_gps_raw_int_get_vel(&msg) / 100;
+      groundspeed_samples ++;
+
       report_sms.gps_fix_type = mavlink_msg_gps_raw_int_get_fix_type(&msg);
       report_sbd.gps_fix_type = mavlink_msg_gps_raw_int_get_fix_type(&msg);
       report_sms.gps_nsat = mavlink_msg_gps_raw_int_get_satellites_visible(&msg);
@@ -96,12 +186,15 @@ bool MAVReport::update(const mavlink_message_t& msg) {
       mask |= mavlink_msg_mask_gps_raw_int;
       return true;
     case MAVLINK_MSG_ID_ATTITUDE:  // 30
-      report_sms.heading =
-          (rad_to_centidegrees(mavlink_msg_attitude_get_yaw(&msg)) + 36000) %
-          36000;
-      report_sbd.heading =
-          (rad_to_centidegrees(mavlink_msg_attitude_get_yaw(&msg)) + 36000) %
-          36000;
+      // report_sms.heading =
+      //     (rad_to_centidegrees(mavlink_msg_attitude_get_yaw(&msg)) + 36000) %
+      //     36000;
+      // report_sbd.heading =
+      //     (rad_to_centidegrees(mavlink_msg_attitude_get_yaw(&msg)) + 36000) %
+      //     36000;
+      heading_acum += (rad_to_centidegrees(mavlink_msg_attitude_get_yaw(&msg)) + 36000) % 36000;
+      heading_samples ++;
+      
       report_sms.roll = rad_to_centidegrees(mavlink_msg_attitude_get_roll(&msg));
       report_sbd.roll = rad_to_centidegrees(mavlink_msg_attitude_get_roll(&msg));
       report_sms.pitch = rad_to_centidegrees(mavlink_msg_attitude_get_pitch(&msg));
@@ -113,10 +206,13 @@ bool MAVReport::update(const mavlink_message_t& msg) {
       report_sbd.latitude = mavlink_msg_global_position_int_get_lat(&msg);
       report_sms.longitude = mavlink_msg_global_position_int_get_lon(&msg);
       report_sbd.longitude = mavlink_msg_global_position_int_get_lon(&msg);
-      report_sms.altitude_amsl =
-          mavlink_msg_global_position_int_get_alt(&msg) / 1000;
-      report_sbd.altitude_amsl =
-          mavlink_msg_global_position_int_get_alt(&msg) / 1000;
+      // report_sms.altitude_amsl =
+      //     mavlink_msg_global_position_int_get_alt(&msg) / 1000;
+      // report_sbd.altitude_amsl =
+      //     mavlink_msg_global_position_int_get_alt(&msg) / 1000;
+      altitude_amsl_acum += mavlink_msg_global_position_int_get_alt(&msg) / 1000;
+      altitude_amsl_samples ++;
+      
       report_sms.altitude_sp =
           mavlink_msg_global_position_int_get_relative_alt(&msg) / 1000;
       report_sbd.altitude_sp =
@@ -138,10 +234,14 @@ bool MAVReport::update(const mavlink_message_t& msg) {
       mask |= mavlink_msg_mask_nav_controller_output;
       return true;
     case MAVLINK_MSG_ID_VFR_HUD:  // 74
-      report_sms.airspeed = mavlink_msg_vfr_hud_get_airspeed(&msg);
-      report_sbd.airspeed = mavlink_msg_vfr_hud_get_airspeed(&msg);
-      report_sms.groundspeed = mavlink_msg_vfr_hud_get_groundspeed(&msg);
-      report_sbd.groundspeed = mavlink_msg_vfr_hud_get_groundspeed(&msg);
+      // report_sms.airspeed = mavlink_msg_vfr_hud_get_airspeed(&msg);
+      // report_sbd.airspeed = mavlink_msg_vfr_hud_get_airspeed(&msg);
+      airspeed_acum += mavlink_msg_vfr_hud_get_airspeed(&msg);
+      airspeed_samples ++;
+      // report_sms.groundspeed = mavlink_msg_vfr_hud_get_groundspeed(&msg);
+      // report_sbd.groundspeed = mavlink_msg_vfr_hud_get_groundspeed(&msg);
+      groundspeed_acum += mavlink_msg_vfr_hud_get_groundspeed(&msg);
+      groundspeed_samples ++;
       // high_latency.heading = mavlink_msg_vfr_hud_get_heading(&msg) * 100;
       report_sms.climb_rate = mavlink_msg_vfr_hud_get_climb(&msg);
       report_sbd.climb_rate = mavlink_msg_vfr_hud_get_climb(&msg);
