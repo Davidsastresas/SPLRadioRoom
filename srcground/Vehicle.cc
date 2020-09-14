@@ -124,7 +124,7 @@ void Vehicle::send_heartbeat_tcp() {
   
       _outgoing_queue_gcsmavmsg.push(heartbeat_msg);
 
-      if (last_high_latency_valid) { // CHECK HOW THE HELL WE KNOW THIS
+      if (last_high_latency_valid) {
         _outgoing_queue_gcsmavmsg.push(last_high_latency);
       }
     }
@@ -543,11 +543,8 @@ void Vehicle::process_message(mavio::SMSmessage& sms) {
   if (sms.get_mavlink_msg().msgid == MAVLINK_MSG_ID_AM_TELEMETRY_HIGH_LAT) {
 
     last_base_mode = mavlink_msg_am_telemetry_high_lat_get_base_mode(&msg);
-    last_base_mode = mavlink_msg_am_telemetry_high_lat_get_base_mode(&msg);
     last_custom_mode = mavlink_msg_am_telemetry_high_lat_get_custom_mode(&msg);
     last_high_latency = msg;
-
-    // check this
     last_high_latency_valid = true;
 
     mavlink_message_t sys_status;
@@ -651,6 +648,62 @@ void Vehicle::process_message(mavio::SBDmessage& sbdmsg) {
       last_custom_mode = mavlink_msg_high_latency_get_custom_mode(&msg);
       last_high_latency = msg;
       last_high_latency_valid = true;
+
+      mavlink_message_t sys_status;
+      mavlink_sys_status_t status_mavlink_msg;
+
+      status_mavlink_msg.battery_remaining = mavlink_msg_high_latency_get_battery_remaining(&msg);
+      status_mavlink_msg.current_battery = mavlink_msg_high_latency_get_landed_state(&msg) * 100;
+      status_mavlink_msg.voltage_battery = mavlink_msg_high_latency_get_temperature(&msg);
+      status_mavlink_msg.voltage_battery = status_mavlink_msg.voltage_battery << 8;
+      status_mavlink_msg.voltage_battery += mavlink_msg_high_latency_get_temperature_air(&msg);
+      status_mavlink_msg.drop_rate_comm = last_sys_drop_rate_com;
+      status_mavlink_msg.errors_comm = last_sys_errors_com;
+      status_mavlink_msg.errors_count1 = last_sys_errors_count1;
+      status_mavlink_msg.errors_count2 = last_sys_errors_count2;
+      status_mavlink_msg.errors_count3 = last_sys_errors_count3;
+      status_mavlink_msg.errors_count4 = last_sys_errors_count4;
+      status_mavlink_msg.load = last_sys_load;
+      status_mavlink_msg.onboard_control_sensors_enabled = last_sys_sensors_enabled;
+      status_mavlink_msg.onboard_control_sensors_health = last_sys_sensors_health;
+      status_mavlink_msg.onboard_control_sensors_present = last_sys_sensors_present;
+
+      mavlink_msg_sys_status_encode(_mav_id, 1, &sys_status, &status_mavlink_msg);
+
+      _outgoing_queue_gcsmavmsg.push(sys_status);
+
+      // encode high latency
+      mavlink_message_t high_lat;
+      mavlink_high_latency_t high_latency_msg;
+
+      high_latency_msg.custom_mode = mavlink_msg_high_latency_get_custom_mode(&msg);
+      high_latency_msg.latitude = mavlink_msg_high_latency_get_latitude(&msg);
+      high_latency_msg.longitude = mavlink_msg_high_latency_get_longitude(&msg);
+      high_latency_msg.roll = mavlink_msg_high_latency_get_roll(&msg);
+      high_latency_msg.pitch = mavlink_msg_high_latency_get_pitch(&msg);
+      high_latency_msg.heading = mavlink_msg_high_latency_get_heading(&msg);
+      high_latency_msg.heading_sp = mavlink_msg_high_latency_get_heading_sp(&msg);
+      high_latency_msg.altitude_amsl = mavlink_msg_high_latency_get_altitude_amsl(&msg);
+      high_latency_msg.altitude_sp = mavlink_msg_high_latency_get_altitude_sp(&msg);
+      high_latency_msg.wp_distance = mavlink_msg_high_latency_get_wp_distance(&msg);
+      high_latency_msg.base_mode = mavlink_msg_high_latency_get_base_mode(&msg);
+      high_latency_msg.landed_state = 0;
+      high_latency_msg.throttle = mavlink_msg_high_latency_get_throttle(&msg);
+      high_latency_msg.airspeed = mavlink_msg_high_latency_get_airspeed(&msg);
+      high_latency_msg.airspeed_sp = mavlink_msg_high_latency_get_airspeed_sp(&msg);
+      high_latency_msg.groundspeed = mavlink_msg_high_latency_get_groundspeed(&msg);
+      high_latency_msg.climb_rate = mavlink_msg_high_latency_get_climb_rate(&msg);
+      high_latency_msg.gps_nsat = mavlink_msg_high_latency_get_gps_nsat(&msg);
+      high_latency_msg.gps_fix_type = mavlink_msg_high_latency_get_gps_fix_type(&msg);
+      high_latency_msg.battery_remaining = mavlink_msg_high_latency_get_battery_remaining(&msg);
+      high_latency_msg.temperature = 0;
+      high_latency_msg.temperature_air = 0;
+      high_latency_msg.wp_num = mavlink_msg_high_latency_get_wp_num(&msg);
+
+      mavlink_msg_high_latency_encode(_mav_id, 1, &high_lat, &high_latency_msg);
+
+      _outgoing_queue_gcsmavmsg.push(high_lat);
+
 
       // send telemetry status
       mavlink_message_t radio_status;

@@ -91,9 +91,6 @@ void MAVLinkHandlerGround::handle_mo_sms(mavio::SMSmessage& sms) {
 
 void MAVLinkHandlerGround::handle_mo_sbd(mavio::SBDmessage& sbdmessage) {
 
-  mavlink_message_t msg = sbdmessage.get_mavlink_msg();
-  tcp_channel.send_message(msg);
-
   vehicle_manager.push_queue_sbd(sbdmessage);
 }
 
