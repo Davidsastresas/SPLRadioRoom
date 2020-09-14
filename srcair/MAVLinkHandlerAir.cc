@@ -199,11 +199,11 @@ bool MAVLinkHandlerAir::init() {
 
   // TCP channel -----------------------------------------------------------------------------------------
 
-  if (tcp_channel.init(config.get_tcp_port())) {
-    log(LOG_INFO, "TCP channel initialized.");
-  } else {
-    log(LOG_WARNING, "TCP channel initialization failed.");
-  }
+  // if (tcp_channel.init(config.get_tcp_port())) {
+  //   log(LOG_INFO, "TCP channel initialized.");
+  // } else {
+  //   log(LOG_WARNING, "TCP channel initialization failed.");
+  // }
 
   return true;
 }
@@ -245,15 +245,15 @@ bool MAVLinkHandlerAir::loop() {
     sleep = false;
   }
 
-  // just active at close range, with wifi connected
-  if ( tcp_channel.get_connected() ) {
-    tcp_channel.send_message(mo_msg);
+  // // just active at close range, with wifi connected
+  // if ( tcp_channel.get_connected() ) {
+  //   tcp_channel.send_message(mo_msg);
     
-    if (tcp_channel.receive_message(mt_msg)) {
-      autopilot_channel.send_message(mt_msg);
-      sleep = false;
-    }
-  }
+  //   if (tcp_channel.receive_message(mt_msg)) {
+  //     autopilot_channel.send_message(mt_msg);
+  //     sleep = false;
+  //   }
+  // }
 
   update_active_channel();
   
