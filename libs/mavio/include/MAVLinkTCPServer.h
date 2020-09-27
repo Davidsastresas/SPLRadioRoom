@@ -20,8 +20,8 @@
  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#ifndef LIBS_MAVIO_INCLUDE_MAVLINKTCP_H_
-#define LIBS_MAVIO_INCLUDE_MAVLINKTCP_H_
+#ifndef LIBS_MAVIO_INCLUDE_MAVLINKTCPSERVER_H_
+#define LIBS_MAVIO_INCLUDE_MAVLINKTCPSERVER_H_
 
 #include "MAVLinkLib.h"
 #include <netinet/in.h>
