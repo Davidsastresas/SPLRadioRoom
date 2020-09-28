@@ -109,8 +109,8 @@ bool MAVLinkUDP::send_message(const mavlink_message_t& msg) {
   uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
 
   // todo, check this one
-  uint16_t n = ::sendto(socket_fd, buf, len, 0, (const struct sockaddr *) &servaddr,  
-            sizeof(servaddr));
+  uint16_t n = ::sendto(socket_fd, buf, len, 0, (const struct sockaddr *) &serv_addr,  
+            sizeof(serv_addr));
 
   if (n == len) {
     MAVLinkLogger::log(LOG_DEBUG, "UDP <<", msg);
