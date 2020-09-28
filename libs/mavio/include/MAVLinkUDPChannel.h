@@ -15,17 +15,17 @@ namespace mavio {
 /**
  * Asyncronous sends/receives MAVLink messages to/from a UDP/IP socket.
  */
-class MAVLinkUDP : public MAVLinkChannel {
+class MAVLinkUDPChannel : public MAVLinkChannel {
  public:
   /**
-   * Constructs an instance of MAVLinkUDPClient.
+   * Constructs an instance of MAVLinkUDPChannelClient.
    */
-  MAVLinkUDP();
+  MAVLinkUDPChannel();
 
   /**
    * Closes connection and frees the resources.
    */
-  virtual ~MAVLinkUDP();
+  virtual ~MAVLinkUDPChannel();
 
   /**
    * Connects to the UDP/IP socket at the specified address and port.
@@ -92,7 +92,7 @@ class MAVLinkUDP : public MAVLinkChannel {
   // Thread of receive_task
   std::thread receive_thread;
   // MAVLink UDP socket connection
-  // MAVLinkUDP socket;
+  // MAVLinkUDPChannel socket;
   MAVLinkUDP socket;
   // Queue that buffers messages to be sent to the socket
   CircularBuffer<mavlink_message_t> send_queue;
