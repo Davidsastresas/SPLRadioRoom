@@ -19,6 +19,7 @@ MAVLinkHandlerGround::MAVLinkHandlerGround()
       sbd_channel(),
       tcp_channel(),
       gsm_channel(),
+      tcp_cli_channel(),
       system_manager(),
       timer_send_link_status() {
 }
@@ -36,44 +37,54 @@ bool MAVLinkHandlerGround::loop() {
   bool sleep = true;
   
   // incomming messages
-  if (rfd_channel.receive_message(msg)) {
-    handle_mo_message(msg);
-    sleep = false;
-  }
+  // if (rfd_channel.receive_message(msg)) {
+  //   handle_mo_message(msg);
+  //   sleep = false;
+  // }
 
-  if (gsm_channel.receive_message(sms)) {
-    handle_mo_sms(sms);
-    sleep = false;
-  }
+  // if (gsm_channel.receive_message(sms)) {
+  //   handle_mo_sms(sms);
+  //   sleep = false;
+  // }
 
-  if (sbd_channel.receive_message(sbdmessage)) {
-    handle_mo_sbd(sbdmessage);
+  // if (sbd_channel.receive_message(sbdmessage)) {
+  //   handle_mo_sbd(sbdmessage);
+  //   sleep = false;
+  // }
+
+  // if (tcp_channel.receive_message(msg)) {
+  //   handle_mt_message(msg);
+  //   sleep = false;
+  // }
+
+  if (tcp_cli_channel.receive_message(msg)) {
+    tcp_channel.send_message(msg);
     sleep = false;
   }
+// 
+  // outgoing messages
+  // if (vehicle_manager.pull_queue_gsm(sms)) {
+  //   gsm_channel.send_message(sms);
+  //   sleep = false;
+  // }
+
+  // if (vehicle_manager.pull_queue_sbd(sbdmessage)) {
+  //   sbd_channel.send_message(sbdmessage);
+  //   sleep = false;
+  // }
+
+  // if (vehicle_manager.pull_queue_tcp(msg)) {
+  //   tcp_channel.send_message(msg);
+  //   sleep = false;
+  // }
 
   if (tcp_channel.receive_message(msg)) {
-    handle_mt_message(msg);
-    sleep = false;
-  }
-
-  // outgoing messages
-  if (vehicle_manager.pull_queue_gsm(sms)) {
-    gsm_channel.send_message(sms);
-    sleep = false;
-  }
-
-  if (vehicle_manager.pull_queue_sbd(sbdmessage)) {
-    sbd_channel.send_message(sbdmessage);
-    sleep = false;
-  }
-
-  if (vehicle_manager.pull_queue_tcp(msg)) {
-    tcp_channel.send_message(msg);
+    tcp_cli_channel.send_message(msg);
     sleep = false;
   }
 
   // send link status to of ground to GCS
-  send_gcs_signal_quality();
+  // send_gcs_signal_quality();
 
   return sleep;
 }
@@ -166,6 +177,8 @@ bool MAVLinkHandlerGround::init() {
         break;
       }
     }
+    log(LOG_INFO, "Radio initialization succesful.");
+
   } else {
     log(LOG_INFO, "Radio disabled.");
     _radio_initialized = false;
@@ -202,6 +215,15 @@ bool MAVLinkHandlerGround::init() {
     log(LOG_INFO, "SBD disabled.");
     _isbd_initialized = false;
   }
+
+  // UDP channel ----------------------------------------------------------------------------------------
+  
+  if (!tcp_cli_channel.init("airpi.local", 5651)) {
+    log(LOG_ERR, "Udp channel initialization failed");
+  } else {
+    log(LOG_INFO, "Udp channel initialization succesfull");
+  }
+
 
   // Vehicle manager -----------------------------------------------------------------------------------
 
@@ -241,6 +263,7 @@ void MAVLinkHandlerGround::close() {
   sbd_channel.close();
   gsm_channel.close();
   rfd_channel.close();
+  tcp_cli_channel.close();
   vehicle_manager.close();
 }
 

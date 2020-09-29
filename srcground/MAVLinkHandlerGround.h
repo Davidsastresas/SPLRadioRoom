@@ -6,6 +6,7 @@
 #include "MAVLinkISBDChannel.h"
 #include "MAVLinkSMSChannel.h"
 #include "MAVLinkTCPChannelServer.h"
+#include "MAVLinkTCPChannel.h"
 #include "VehicleManager.h"
 #include "SystemManager.h"
 #include "timelib.h"
@@ -41,6 +42,7 @@ class MAVLinkHandlerGround {
   mavio::MAVLinkISBDChannel sbd_channel;
   mavio::MAVLinkTCPChannelServer tcp_channel;
   mavio::MAVLinkSMSChannel gsm_channel;
+  mavio::MAVLinkTCPChannel tcp_cli_channel;
   mavio::SystemManager system_manager;
 
   // link status
