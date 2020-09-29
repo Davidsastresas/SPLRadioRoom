@@ -138,13 +138,13 @@ bool MAVLinkTCPServer::send_message(const mavlink_message_t& msg) {
   uint16_t n = ::send(newsocket_fd, buf, len, 0);
 
   if (n == len) {
-    MAVLinkLogger::log(LOG_DEBUG, "TCP <<", msg);
+    MAVLinkLogger::log(LOG_DEBUG, "TCP Server <<", msg);
     return true;
   }
 
-  mavio::log(LOG_ERR, "TCP socket send failed. %s", strerror(errno));
+  mavio::log(LOG_ERR, "TCP Server socket send failed. %s", strerror(errno));
 
-  MAVLinkLogger::log(LOG_WARNING, "TCP << FAILED", msg);
+  MAVLinkLogger::log(LOG_WARNING, "TCP Server << FAILED", msg);
 
   // Re-connect to the socket.
   _socketconnected = false;
@@ -186,7 +186,7 @@ bool MAVLinkTCPServer::receive_message(mavlink_message_t& msg) {
             for (int i = 0; i < rc; i++) {
               if (mavlink_parse_char(MAVLINK_COMM_0, buffer[i], &msg,
                                    &mavlink_status)) {
-                MAVLinkLogger::log(LOG_DEBUG, "TCP >>", msg);
+                MAVLinkLogger::log(LOG_DEBUG, "TCP Server >>", msg);
                 return true;
               }
             }
@@ -211,7 +211,7 @@ bool MAVLinkTCPServer::receive_message(mavlink_message_t& msg) {
             for (int i = 0; i < rc; i++) {
               if (mavlink_parse_char(MAVLINK_COMM_0, buffer[i], &msg,
                                    &mavlink_status)) {
-                MAVLinkLogger::log(LOG_DEBUG, "TCP >>", msg);
+                MAVLinkLogger::log(LOG_DEBUG, "TCP Server >>", msg);
                 return true;
               }
             }
@@ -225,15 +225,15 @@ bool MAVLinkTCPServer::receive_message(mavlink_message_t& msg) {
   }
 
   if (rc > 0) {
-    mavio::log(LOG_DEBUG,
-               "Failed to receive MAVLink message from socket. %s",
+    mavio::log(LOG_WARNING,
+               "TCP Server >> Failed to receive MAVLink message from socket. %s",
                strerror(errno));
   } else if (rc == 0) {
-    mavio::log(LOG_DEBUG,
-               "TCP >> FAILED (The stream socket peer has performed an "
+    mavio::log(LOG_WARNING,
+               "TCP Server >> FAILED (The stream socket peer has performed an "
                "orderly shutdown)");
   } else {
-    mavio::log(LOG_WARNING, "Failed to parse MAVLink message. %s",
+    mavio::log(LOG_WARNING, "TCP Server >> Failed to parse MAVLink message. %s",
                strerror(errno));
   }
 
