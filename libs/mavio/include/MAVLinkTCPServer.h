@@ -79,6 +79,8 @@ class MAVLinkTCPServer {
   bool accept_connection();
 
   bool get_connected() { return _socketconnected; }
+
+  bool set_blocking(int fd, bool blcoking);
   
  private:
   /**

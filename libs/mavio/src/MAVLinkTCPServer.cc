@@ -31,6 +31,7 @@
 #include <sys/poll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <fcntl.h>
 #include <unistd.h>
 
 #include "MAVLinkLogger.h"
@@ -70,32 +71,32 @@ bool MAVLinkTCPServer::connect() {
   socket_fd = ::socket(AF_INET, SOCK_STREAM, 0);
 
   if (socket_fd < 0) {
-    mavio::log(LOG_ERR, "Socket creation failed. %s", strerror(errno));
+    mavio::log(LOG_ERR,"TCP Server Socket creation failed. %s", strerror(errno));
     socket_fd = 0;
     return false;
   }
 
   if (::setsockopt(socket_fd, SOL_SOCKET, SO_KEEPALIVE, &so_keepalive_value,
                    sizeof(so_keepalive_value))) {
-    mavio::log(LOG_ERR, "Failed to enable TCP socket keepalive. %s",
+    mavio::log(LOG_ERR,"TCP Server Failed to enable TCP socket keepalive. %s",
                strerror(errno));
     return false;
   }
 
   if (::setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &so_keepalive_value,
                    sizeof(so_keepalive_value))) {
-    mavio::log(LOG_ERR, "Failed to enable TCP socket reuseadrr. %s",
+    mavio::log(LOG_ERR,"TCP Server Failed to enable TCP socket reuseadrr. %s",
                strerror(errno));
     return false;
   }
 
   //Bind
   if( bind(socket_fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr) ) < 0 ) {
-    mavio::log(LOG_ERR, "Failed to bind socket. %s", strerror(errno));
+    mavio::log(LOG_ERR,"TCP Server Failed to bind socket. %s", strerror(errno));
     return false;
   }
 
-  mavio::log(LOG_INFO, "Socket set up succesfully, going to listen ..");
+  mavio::log(LOG_INFO,"TCP Server Socket set up succesfully, going to listen ..");
 
   listen(socket_fd , 3);
 
@@ -106,11 +107,15 @@ bool MAVLinkTCPServer::accept_connection() {
   cli_len = sizeof(cli_addr);
   newsocket_fd = accept( socket_fd, (struct sockaddr *) &cli_addr, &cli_len );
   if (newsocket_fd < 0) {
-    mavio::log(LOG_ERR, "Fail to accept connection. %s", strerror(errno));
+    mavio::log(LOG_ERR,"TCP Server Fail to accept connection. %s", strerror(errno));
     return false;
   }
-  mavio::log(LOG_INFO, "connection accepted");
+  mavio::log(LOG_INFO,"TCP Server connection accepted");
   _socketconnected = true;
+
+  // set to non blocking
+  set_blocking(newsocket_fd, true);
+
   return true;
 }
 
@@ -216,6 +221,7 @@ bool MAVLinkTCPServer::receive_message(mavlink_message_t& msg) {
               }
             }
           }
+
         }
         break;
       }
@@ -233,11 +239,36 @@ bool MAVLinkTCPServer::receive_message(mavlink_message_t& msg) {
                "TCP Server >> FAILED (The stream socket peer has performed an "
                "orderly shutdown)");
   } else {
+    if ( errno == EAGAIN ) {
+      // just the socket in non blocking mode reporting resource temporarily unavailable
+      return false;
+    }
     mavio::log(LOG_WARNING, "TCP Server >> Failed to parse MAVLink message. %s",
                strerror(errno));
   }
 
   return false;
+}
+
+bool MAVLinkTCPServer::set_blocking(int fd, bool blocking)
+{
+  if (fd < 0) {
+    mavio::log(LOG_INFO,"TCP Server fail to set_blocking");
+    return false;
+  }
+
+    int flags = fcntl(fd, F_GETFL, 0);
+    if (flags == -1) {
+      mavio::log(LOG_INFO,"TCP Server fail to get fd flags");
+      return false;
+    }
+    
+    if (blocking) {
+      flags = (flags | O_NONBLOCK);
+    } else {
+      flags = (flags & ~O_NONBLOCK);
+    }
+    return (fcntl(fd, F_SETFL, flags) == 0) ? true : false;
 }
 
 }  // namespace mavio
