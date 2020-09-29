@@ -42,7 +42,7 @@ namespace mavio {
 constexpr int so_keepalive_value  = 1;   // enabled
 
 MAVLinkTCPServer::MAVLinkTCPServer() : 
-  _socketconnected(true), 
+  _socketconnected(false), 
   socket_fd(0)
 
 {}
