@@ -115,11 +115,13 @@ void MAVLinkTCPChannelServer::receive_task() {
   while (running) {
     mavlink_message_t msg;
 
-    if (socket.receive_message(msg)) {
-      receive_time = timelib::time_since_epoch();
-      receive_queue.push(msg);
+    if (socket.get_connected()) {
+      if (socket.receive_message(msg)) {
+        receive_time = timelib::time_since_epoch();
+        receive_queue.push(msg);
 
-      continue;
+        continue;
+      }
     }
 
     sleep(tcp_channel_receive_interval);

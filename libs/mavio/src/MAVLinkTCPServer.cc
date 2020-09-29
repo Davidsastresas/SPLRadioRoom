@@ -131,6 +131,10 @@ bool MAVLinkTCPServer::send_message(const mavlink_message_t& msg) {
     return false;
   }
 
+  if (!_socketconnected) {
+    connect();
+  }
+
   if (msg.len == 0 && msg.msgid == 0) {
     return true;
   }
@@ -148,12 +152,12 @@ bool MAVLinkTCPServer::send_message(const mavlink_message_t& msg) {
   }
 
   mavio::log(LOG_ERR, "TCP Server socket send failed. %s", strerror(errno));
+  mavio::log(LOG_ERR, "TCP Server socket send failed. %d", errno);
 
   MAVLinkLogger::log(LOG_WARNING, "TCP Server << FAILED", msg);
 
   // Re-connect to the socket.
   _socketconnected = false;
-  connect();
 
   return false;
 }
