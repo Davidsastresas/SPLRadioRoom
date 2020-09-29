@@ -31,13 +31,19 @@ bool MAVLinkUDPServer::init(uint16_t port) {
   
   serv_addr.sin_family = AF_INET;
   
+  // serv_addr.sin_addr.s_addr = inet_addr("10.42.0.138");
   serv_addr.sin_addr.s_addr = INADDR_ANY;
-  
+
   serv_addr.sin_port = htons(port);
 
-  // return connect();
+  cli_addr.sin_family = AF_INET;
+  
+  cli_addr.sin_addr.s_addr = inet_addr("10.42.0.1");
+  // cli_addr.sin_addr.s_addr = INADDR_ANY;
 
-  return true;
+  cli_addr.sin_port = htons(port);
+
+  return connect();
 }
 
 bool MAVLinkUDPServer::connect() {
@@ -53,7 +59,21 @@ bool MAVLinkUDPServer::connect() {
     return false;
   }
 
-  if (::setsockopt(socket_fd, SOL_SOCKET, SO_KEEPALIVE || SO_REUSEADDR || SO_REUSEPORT, &so_option_en_value,
+  if (::setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &so_option_en_value,
+                   sizeof(so_option_en_value))) {
+    mavio::log(LOG_ERR, "Failed to set udp socket options. %s",
+               strerror(errno));
+    return false;
+  }
+
+  if (::setsockopt(socket_fd, SOL_SOCKET, SO_REUSEPORT, &so_option_en_value,
+                   sizeof(so_option_en_value))) {
+    mavio::log(LOG_ERR, "Failed to set udp socket options. %s",
+               strerror(errno));
+    return false;
+  }
+  
+  if (::setsockopt(socket_fd, SOL_SOCKET, SO_BROADCAST, &so_option_en_value,
                    sizeof(so_option_en_value))) {
     mavio::log(LOG_ERR, "Failed to set udp socket options. %s",
                strerror(errno));
@@ -67,6 +87,13 @@ bool MAVLinkUDPServer::connect() {
   }
 
   mavio::log(LOG_INFO, "UDP Socket set up succesfully, going to listen ..");
+
+  cli_len = sizeof(serv_addr);
+
+  if ( ::connect(socket_fd, (struct sockaddr *)&cli_addr, sizeof(cli_addr)) < 0 ) {
+    mavio::log(LOG_ERR, "UDP Failed to connect socket. %s", strerror(errno));
+    return false;
+  }
 
   // listen(socket_fd , 3);
 
@@ -94,7 +121,7 @@ void MAVLinkUDPServer::close() {
 }
 
 bool MAVLinkUDPServer::send_message(const mavlink_message_t& msg) {
-  if (newsocket_fd == 0) {
+  if (socket_fd == 0) {
     return false;
   }
 
@@ -107,7 +134,9 @@ bool MAVLinkUDPServer::send_message(const mavlink_message_t& msg) {
   // Copy the message to send buffer
   uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
 
-  uint16_t n = ::send(newsocket_fd, buf, len, 0);
+  // uint16_t n = ::sendto(socket_fd, buf, len, 0, (const struct sockaddr *) &cli_addr,  
+  //           sizeof(cli_addr));
+  uint16_t n = ::send(socket_fd, buf, len, 0);
 
   if (n == len) {
     MAVLinkLogger::log(LOG_DEBUG, "UDP <<", msg);
@@ -126,7 +155,7 @@ bool MAVLinkUDPServer::send_message(const mavlink_message_t& msg) {
 }
 
 bool MAVLinkUDPServer::receive_message(mavlink_message_t& msg) {
-  if (newsocket_fd == 0) {
+  if (socket_fd == 0) {
     return false;
   }
 
@@ -137,19 +166,20 @@ bool MAVLinkUDPServer::receive_message(mavlink_message_t& msg) {
   uint8_t stx;
   uint8_t payload_length;
   mavlink_status_t mavlink_status;
-  int rc = ::recv(newsocket_fd, &stx, 1, MSG_WAITALL);
+  cli_len = sizeof(cli_addr);
+  int rc = ::recv(socket_fd, &stx, 1, MSG_WAITALL);
 
   if (rc > 0) {
     switch (stx) { 
         
       case 0xFE: {  
 
-        rc = ::recv(newsocket_fd, &payload_length, 1, MSG_WAITALL);
-        
+        rc = ::recv(socket_fd, &payload_length, 1, MSG_WAITALL);
+
         if (rc > 0) {
           uint8_t buffer[263];
-          rc = ::recv(newsocket_fd, buffer, payload_length + 6, MSG_WAITALL);
-          
+          rc = ::recv(socket_fd, buffer, payload_length + 6, MSG_WAITALL);
+
           if (rc > 0) {
 
             mavlink_parse_char(MAVLINK_COMM_0, stx, &msg, &mavlink_status);
@@ -158,7 +188,7 @@ bool MAVLinkUDPServer::receive_message(mavlink_message_t& msg) {
             for (int i = 0; i < rc; i++) {
               if (mavlink_parse_char(MAVLINK_COMM_0, buffer[i], &msg,
                                    &mavlink_status)) {
-                MAVLinkLogger::log(LOG_DEBUG, "UDP >>", msg);
+                MAVLinkLogger::log(LOG_INFO, "UDP >>", msg);
                 return true;
               }
             }
@@ -169,11 +199,11 @@ bool MAVLinkUDPServer::receive_message(mavlink_message_t& msg) {
 
       case 0xFD: {
 
-        rc = ::recv(newsocket_fd, &payload_length, 1, MSG_WAITALL);
+        rc = ::recv(socket_fd, &payload_length, 1, MSG_WAITALL);
 
         if (rc > 0) {
           uint8_t buffer[263];
-          rc = ::recv(newsocket_fd, buffer, payload_length + 10, MSG_WAITALL);
+          rc = ::recv(socket_fd, buffer, payload_length + 10, MSG_WAITALL);
           
           if (rc > 0) {
 
@@ -183,7 +213,7 @@ bool MAVLinkUDPServer::receive_message(mavlink_message_t& msg) {
             for (int i = 0; i < rc; i++) {
               if (mavlink_parse_char(MAVLINK_COMM_0, buffer[i], &msg,
                                    &mavlink_status)) {
-                MAVLinkLogger::log(LOG_DEBUG, "UDP >>", msg);
+                MAVLinkLogger::log(LOG_INFO, "UDP >>", msg);
                 return true;
               }
             }
@@ -192,20 +222,23 @@ bool MAVLinkUDPServer::receive_message(mavlink_message_t& msg) {
         break;
       }
 
-      default: return false;
+      default: 
+            mavio::log(LOG_WARNING, "UDPServer >> mavlink header not found. %s",
+               strerror(errno));
+      return false;
     }
   }
 
   if (rc > 0) {
     mavio::log(LOG_DEBUG,
-               "Failed to receive MAVLink message from socket. %s",
+               "UDPServer >> Failed to receive MAVLink message from socket. %s",
                strerror(errno));
   } else if (rc == 0) {
     mavio::log(LOG_DEBUG,
-               "UDP >> FAILED (The stream socket peer has performed an "
+               "UDPServer >> FAILED (The stream socket peer has performed an "
                "orderly shutdown)");
   } else {
-    mavio::log(LOG_WARNING, "Failed to parse MAVLink message. %s",
+    mavio::log(LOG_WARNING, "UDPServer >> Failed to parse MAVLink message. %s",
                strerror(errno));
   }
 

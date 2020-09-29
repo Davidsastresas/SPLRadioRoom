@@ -2,6 +2,8 @@
 
 #include "timelib.h"
 
+#include "MAVLinkLogger.h"
+
 namespace mavio {
 
 using timelib::sleep;
@@ -45,11 +47,14 @@ void MAVLinkUDPChannelServer::close() {
   if (running) {
     running = false;
 
+    mavio::log(LOG_INFO, "joining receive udp server");
     receive_thread.join();
+    mavio::log(LOG_INFO, "joining send udp server");
     send_thread.join();
   }
 
   // this is what is delaying the closing of the app?
+  mavio::log(LOG_INFO, "closing socket");
   socket.close();
 }
 
