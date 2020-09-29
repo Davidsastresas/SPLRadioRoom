@@ -87,7 +87,7 @@ class MAVLinkHandlerAir {
   mavio::MAVLinkSMSChannel gsm_channel;
   mavio::SystemManager system_manager;
   mavio::MAVLinkTCPChannelServer tcp_channel;
-
+  
   // timers
   timelib::Stopwatch timer_update_active;
   timelib::Stopwatch heartbeat_timer;
@@ -97,9 +97,13 @@ class MAVLinkHandlerAir {
 
 
   // active links
-  bool rfd_active;
-  bool gsm_active;
-  bool isbd_active;
+  bool rfd_active = false;
+  bool gsm_active = false;
+  bool isbd_active = false;
+
+  bool rfd_active_message = false;
+  bool gsm_active_message = false;
+  bool isbd_active_message = false;
 
   // links initialization
   bool radio_initialized = false;

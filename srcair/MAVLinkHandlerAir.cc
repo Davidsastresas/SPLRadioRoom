@@ -135,13 +135,24 @@ bool MAVLinkHandlerAir::init() {
     isbd_initialized = false;
   }
 
-  // System manager --------------------------------------------------------------------------------------
+  // ----------------- System manager -------------
 
   if (!system_manager.init()) {
     log(LOG_ERR, "System manager initialization failed");
   } else {
     log(LOG_INFO, "System manager initialization succesfull");
   }
+
+  // ----------------- TCP channelServer ----------
+
+  if (!tcp_channel.init(5651)) {
+    log(LOG_ERR, "TCP channel server initialization failed");
+  } else {
+    log(LOG_INFO, "TCP channel server initialization succesfull");
+  }
+
+
+  // Initialization of channels ends here
 
   period_rfd_status = timelib::sec2ms(2);
   timer_rfd_status.reset();
@@ -197,14 +208,6 @@ bool MAVLinkHandlerAir::init() {
   
   log(LOG_INFO, "UV Radio Room initialization succeeded.");
 
-  // TCP channel -----------------------------------------------------------------------------------------
-
-  // if (tcp_channel.init(config.get_tcp_port())) {
-  //   log(LOG_INFO, "TCP channel initialized.");
-  // } else {
-  //   log(LOG_WARNING, "TCP channel initialization failed.");
-  // }
-
   return true;
 }
 
@@ -223,10 +226,10 @@ bool MAVLinkHandlerAir::loop() {
   mavio::SMSmessage mt_sms;
   bool sleep = true;
 
-  if (rfd_channel.receive_message(mt_msg)) {
-    handle_mt_message(mt_msg);
-    sleep = false; 
-  }
+  // if (rfd_channel.receive_message(mt_msg)) {
+  //   handle_mt_message(mt_msg);
+  //   sleep = false; 
+  // }
 
   if (gsm_channel.receive_message(mt_sms)) {
     handle_mt_sms(mt_sms);
@@ -240,19 +243,22 @@ bool MAVLinkHandlerAir::loop() {
     }
   }
 
-  if (autopilot_channel.receive_message(mo_msg)) {
-    handle_mo_message(mo_msg);
+  // if (autopilot_channel.receive_message(mo_msg)) {
+  //   handle_mo_message(mo_msg);
+  //   sleep = false;
+  // }
+
+  // just active at close range, with wifi connected
+  // if ( tcp_channel.get_connected() ) {
+  if ( autopilot_channel.receive_message(mo_msg)) {
+    tcp_channel.send_message(mo_msg);
     sleep = false;
   }
-
-  // // just active at close range, with wifi connected
-  // if ( tcp_channel.get_connected() ) {
-  //   tcp_channel.send_message(mo_msg);
-    
-  //   if (tcp_channel.receive_message(mt_msg)) {
-  //     autopilot_channel.send_message(mt_msg);
-  //     sleep = false;
-  //   }
+  
+  if (tcp_channel.receive_message(mt_msg)) {
+    autopilot_channel.send_message(mt_msg);
+    sleep = false;
+  }
   // }
 
   update_active_channel();
@@ -448,7 +454,12 @@ bool MAVLinkHandlerAir::set_rfd_active() {
     gsm_active = false;
     isbd_active = false;
     rfd_active = true;
-    log(LOG_INFO, "RFD active");
+    if (!rfd_active_message) {
+      log(LOG_INFO, "RFD active");
+      rfd_active_message = true;
+      gsm_active_message = false;
+      isbd_active_message = false;
+    }
   } else {
     rfd_active = false;
   }
@@ -463,7 +474,12 @@ bool MAVLinkHandlerAir::set_gsm_active() {
     // gsm_channel.reset_timer();
     time_last_sms = timelib::time_since_epoch();
     timer_report_sms.reset();
-    log(LOG_INFO, "GSM active");
+    if (!gsm_active_message) {
+      log(LOG_INFO, "GSM active");
+      gsm_active_message = true;
+      rfd_active_message = false;
+      isbd_active_message = false;
+    }    
   } else {
     gsm_active = false;
   }
@@ -476,7 +492,12 @@ bool MAVLinkHandlerAir::set_isbd_active() {
     gsm_active = false;
     isbd_active = true;
     // timer_report_sbd.reset();
-    log(LOG_INFO, "ISBD active");
+    if (!isbd_active_message) {
+      log(LOG_INFO, "SBD active");
+      isbd_active_message = true;
+      gsm_active_message = false;
+      rfd_active_message = false;
+    }
   } else {
     isbd_active = false;
   }
