@@ -228,6 +228,8 @@ bool MAVLinkHandlerAir::loop() {
   mavlink_message_t mo_msg;
   mavlink_message_t mt_msg;
   mavio::SMSmessage mt_sms;
+  mavio::SBDmessage mt_sbd;
+
   bool sleep = true;
 
   if (rfd_channel.receive_message(mt_msg)) {
@@ -241,8 +243,8 @@ bool MAVLinkHandlerAir::loop() {
   }
 
   if (isbd_initialized) {
-    if (sbd_channel.receive_message(mt_msg)) {
-      handle_mt_message(mt_msg);
+    if (sbd_channel.receive_message(mt_sbd)) {
+      handle_mt_sbd(mt_sbd);
       sleep = false;
     }
   }
@@ -328,10 +330,6 @@ void MAVLinkHandlerAir::handle_mo_message(const mavlink_message_t& msg) {
 }
 
 void MAVLinkHandlerAir::handle_mt_message(const mavlink_message_t& msg) {
-  // TODO - check this out! maybe neccesary if autopilot receives duplicated messages!!
-  // if ( wifi_active ) {
-  //   return;
-  // }
 
   autopilot_channel.send_message(msg);
 }
@@ -439,6 +437,15 @@ void MAVLinkHandlerAir::handle_mt_sms(mavio::SMSmessage& sms) {
   mavlink_message_t msg = sms.get_mavlink_msg();
   last_gcs_number = sms.get_number();
   time_last_sms = sms.get_time();
+  autopilot_channel.send_message(msg);
+}
+
+void MAVLinkHandlerAir::handle_mt_sbd(mavio::SBDmessage& sbd_msg) {
+
+  // first extract message
+  mavlink_message_t msg = sbd_msg.get_mavlink_msg();
+
+  // send to autopilot
   autopilot_channel.send_message(msg);
 }
 

@@ -58,6 +58,8 @@ class MAVLinkHandlerAir {
 
   void handle_mt_sms(mavio::SMSmessage& msg);
 
+  void handle_mt_sbd(mavio::SBDmessage& msg);
+
   bool send_report();
 
   bool send_heartbeat();
