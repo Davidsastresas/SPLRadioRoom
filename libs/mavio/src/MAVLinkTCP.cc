@@ -31,6 +31,7 @@
 #include <sys/poll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <fcntl.h>
 #include <unistd.h>
 
 #include "MAVLinkLogger.h"
@@ -49,10 +50,28 @@ bool MAVLinkTCP::init(const std::string address, uint16_t port) {
     return false;
   }
 
-  struct hostent* server = ::gethostbyname(address.c_str());
+  server_addr_str = address;
+  server_port = port;
+
+  return true;
+}
+
+bool MAVLinkTCP::init(const std::string address, uint16_t port, int instance) {
+  if ( init(address, port) ) {
+    
+    uav_instance = instance;
+    return true;
+  }
+
+  return false;
+}
+
+bool MAVLinkTCP::setup_server_info() {
+
+  struct hostent* server = ::gethostbyname(server_addr_str.c_str());
 
   if (server == NULL) {
-    mavio::log(LOG_ERR, "No such host '%s'.", address.c_str());
+    mavio::log(LOG_ERR, "TCP Vehicle %d: No such host '%s'.", uav_instance, server_addr_str.c_str());
     return false;
   }
 
@@ -62,28 +81,33 @@ bool MAVLinkTCP::init(const std::string address, uint16_t port) {
 
   memcpy(&serv_addr.sin_addr.s_addr, server->h_addr, server->h_length);
 
-  serv_addr.sin_port = htons(port);
+  serv_addr.sin_port = htons(server_port);
 
-  return connect();
+  return true;
 }
 
 bool MAVLinkTCP::connect() {
-  if (socket_fd > 0) {
-    ::close(socket_fd);
+
+  if (!setup_server_info()) {
+
+    _socketconnected = false; // paranoid check
+    return false;
   }
+  // gracefully close socket just in case
+  close();
 
   socket_fd = ::socket(AF_INET, SOCK_STREAM, 0);
 
   if (socket_fd < 0) {
-    mavio::log(LOG_ERR, "Socket creation failed. %s", strerror(errno));
+    mavio::log(LOG_ERR, "TCP Vehicle %d: Socket creation failed. %s", uav_instance, strerror(errno));
     socket_fd = 0;
     return false;
   }
 
   if (::setsockopt(socket_fd, SOL_SOCKET, SO_KEEPALIVE, &so_keepalive_value,
                    sizeof(so_keepalive_value))) {
-    mavio::log(LOG_ERR, "Failed to enable TCP socket keepalive. %s",
-               strerror(errno));
+    mavio::log(LOG_ERR, "TCP Vehicle %d: Failed to enable socket keepalive. %s",
+                   uav_instance, strerror(errno));
     return false;
   }
 
@@ -92,19 +116,38 @@ bool MAVLinkTCP::connect() {
 
   if (::connect(socket_fd, reinterpret_cast<sockaddr*>(&serv_addr),
                 sizeof(serv_addr)) < 0) {
-    mavio::log(LOG_ERR, "Connection to 'tcp://%s:%d' failed. %s",
-               sin_addr_str,  ntohs(serv_addr.sin_port), strerror(errno));
+    
+    // This should be false, but just in case
+    _socketconnected = false;
+
+    if ( errno == ECONNREFUSED ) {
+      
+      // ignore this error as it is just that airpi is not nearby 
+      return false;
+    }
+
+    mavio::log(LOG_ERR, "TCP Vehicle %d: Connection to 'tcp://%s:%d' failed. %s",
+              uav_instance, sin_addr_str,  ntohs(serv_addr.sin_port), strerror(errno));
+      
+    
     return false;
   }
 
-  mavio::log(LOG_NOTICE, "Connected to 'tcp://%s:%d'.", sin_addr_str,
-             ntohs(serv_addr.sin_port));
+  mavio::log(LOG_NOTICE, "TCP Vehicle %d: Connected to 'tcp://%s:%d'.", uav_instance, 
+             sin_addr_str, ntohs(serv_addr.sin_port));
+
+  // update status of socket
+  _socketconnected = true;
+
+  // set to non blocking
+  set_blocking(socket_fd, true);
 
   return true;
 }
 
 void MAVLinkTCP::close() {
   if (socket_fd != 0) {
+    ::shutdown(socket_fd, SHUT_RD);
     ::close(socket_fd);
     socket_fd = 0;
   }
@@ -112,6 +155,10 @@ void MAVLinkTCP::close() {
 
 bool MAVLinkTCP::send_message(const mavlink_message_t& msg) {
   if (socket_fd == 0) {
+    return false;
+  }
+
+  if (!_socketconnected) {
     return false;
   }
 
@@ -135,14 +182,17 @@ bool MAVLinkTCP::send_message(const mavlink_message_t& msg) {
 
   MAVLinkLogger::log(LOG_WARNING, "TCP << FAILED", msg);
 
-  // Re-connect to the socket.
-  connect();
+  _socketconnected = false;
 
   return false;
 }
 
 bool MAVLinkTCP::receive_message(mavlink_message_t& msg) {
   if (socket_fd == 0) {
+    return false;
+  }
+
+  if (!_socketconnected) {
     return false;
   }
 
@@ -212,16 +262,51 @@ bool MAVLinkTCP::receive_message(mavlink_message_t& msg) {
     mavio::log(LOG_WARNING,
                "TCP >> Failed to receive MAVLink message from socket. %s",
                strerror(errno));
+               
+    _socketconnected = false; 
+
   } else if (rc == 0) {
-    mavio::log(LOG_WARNING,
-               "TCP >> FAILED (The stream socket peer has performed an "
-               "orderly shutdown)");
+    mavio::log(LOG_INFO,"TCP Vehicle %d: connection closed by the client");
+
+    _socketconnected = false;
+
   } else {
+    
+    if ( errno == EAGAIN ) {
+      // just the socket in non blocking mode reporting resource temporarily unavailable
+      return false;
+    }
+
     mavio::log(LOG_WARNING, "TCP >> Failed to parse MAVLink message. %s",
                strerror(errno));
+
+    // close the socket and start again, just in case. It shouldn't fail to parse mavlink
+    // unless something is wrong
+    _socketconnected = false;           
   }
 
   return false;
+}
+
+bool MAVLinkTCP::set_blocking(int fd, bool blocking)
+{
+  if (fd < 0) {
+    mavio::log(LOG_INFO,"TCP Server fail to set_blocking");
+    return false;
+  }
+
+    int flags = fcntl(fd, F_GETFL, 0);
+    if (flags == -1) {
+      mavio::log(LOG_INFO,"TCP Server fail to get fd flags");
+      return false;
+    }
+    
+    if (blocking) {
+      flags = (flags | O_NONBLOCK);
+    } else {
+      flags = (flags & ~O_NONBLOCK);
+    }
+    return (fcntl(fd, F_SETFL, flags) == 0) ? true : false;
 }
 
 }  // namespace mavio

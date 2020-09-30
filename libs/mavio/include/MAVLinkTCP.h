@@ -26,6 +26,7 @@
 #include "MAVLinkLib.h"
 #include <netinet/in.h>
 #include <string>
+#include <atomic>
 
 namespace mavio {
 
@@ -50,6 +51,9 @@ class MAVLinkTCP {
    * Returns true if the connection was successful.
    */
   bool init(const std::string address, uint16_t port);
+  
+  // overloaded function to display in logs vehicle instance
+  bool init(const std::string address, uint16_t port, int instance);
 
   /**
    * Closes the connection if it was open.
@@ -70,14 +74,25 @@ class MAVLinkTCP {
    */
   bool receive_message(mavlink_message_t& msg);
 
- private:
-  /**
-   * Connects to the TCP/IP socket specified by the init() call.
-   */
+  bool get_connected() { return _socketconnected; }
+
   bool connect();
+
+ private:
+
+  bool setup_server_info();
+
+  bool set_blocking(int fd, bool blcoking);
+
+  std::atomic<bool> _socketconnected;
 
   struct sockaddr_in serv_addr;  // Socket address
   int socket_fd;                 // Socket file descriptor
+
+  std::string server_addr_str;   // this is the setting loaded from settings
+  uint16_t server_port;          // this is the port setting loaded from settings
+
+  int uav_instance;
 };
 
 }  // namespace mavio
