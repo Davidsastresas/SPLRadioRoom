@@ -135,13 +135,24 @@ bool MAVLinkHandlerAir::init() {
     isbd_initialized = false;
   }
 
-  // System manager --------------------------------------------------------------------------------------
+  // ----------------- System manager -------------
 
   if (!system_manager.init()) {
     log(LOG_ERR, "System manager initialization failed");
   } else {
     log(LOG_INFO, "System manager initialization succesfull");
   }
+
+  // ----------------- TCP channelServer ----------
+
+  if (!tcp_channel.init(5651)) {
+    log(LOG_ERR, "TCP channel server initialization failed");
+  } else {
+    log(LOG_INFO, "TCP channel server initialization succesfull");
+  }
+
+
+  // Initialization of channels ends here
 
   period_rfd_status = timelib::sec2ms(2);
   timer_rfd_status.reset();
@@ -162,6 +173,7 @@ bool MAVLinkHandlerAir::init() {
 
   // configurable options, set limits
 
+  timeout_wifi = timelib::sec2ms(1);
   timeout_rfd = timelib::sec2ms(2);
   timeout_gsm = timelib::sec2ms(20);
   period_sms_report = timelib::sec2ms(14);
@@ -186,6 +198,7 @@ bool MAVLinkHandlerAir::init() {
   last_gcs_number = config.get_groundstation_tlf_number1();
 
   log(LOG_INFO,"GCS number %s", last_gcs_number.c_str());
+  log(LOG_INFO,"timeout_wifi %d", timeout_wifi);
   log(LOG_INFO,"timeout_rfd %d", timeout_rfd);
   log(LOG_INFO,"timeout_gsm %d", timeout_gsm);
   log(LOG_INFO,"period_sms_report %d", period_sms_report);
@@ -196,14 +209,6 @@ bool MAVLinkHandlerAir::init() {
   rfd_channel.reset_timer();
   
   log(LOG_INFO, "UV Radio Room initialization succeeded.");
-
-  // TCP channel -----------------------------------------------------------------------------------------
-
-  // if (tcp_channel.init(config.get_tcp_port())) {
-  //   log(LOG_INFO, "TCP channel initialized.");
-  // } else {
-  //   log(LOG_WARNING, "TCP channel initialization failed.");
-  // }
 
   return true;
 }
@@ -245,14 +250,10 @@ bool MAVLinkHandlerAir::loop() {
     sleep = false;
   }
 
-  // // just active at close range, with wifi connected
-  // if ( tcp_channel.get_connected() ) {
-  //   tcp_channel.send_message(mo_msg);
-    
-  //   if (tcp_channel.receive_message(mt_msg)) {
-  //     autopilot_channel.send_message(mt_msg);
-  //     sleep = false;
-  //   }
+  if (tcp_channel.receive_message(mt_msg)) {
+    autopilot_channel.send_message(mt_msg);
+    sleep = false;
+  }
   // }
 
   update_active_channel();
@@ -274,6 +275,12 @@ void MAVLinkHandlerAir::update_active_channel() {
   
   timer_update_active.reset();
   time_current = timelib::time_since_epoch();
+
+  if ( wifi_active ) {
+    if ( time_current - tcp_channel.last_receive_time() > timeout_wifi ) {
+      handle_wifi_out();
+    }
+  }
 
   if ( rfd_active ) {
     if ( time_current - rfd_channel.last_receive_time() > timeout_rfd ) {
@@ -302,9 +309,13 @@ void MAVLinkHandlerAir::update_active_channel() {
 
 void MAVLinkHandlerAir::handle_mo_message(const mavlink_message_t& msg) {
 
-  rfd_channel.send_message(msg);
-  
-  if ( rfd_active ) {
+  if ( wifi_active ) {
+    tcp_channel.send_message(msg);
+  } else {
+    rfd_channel.send_message(msg);
+  }
+
+  if ( rfd_active || wifi_active ) {
     return;
 
   } else {
@@ -313,6 +324,10 @@ void MAVLinkHandlerAir::handle_mo_message(const mavlink_message_t& msg) {
 }
 
 void MAVLinkHandlerAir::handle_mt_message(const mavlink_message_t& msg) {
+  // TODO - check this out! maybe neccesary if autopilot receives duplicated messages!!
+  // if ( wifi_active ) {
+  //   return;
+  // }
 
   autopilot_channel.send_message(msg);
 }
@@ -443,12 +458,38 @@ bool MAVLinkHandlerAir::send_heartbeat() {
   return false;
 }
 
+bool MAVLinkHandlerAir::set_wifi_active() {
+  if (wifi_initialized) {
+    gsm_active = false;
+    isbd_active = false;
+    rfd_active = false;
+    wifi_active = true;
+    if (!wifi_active_message) {
+      log(LOG_INFO, "Wifi active");
+      wifi_active_message = true;
+      rfd_active_message = false;
+      gsm_active_message = false;
+      isbd_active_message = false;
+    }
+  } else {
+    rfd_active = false;
+  }
+  return rfd_active;
+}
+
 bool MAVLinkHandlerAir::set_rfd_active() {
   if (radio_initialized) {
     gsm_active = false;
     isbd_active = false;
     rfd_active = true;
-    log(LOG_INFO, "RFD active");
+    wifi_active = false;
+    if (!rfd_active_message) {
+      log(LOG_INFO, "RFD active");
+      rfd_active_message = true;
+      gsm_active_message = false;
+      isbd_active_message = false;
+      wifi_active_message = false;
+    }
   } else {
     rfd_active = false;
   }
@@ -460,10 +501,17 @@ bool MAVLinkHandlerAir::set_gsm_active() {
     rfd_active = false;
     isbd_active = false;
     gsm_active = true;
+    wifi_active = false;
     // gsm_channel.reset_timer();
     time_last_sms = timelib::time_since_epoch();
     timer_report_sms.reset();
-    log(LOG_INFO, "GSM active");
+    if (!gsm_active_message) {
+      log(LOG_INFO, "GSM active");
+      gsm_active_message = true;
+      rfd_active_message = false;
+      isbd_active_message = false;
+      wifi_active_message = false;
+    }    
   } else {
     gsm_active = false;
   }
@@ -475,12 +523,31 @@ bool MAVLinkHandlerAir::set_isbd_active() {
     rfd_active = false;
     gsm_active = false;
     isbd_active = true;
+    wifi_active = false;
     // timer_report_sbd.reset();
-    log(LOG_INFO, "ISBD active");
+    if (!isbd_active_message) {
+      log(LOG_INFO, "SBD active");
+      isbd_active_message = true;
+      gsm_active_message = false;
+      rfd_active_message = false;
+      wifi_active_message = false;
+    }
   } else {
     isbd_active = false;
   }
   return isbd_active;
+}
+
+void MAVLinkHandlerAir::handle_wifi_out() {
+  if (set_rfd_active()) {
+    return;
+  } else if (set_gsm_active()) {
+    return;
+  } else if (set_isbd_active()) {
+    return;
+  } else {
+    set_wifi_active();
+  }
 }
 
 void MAVLinkHandlerAir::handle_rfd_out() {
