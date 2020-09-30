@@ -166,6 +166,8 @@ bool MAVLinkHandlerGround::init() {
         break;
       }
     }
+    log(LOG_INFO, "Radio initialization succesful.");
+
   } else {
     log(LOG_INFO, "Radio disabled.");
     _radio_initialized = false;
@@ -221,9 +223,9 @@ bool MAVLinkHandlerGround::init() {
 
   // TCP --------------------------------------------------------------------------------------------------
   if (tcp_channel.init(config.get_tcp_port())) {
-    log(LOG_INFO, "TCP channel initialized.");
+    log(LOG_INFO, "TCP Server channel initialized.");
   } else {
-    log(LOG_WARNING, "TCP channel initialization failed.");
+    log(LOG_WARNING, "TCP Server channel initialization failed.");
     return false;
   }
 
