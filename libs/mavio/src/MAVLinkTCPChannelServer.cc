@@ -119,11 +119,12 @@ void MAVLinkTCPChannelServer::send_task() {
 
 void MAVLinkTCPChannelServer::receive_task() {
   while (running) {
-    mavlink_message_t msg;
 
     if (!socket.get_connected()) {
       socket.connect();
     }
+    
+    mavlink_message_t msg;
 
     if (socket.get_connected()) {
       if (socket.receive_message(msg)) {
