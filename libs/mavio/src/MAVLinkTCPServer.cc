@@ -236,6 +236,11 @@ bool MAVLinkTCPServer::receive_message(mavlink_message_t& msg) {
   }
 
   if (rc > 0) {
+    if ( errno == EAGAIN ) {
+      // just the socket in non blocking mode reporting resource temporarily unavailable
+      return false;
+    }
+    
     mavio::log(LOG_WARNING,
                "TCP Server >> Failed to receive MAVLink message from socket. %s",
                strerror(errno));
