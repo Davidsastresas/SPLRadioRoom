@@ -30,8 +30,15 @@ using timelib::sleep;
 
 constexpr size_t max_tcp_channnel_queue_size = 1024;
 
-const std::chrono::milliseconds tcp_channel_send_interval(1);
-const std::chrono::milliseconds tcp_channel_receive_interval(1);
+// try to connect each 5 seconds
+const std::chrono::milliseconds tcp_channel_connect_interval(5000);
+
+// if not connected, sleep sending thread for a second
+const std::chrono::milliseconds tcp_channel_sleep_interval(1000);
+
+// sleep in case no new messages, to slow CPU usage
+const std::chrono::milliseconds tcp_channel_send_interval(5);
+const std::chrono::milliseconds tcp_channel_receive_interval(5);
 
 MAVLinkTCPChannel::MAVLinkTCPChannel()
     : MAVLinkChannel("tcp"),
@@ -42,12 +49,32 @@ MAVLinkTCPChannel::MAVLinkTCPChannel()
       send_queue(max_tcp_channnel_queue_size),
       receive_queue(max_tcp_channnel_queue_size),
       send_time(0),
-      receive_time(0) {}
+      receive_time(0) {
+
+      receive_time = timelib::time_since_epoch();
+}
 
 MAVLinkTCPChannel::~MAVLinkTCPChannel() { close(); }
 
+// we never use this one, we keep it to not bug other older files using it. To be fixed
 bool MAVLinkTCPChannel::init(const std::string address, uint16_t port) {
   bool ret = socket.init(address, port);
+
+  if (!running) {
+    running = true;
+
+    std::thread send_th(&MAVLinkTCPChannel::send_task, this);
+    send_thread.swap(send_th);
+
+    std::thread receive_th(&MAVLinkTCPChannel::receive_task, this);
+    receive_thread.swap(receive_th);
+  }
+
+  return false;
+}
+
+bool MAVLinkTCPChannel::init(const std::string address, uint16_t port, int instance) { 
+    bool ret = socket.init(address, port, instance);
 
   if (!running) {
     running = true;
@@ -95,6 +122,13 @@ std::chrono::milliseconds MAVLinkTCPChannel::last_receive_time() {
 
 void MAVLinkTCPChannel::send_task() {
   while (running) {
+
+    if (!socket.get_connected()) {
+      sleep(tcp_channel_sleep_interval);
+      
+      continue;
+    }
+
     mavlink_message_t msg;
 
     if (send_queue.pop(msg)) {
@@ -111,13 +145,22 @@ void MAVLinkTCPChannel::send_task() {
 
 void MAVLinkTCPChannel::receive_task() {
   while (running) {
+
+    if (!socket.get_connected()) {
+      socket.connect();
+
+      sleep(tcp_channel_connect_interval);
+    }
+    
     mavlink_message_t msg;
 
-    if (socket.receive_message(msg)) {
-      receive_time = timelib::time_since_epoch();
-      receive_queue.push(msg);
+    if (socket.get_connected()) {
+      if (socket.receive_message(msg)) {
+        receive_time = timelib::time_since_epoch();
+        receive_queue.push(msg);
 
-      continue;
+        continue;
+      }
     }
 
     sleep(tcp_channel_receive_interval);
