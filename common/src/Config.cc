@@ -84,6 +84,8 @@ constexpr char tlf_number2[] = "tlf_number2";
 constexpr char tlf_number3[] = "tlf_number3";
 constexpr char rock_address[] = "rock_address";
 constexpr char mav_id[] = "mav_id";
+constexpr char ip_address[] = "ip_address";
+constexpr char ip_port[] = "ip_port";
 
 // TODO we may need to check this out
 Config::Config() {}
@@ -226,6 +228,13 @@ int Config::init(const std::string& config_file) {
   set_aircraft1_mav_id(conf.GetInteger(
         aircraft1_config_section, mav_id, default_int));
 
+  set_aircraft1_ip_address(conf.Get(aircraft1_config_section,
+                                ip_address,
+                                default_string));
+
+  set_aircraft1_ip_port(conf.GetInteger(
+        aircraft1_config_section, ip_port, default_int));
+
   /* [aircraft2] config section */ 
 
   set_aircraft2_enabled(conf.GetBoolean(aircraft2_config_section, enabled,
@@ -249,6 +258,13 @@ int Config::init(const std::string& config_file) {
 
   set_aircraft2_mav_id(conf.GetInteger(
         aircraft2_config_section, mav_id, default_int));
+
+  set_aircraft2_ip_address(conf.Get(aircraft2_config_section,
+                                ip_address,
+                                default_string));
+
+  set_aircraft2_ip_port(conf.GetInteger(
+        aircraft2_config_section, ip_port, default_int));
 
   /* [aircraft3] config section */ 
 
@@ -274,6 +290,13 @@ int Config::init(const std::string& config_file) {
   set_aircraft3_mav_id(conf.GetInteger(
         aircraft3_config_section, mav_id, default_int));
 
+  set_aircraft3_ip_address(conf.Get(aircraft3_config_section,
+                                ip_address,
+                                default_string));
+
+  set_aircraft3_ip_port(conf.GetInteger(
+        aircraft3_config_section, ip_port, default_int));
+
   /* [aircraft4] config section */ 
 
   set_aircraft4_enabled(conf.GetBoolean(aircraft4_config_section, enabled,
@@ -297,6 +320,13 @@ int Config::init(const std::string& config_file) {
 
   set_aircraft4_mav_id(conf.GetInteger(
         aircraft4_config_section, mav_id, default_int));
+
+  set_aircraft4_ip_address(conf.Get(aircraft4_config_section,
+                                ip_address,
+                                default_string));
+
+  set_aircraft4_ip_port(conf.GetInteger(
+        aircraft4_config_section, ip_port, default_int));
   
   /* [aircraft5] config section */ 
   set_aircraft5_enabled(conf.GetBoolean(aircraft5_config_section, enabled,
@@ -318,6 +348,13 @@ int Config::init(const std::string& config_file) {
                                 default_int));
   set_aircraft5_mav_id(conf.GetInteger(
         aircraft5_config_section, mav_id, default_int));
+
+  set_aircraft5_ip_address(conf.Get(aircraft5_config_section,
+                                ip_address,
+                                default_string));
+
+  set_aircraft5_ip_port(conf.GetInteger(
+        aircraft5_config_section, ip_port, default_int));
 
   return 0;
 }
@@ -458,6 +495,10 @@ void Config::set_aircraft1_rock_address(int address) { aircraft1_rock_address = 
 int Config::get_aircraft1_mav_id() const { return aircraft1_mav_id; }
 void Config::set_aircraft1_mav_id(int mavid) { aircraft1_mav_id = mavid; }
 
+void Config::set_aircraft1_ip_address(const std::string& addr) { aircraft1_ip_addr = addr; }
+
+void Config::set_aircraft1_ip_port(int port) { aircraft1_ip_port = port; }
+
  /* aircraft2 configuration properties */
 
 bool Config::get_aircraft2_enabled() const { return aircraft2_enabled; }
@@ -477,6 +518,10 @@ void Config::set_aircraft2_rock_address(int address) { aircraft2_rock_address = 
 
 int Config::get_aircraft2_mav_id() const { return aircraft2_mav_id; }
 void Config::set_aircraft2_mav_id(int mavid) { aircraft2_mav_id = mavid; }
+
+void Config::set_aircraft2_ip_address(const std::string& addr) { aircraft2_ip_addr = addr; }
+
+void Config::set_aircraft2_ip_port(int port) { aircraft2_ip_port = port; }
 
  /* aircraft3 configuration properties */
 
@@ -498,6 +543,10 @@ void Config::set_aircraft3_rock_address(int address) { aircraft3_rock_address = 
 int Config::get_aircraft3_mav_id() const { return aircraft3_mav_id; }
 void Config::set_aircraft3_mav_id(int mavid) { aircraft3_mav_id = mavid; }
 
+void Config::set_aircraft3_ip_address(const std::string& addr) { aircraft3_ip_addr = addr; }
+
+void Config::set_aircraft3_ip_port(int port) { aircraft3_ip_port = port; }
+
  /* aircraft4 configuration properties */
 
 bool Config::get_aircraft4_enabled() const { return aircraft4_enabled; }
@@ -518,6 +567,10 @@ void Config::set_aircraft4_rock_address(int address) { aircraft4_rock_address = 
 int Config::get_aircraft4_mav_id() const { return aircraft4_mav_id; }
 void Config::set_aircraft4_mav_id(int mavid) { aircraft4_mav_id = mavid; }
 
+void Config::set_aircraft4_ip_address(const std::string& addr) { aircraft4_ip_addr = addr; }
+
+void Config::set_aircraft4_ip_port(int port) { aircraft4_ip_port = port; }
+
  /* aircraft5 configuration properties */
 
 bool Config::get_aircraft5_enabled() const { return aircraft5_enabled; }
@@ -537,6 +590,10 @@ void Config::set_aircraft5_rock_address(int address) { aircraft5_rock_address = 
 
 int Config::get_aircraft5_mav_id() const { return aircraft5_mav_id; }
 void Config::set_aircraft5_mav_id(int mavid) { aircraft5_mav_id = mavid; }
+
+void Config::set_aircraft5_ip_address(const std::string& addr) { aircraft5_ip_addr = addr; }
+
+void Config::set_aircraft5_ip_port(int port) { aircraft5_ip_port = port; }
 
 /* global aircraft getter functions */
 
@@ -649,6 +706,40 @@ int Config::get_aircraftx_mav_id(int index) const {
         return aircraft5_mav_id;
     default:
         return aircraft1_mav_id;
+    }
+}
+
+std::string Config::get_aircraftx_ip_address(int index) const {
+    switch (index) {
+    case 1:
+        return aircraft1_ip_addr;
+    case 2:
+        return aircraft2_ip_addr;
+    case 3:
+        return aircraft3_ip_addr;
+    case 4:
+        return aircraft4_ip_addr;
+    case 5:
+        return aircraft5_ip_addr;
+    default:
+        return aircraft1_ip_addr;
+    }
+}
+
+int Config::get_aircraftx_ip_port(int index) const {
+    switch (index) {
+    case 1:
+        return aircraft1_ip_port;
+    case 2:
+        return aircraft2_ip_port;
+    case 3:
+        return aircraft3_ip_port;
+    case 4:
+        return aircraft4_ip_port;
+    case 5:
+        return aircraft5_ip_port;
+    default:
+        return aircraft1_ip_port;
     }
 }
 

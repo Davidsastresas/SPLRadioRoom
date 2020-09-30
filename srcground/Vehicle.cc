@@ -435,7 +435,8 @@ bool Vehicle::init(int instance) {
       }
 
       // init TCP client for close range wifi connection
-      if (!tcp_cli_channel.init("airpi.local", 5651, instance)) {
+      if (!tcp_cli_channel.init(radioroom::config.get_aircraftx_ip_address(instance),
+                                radioroom::config.get_aircraftx_ip_port(instance) , instance)) {
       
         _wifi_initialized = false;
         log(LOG_ERR, "Vehicle %d TCP channel initialization failed", instance);
@@ -443,6 +444,9 @@ bool Vehicle::init(int instance) {
       
         _wifi_initialized = true;
         log(LOG_INFO, "Vehicle %d TCP channel initialization succesfull", instance);
+        log(LOG_INFO, "Vehicle %d TCP address: %s TCP port: %d", instance, 
+                                radioroom::config.get_aircraftx_ip_address(instance).c_str(),
+                                radioroom::config.get_aircraftx_ip_port(instance));
       }
 
       if ( !radioroom::config.get_gsm_enabled() ) {

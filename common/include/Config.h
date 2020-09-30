@@ -179,6 +179,10 @@ class Config {
   int get_aircraft1_mav_id() const;
   void set_aircraft1_mav_id(int mavid);
 
+  void set_aircraft1_ip_address(const std::string& addr);
+
+  void set_aircraft1_ip_port(int port);
+
   /* aircraft2 configuration properties */
 
   bool get_aircraft2_enabled() const;
@@ -198,6 +202,10 @@ class Config {
 
   int get_aircraft2_mav_id() const;
   void set_aircraft2_mav_id(int mavid);
+
+  void set_aircraft2_ip_address(const std::string& addr);
+
+  void set_aircraft2_ip_port(int port);
 
   /* aircraft3 configuration properties */
 
@@ -219,6 +227,10 @@ class Config {
   int get_aircraft3_mav_id() const;
   void set_aircraft3_mav_id(int mavid);
 
+  void set_aircraft3_ip_address(const std::string& addr);
+
+  void set_aircraft3_ip_port(int port);
+
   /* aircraft4 configuration properties */
 
   bool get_aircraft4_enabled() const;
@@ -238,6 +250,10 @@ class Config {
 
   int get_aircraft4_mav_id() const;
   void set_aircraft4_mav_id(int mavid);
+
+  void set_aircraft4_ip_address(const std::string& addr);
+
+  void set_aircraft4_ip_port(int port);
 
   /* aircraft5 configuration properties */
 
@@ -259,6 +275,10 @@ class Config {
   int get_aircraft5_mav_id() const;
   void set_aircraft5_mav_id(int mavid);
 
+  void set_aircraft5_ip_address(const std::string& addr);
+
+  void set_aircraft5_ip_port(int port);
+
   /* global aircraft getter functions */
 
   std::string get_groundstation_tlfx(int tlfindex) const;
@@ -271,7 +291,9 @@ class Config {
 
   int get_aircraftx_mav_id(int index) const;
 
+  std::string get_aircraftx_ip_address(int index) const;
 
+  int get_aircraftx_ip_port(int index) const;
 
  private:
 
@@ -330,6 +352,8 @@ class Config {
   std::string aircraft1_tlf_number3 = "0";
   int aircraft1_rock_address = 0;
   int aircraft1_mav_id = 0;
+  std::string aircraft1_ip_addr = "0";
+  int aircraft1_ip_port = 0;
 
   // aircraft 2
   bool aircraft2_enabled = false;
@@ -338,6 +362,8 @@ class Config {
   std::string aircraft2_tlf_number3 = "0";
   int aircraft2_rock_address = 0;
   int aircraft2_mav_id = 0;
+  std::string aircraft2_ip_addr = "0";
+  int aircraft2_ip_port = 0;
 
   // aircraft 3
   bool aircraft3_enabled = false;
@@ -346,6 +372,8 @@ class Config {
   std::string aircraft3_tlf_number3 = "0";
   int aircraft3_rock_address = 0;
   int aircraft3_mav_id = 0;
+  std::string aircraft3_ip_addr = "0";
+  int aircraft3_ip_port = 0;
 
   // aircraft 4
   bool aircraft4_enabled = false;
@@ -354,6 +382,8 @@ class Config {
   std::string aircraft4_tlf_number3 = "0";
   int aircraft4_rock_address = 0;
   int aircraft4_mav_id = 0;
+  std::string aircraft4_ip_addr = "0";
+  int aircraft4_ip_port = 0;
 
   // aircraft 5
   bool aircraft5_enabled = false;
@@ -362,6 +392,8 @@ class Config {
   std::string aircraft5_tlf_number3 = "0";
   int aircraft5_rock_address = 0;
   int aircraft5_mav_id = 0;
+  std::string aircraft5_ip_addr = "0";
+  int aircraft5_ip_port = 0;
 };
 
 extern Config config;
