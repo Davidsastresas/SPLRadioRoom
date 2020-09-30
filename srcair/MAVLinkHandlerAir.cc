@@ -145,7 +145,7 @@ bool MAVLinkHandlerAir::init() {
 
   // ----------------- TCP channelServer ----------
 
-  if (!tcp_channel.init(5651)) {
+  if (!tcp_channel.init(config.get_tcp_port())) {
     log(LOG_ERR, "TCP channel server initialization failed");
     wifi_initialized = false;
   } else {
