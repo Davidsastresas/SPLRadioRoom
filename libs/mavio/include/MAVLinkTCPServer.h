@@ -79,12 +79,12 @@ class MAVLinkTCPServer {
   bool accept_connection();
 
   bool get_connected() { return _socketconnected; }
-
-  bool set_blocking(int fd, bool blcoking);
   
   bool connect();
 
  private:
+
+  bool set_blocking(int fd, bool blcoking);
 
   std::atomic<bool> _socketconnected;
 
