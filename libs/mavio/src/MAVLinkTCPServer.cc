@@ -111,6 +111,8 @@ bool MAVLinkTCPServer::accept_connection() {
     return false;
   }
   mavio::log(LOG_INFO,"TCP Server connection accepted");
+
+  // update status of socket
   _socketconnected = true;
 
   // set to non blocking
@@ -157,7 +159,6 @@ bool MAVLinkTCPServer::send_message(const mavlink_message_t& msg) {
 
   MAVLinkLogger::log(LOG_WARNING, "TCP Server << FAILED", msg);
 
-  // Re-connect to the socket.
   _socketconnected = false;
 
   return false;
@@ -252,10 +253,12 @@ bool MAVLinkTCPServer::receive_message(mavlink_message_t& msg) {
     _socketconnected = false;
   
   } else {
+
     if ( errno == EAGAIN ) {
       // just the socket in non blocking mode reporting resource temporarily unavailable
       return false;
     }
+    
     mavio::log(LOG_WARNING, "TCP Server >> Failed to parse MAVLink message. %s",
                strerror(errno));
 
