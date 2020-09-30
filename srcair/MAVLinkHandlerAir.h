@@ -104,7 +104,7 @@ class MAVLinkHandlerAir {
   bool rfd_active = false;
   bool gsm_active = false;
   bool isbd_active = false;
-  bool wifi_active = true;
+  bool wifi_active = true; // we start in wifi, it will switch to rfd if no wifi 
 
   bool rfd_active_message = false;
   bool gsm_active_message = false;

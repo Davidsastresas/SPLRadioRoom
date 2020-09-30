@@ -147,8 +147,10 @@ bool MAVLinkHandlerAir::init() {
 
   if (!tcp_channel.init(5651)) {
     log(LOG_ERR, "TCP channel server initialization failed");
+    wifi_initialized = false;
   } else {
     log(LOG_INFO, "TCP channel server initialization succesfull");
+    wifi_initialized = true;
   }
 
 
@@ -173,7 +175,7 @@ bool MAVLinkHandlerAir::init() {
 
   // configurable options, set limits
 
-  timeout_wifi = timelib::sec2ms(1);
+  timeout_wifi = timelib::sec2ms(1.5);
   timeout_rfd = timelib::sec2ms(2);
   timeout_gsm = timelib::sec2ms(20);
   period_sms_report = timelib::sec2ms(14);
@@ -280,15 +282,17 @@ void MAVLinkHandlerAir::update_active_channel() {
     if ( time_current - tcp_channel.last_receive_time() > timeout_wifi ) {
       handle_wifi_out();
     }
-  }
 
-  if ( rfd_active ) {
-    if ( time_current - rfd_channel.last_receive_time() > timeout_rfd ) {
+  } else if ( rfd_active ) {
+    if ( time_current - tcp_channel.last_receive_time() < timeout_wifi ) {
+      set_wifi_active();
+    
+    } else if ( time_current - rfd_channel.last_receive_time() > timeout_rfd ) {
       handle_rfd_out();
     }
   
   } else if ( gsm_active ) {
-    if ( time_current - rfd_channel.last_receive_time() <= timeout_rfd ) {
+    if ( time_current - rfd_channel.last_receive_time() < timeout_rfd ) {
       set_rfd_active();
 
     } else if ( time_current - time_last_sms >= timeout_gsm ) {
@@ -296,14 +300,14 @@ void MAVLinkHandlerAir::update_active_channel() {
     }
 
   } else if ( isbd_active ) { 
-    if ( time_current - rfd_channel.last_receive_time() <= timeout_rfd ) {
+    if ( time_current - rfd_channel.last_receive_time() < timeout_rfd ) {
       set_rfd_active();
     } else if ( time_current - time_last_sms <= timeout_gsm ) {
       set_gsm_active();
     }
 
   } else {
-      set_rfd_active();
+      set_wifi_active(); // paranoid check, in case all flags are false
   }
 }
 
