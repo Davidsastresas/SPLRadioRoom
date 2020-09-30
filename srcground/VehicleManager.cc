@@ -127,6 +127,13 @@ void VehicleManager::send_task() {
 
             mavlink_message_t mavmsg;
 
+            // Here is where we extract the messages comming from the local TCPchannel (wifi short range)
+            
+            if ( _vehicles[i].pull_queue_tcp_cli(mavmsg) ) {
+                sleeping = false;
+                _receive_queue_tcp.push(mavmsg);
+            }
+
             if ( _vehicles[i].pull_queue_mavmsg(mavmsg) ) {
                 sleeping = false;
                 _receive_queue_tcp.push(mavmsg);
