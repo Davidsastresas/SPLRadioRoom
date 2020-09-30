@@ -266,7 +266,7 @@ bool MAVLinkTCP::receive_message(mavlink_message_t& msg) {
     _socketconnected = false; 
 
   } else if (rc == 0) {
-    mavio::log(LOG_INFO,"TCP Vehicle %d: connection closed by the client");
+    mavio::log(LOG_INFO,"TCP Vehicle %d: connection closed by the client", uav_instance);
 
     _socketconnected = false;
 
