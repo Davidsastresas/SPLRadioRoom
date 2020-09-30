@@ -24,7 +24,8 @@ Vehicle::Vehicle()
       timer_last_cmd_long(),
       timer_last_cmd_set_current(),
       timer_last_cmd_mission_item(),
-      timer_last_cmd_set_mode() {
+      timer_last_cmd_set_mode(),
+      tcp_cli_channel() {
       
       _enabled = false; // paranoid check it start as not initialized
       _initialized = false;
@@ -90,6 +91,11 @@ void Vehicle::send_heartbeat_sms(std::string number) {
 }
 
 void Vehicle::send_high_lat_heartbeats() {
+
+  // This is sent when we change first time from gsm to sbd
+  // we send a sms to all 3 gsm modems in hope ground will
+  // receive them when they get back in line
+
   if ( _isbd_initialized && _active_channel == SBD_ACTIVE ) { 
     if ( !gsm_rehook_sent ) {
       send_heartbeat_sms(_tlf_1);
@@ -112,7 +118,7 @@ void Vehicle::send_high_lat_heartbeats() {
 
 void Vehicle::send_heartbeat_tcp() {
   if (timer_gcs_heartbeat.elapsed_time() >= period_heartbeat_gcs) {
-    if ( _active_channel != RFD_ACTIVE ) {
+    if ( _active_channel != RFD_ACTIVE && _active_channel != WIFI_ACTIVE ) {
       timer_gcs_heartbeat.reset();
       
       mavlink_message_t heartbeat_msg;
@@ -140,16 +146,30 @@ void Vehicle::update_active_channel() {
   timer_update_active_channel.reset();
   time_current = timelib::time_since_epoch();
 
+  // provisional, we might move it to vehiclemanager while reading tcp, aditional public funtion here needed.
+  time_last_wifi = tcp_cli_channel.last_receive_time();
+
   switch (_active_channel) {
+    case WIFI_ACTIVE: {
+      if ( time_current - time_last_wifi > timeout_wifi ) {
+        handle_wifi_out();
+      }
+    }
+    break;
+
     case RFD_ACTIVE: {
-      if ( time_current - time_last_rfd > timeout_rfd ) {
+      if ( time_current - time_last_wifi < timeout_wifi ) {
+        set_wifi_active();
+      } else if ( time_current - time_last_rfd > timeout_rfd ) {
         handle_rfd_out();
       }
     }
     break;
 
     case GSM_ACTIVE: {
-      if ( time_current - time_last_rfd < timeout_rfd ) {
+      if ( time_current - time_last_wifi < timeout_wifi ) {
+        set_wifi_active();
+      } else if ( time_current - time_last_rfd < timeout_rfd ) {
         set_rfd_active();
       } else if ( time_current - time_last_sms > timeout_sms ) {
         handle_gsm_out();
@@ -158,7 +178,9 @@ void Vehicle::update_active_channel() {
     break;
     
     case SBD_ACTIVE: {
-      if ( time_current - time_last_rfd < timeout_rfd ) {
+      if ( time_current - time_last_wifi < timeout_wifi ) {
+        set_wifi_active();
+      } else if ( time_current - time_last_rfd < timeout_rfd ) {
         set_rfd_active();
       } else if ( time_current - time_last_sms < timeout_sms ) {
         set_gsm_active();
@@ -167,7 +189,7 @@ void Vehicle::update_active_channel() {
     break;
     
     default:
-      set_rfd_active();
+      set_wifi_active(); // paranoid check. If no wifi it will go to rfd.
     break;
   }
 }
@@ -178,11 +200,18 @@ bool Vehicle::set_isbd_active() {
 
     gsm_rehook_sent = false;
 
-    log(LOG_INFO, "ISBD active");
+    if ( !isbd_active_message ) {
+      log(LOG_INFO, "SBD active");
+      rfd_active_message = false;
+      gsm_active_message = false;
+      isbd_active_message = true;
+      wifi_active_message = false;
+    
+      mavlink_message_t status_msg;
+      mavlink_msg_statustext_pack(_mav_id, 1, &status_msg, MAV_SEVERITY_NOTICE, "SBD active", 0, 0);
+      _outgoing_queue_gcsmavmsg.push(status_msg);
+    }    
 
-    mavlink_message_t status_msg;
-    mavlink_msg_statustext_pack(_mav_id, 1, &status_msg, MAV_SEVERITY_NOTICE, "ISBD active", 0, 0);
-    _outgoing_queue_gcsmavmsg.push(status_msg);
     
     return true;
   } 
@@ -197,11 +226,19 @@ bool Vehicle::set_gsm_active() {
     // gsm_channel.reset_timer();
     time_last_sms = timelib::time_since_epoch(); // needed for not jumping directly to sbd
     timer_sms_alive.reset();
-    log(LOG_INFO, "GSM active");
 
-    mavlink_message_t status_msg;
-    mavlink_msg_statustext_pack(_mav_id, 1, &status_msg, MAV_SEVERITY_NOTICE, "GSM active", 0, 0);
-    _outgoing_queue_gcsmavmsg.push(status_msg);
+    if ( !gsm_active_message ) {
+      log(LOG_INFO, "GSM active");
+      rfd_active_message = false;
+      gsm_active_message = true;
+      isbd_active_message = false;
+      wifi_active_message = false;
+    
+      mavlink_message_t status_msg;
+      mavlink_msg_statustext_pack(_mav_id, 1, &status_msg, MAV_SEVERITY_NOTICE, "GSM active", 0, 0);
+      _outgoing_queue_gcsmavmsg.push(status_msg);
+    }    
+
 
     return true;
   } 
@@ -213,18 +250,63 @@ bool Vehicle::set_rfd_active() {
   if (_radio_initialized) {
     _active_channel = RFD_ACTIVE;
 
-    log(LOG_INFO, "RFD active");
+    if ( !rfd_active_message ) {
+      log(LOG_INFO, "RFD active");
+      rfd_active_message = true;
+      gsm_active_message = false;
+      isbd_active_message = false;
+      wifi_active_message = false;
+
+      mavlink_message_t status_msg;
+      mavlink_msg_statustext_pack(_mav_id, 1, &status_msg, MAV_SEVERITY_NOTICE, "RFD active", 0, 0);
+      _outgoing_queue_gcsmavmsg.push(status_msg);
+    }
 
     last_high_latency_valid = false;
 
-    mavlink_message_t status_msg;
-    mavlink_msg_statustext_pack(_mav_id, 1, &status_msg, MAV_SEVERITY_NOTICE, "RFD active", 0, 0);
-    _outgoing_queue_gcsmavmsg.push(status_msg);
     
     return true;
   } 
 
   return false;
+}
+
+bool Vehicle::set_wifi_active() {
+  if (_wifi_initialized) {
+    _active_channel = WIFI_ACTIVE;
+
+    if ( !wifi_active_message ) {
+      log(LOG_INFO, "WIFI active");
+      rfd_active_message = false;
+      gsm_active_message = false;
+      isbd_active_message = false;
+      wifi_active_message = true;
+
+      mavlink_message_t status_msg;
+      mavlink_msg_statustext_pack(_mav_id, 1, &status_msg, MAV_SEVERITY_NOTICE, "WIFI active", 0, 0);
+      _outgoing_queue_gcsmavmsg.push(status_msg);
+    }
+
+    last_high_latency_valid = false;
+
+    
+    return true;
+  } 
+
+  return false;
+}
+
+void Vehicle::handle_wifi_out() {
+  if (set_rfd_active()) {
+    return;
+  } else if (set_gsm_active()) {
+    return;
+  } else if (set_isbd_active()) { 
+    return;
+  } else {
+
+    set_wifi_active();
+  }
 }
 
 void Vehicle::handle_rfd_out() {
@@ -233,7 +315,7 @@ void Vehicle::handle_rfd_out() {
   } else if (set_isbd_active()) { 
     return;
   } else {
-    // we may eliminate this so it doesn't send repeated message to gcs
+
     set_rfd_active();
   }
 }
@@ -242,7 +324,7 @@ void Vehicle::handle_gsm_out() {
   if (set_isbd_active()) {
     return; 
   } else {
-    // we may eliminate this so it doesn't send repeated message to gcs
+
     set_rfd_active();
   }
 }
@@ -321,10 +403,12 @@ bool Vehicle::init(int instance) {
       time_current = timelib::time_since_epoch();
       time_last_rfd = timelib::time_since_epoch();
       time_last_sms = timelib::time_since_epoch();
+      time_last_wifi = timelib::time_since_epoch();
 
       last_high_latency_valid = false;
       last_aircraft_number = _tlf_1;
 
+      timeout_wifi = timelib::sec2ms(1); // hardcoded to 1 second
       period_heartbeat_gcs = timelib::sec2ms(2);
       timeout_rfd = timelib::sec2ms(4);
       timeout_sms = timelib::sec2ms(30);
@@ -350,6 +434,25 @@ bool Vehicle::init(int instance) {
         _radio_initialized = false;
       }
 
+      // init TCP client for close range wifi connection
+      if (!tcp_cli_channel.init("airpi.local", 5651, instance)) {
+      
+        _wifi_initialized = false;
+        log(LOG_ERR, "Vehicle %d TCP channel initialization failed", instance);
+      } else {
+      
+        _wifi_initialized = true;
+        log(LOG_INFO, "Vehicle %d TCP channel initialization succesfull", instance);
+      }
+
+      if ( !radioroom::config.get_gsm_enabled() ) {
+        _gsm_initialized = false;
+      }      
+
+      if ( !radioroom::config.get_isbd_enabled() ) {
+        _isbd_initialized = false;
+      }
+      
       log(LOG_INFO, "Vehicle %d tlf 1: %s", instance, _tlf_1.c_str());
       log(LOG_INFO, "Vehicle %d tlf 2: %s", instance, _tlf_2.c_str());
       log(LOG_INFO, "Vehicle %d tlf 3: %s", instance, _tlf_3.c_str());
@@ -391,6 +494,14 @@ int Vehicle::get_mavid() {
 
 void Vehicle::process_gcs_message(mavlink_message_t& msg) {
   if ( !_initialized ) {
+    return;
+  }
+
+  // This is not completely pretty, as the meesages are arriving duplicated
+  // ( rfd and wifi ), when it is under wifi. But no better solution at the moment
+  tcp_cli_channel.send_message(msg);
+  
+  if ( _active_channel == WIFI_ACTIVE ) {
     return;
   }
 
@@ -723,6 +834,11 @@ void Vehicle::process_message(mavio::SBDmessage& sbdmsg) {
   }
 }
 
-
-
+bool Vehicle::pull_queue_tcp_cli(mavlink_message_t& msg) {
+  if ( !_initialized ) {
+    return false;
+  }
+  
+  return tcp_cli_channel.receive_message(msg);
+}
 } // namespace mavio
