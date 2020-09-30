@@ -121,6 +121,7 @@ bool MAVLinkTCPServer::accept_connection() {
 
 void MAVLinkTCPServer::close() {
   if (socket_fd != 0) {
+    ::shutdown(socket_fd, SHUT_RD);
     ::close(socket_fd);
     socket_fd = 0;
   }

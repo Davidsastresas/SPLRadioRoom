@@ -64,15 +64,14 @@ bool MAVLinkTCPChannelServer::init(uint16_t port) {
 }
 
 void MAVLinkTCPChannelServer::close() {
+  socket.close();
+
   if (running) {
     running = false;
 
     receive_thread.join();
     send_thread.join();
   }
-
-  // this is what is delaying the closing of the app?
-  socket.close();
 }
 
 bool MAVLinkTCPChannelServer::send_message(const mavlink_message_t& msg) {
