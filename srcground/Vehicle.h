@@ -8,6 +8,7 @@
 #include "MAVLinkLib.h"
 #include "MAVLinkSMSChannel.h"
 #include "MAVLinkISBDChannel.h"
+#include "MAVLinkTCPChannel.h"
 
 namespace mavio {
 
@@ -31,7 +32,8 @@ class Vehicle {
     bool update();
 
     enum enum_vehicle_act_chan {
-        RFD_ACTIVE = 0,
+        WIFI_ACTIVE = 0,
+        RFD_ACTIVE,
         GSM_ACTIVE,
         SBD_ACTIVE
     };
@@ -44,6 +46,8 @@ class Vehicle {
     void                   process_message(mavio::SMSmessage& sms);
     void                   process_message(mavio::SBDmessage& msg);
 
+    bool                   pull_queue_tcp_cli(mavlink_message_t& msg);
+
     private:
 
     void send_heartbeat_sms(std::string number);
@@ -54,11 +58,15 @@ class Vehicle {
 
     void update_active_channel();
 
+    bool set_wifi_active();
+
     bool set_rfd_active();
 
     bool set_gsm_active();
 
     bool set_isbd_active();
+
+    void handle_wifi_out();
 
     void handle_rfd_out();
 
@@ -71,7 +79,14 @@ class Vehicle {
     CircularBuffer<mavio::SBDmessage> _outgoing_queue_sbdmsg;
 
 
-    enum_vehicle_act_chan _active_channel = RFD_ACTIVE;
+    // init channel is wifi. If not available it will change
+    // to the next priority ones
+    enum_vehicle_act_chan _active_channel = WIFI_ACTIVE;
+
+    bool rfd_active_message = false;
+    bool gsm_active_message = false;
+    bool isbd_active_message = false;
+    bool wifi_active_message = false;
 
     // state machine parameters
 
@@ -83,6 +98,7 @@ class Vehicle {
     bool _isbd_initialized = false;
     bool _gsm_initialized = false;
     bool _radio_initialized = false;
+    bool _wifi_initialized = false;
 
     // Config parameters
 
@@ -119,8 +135,10 @@ class Vehicle {
 
     // initialize??
     std::chrono::milliseconds time_current; // initialize!!
+    std::chrono::milliseconds time_last_wifi; // initialize!!
     std::chrono::milliseconds time_last_rfd; // initialize!!
     std::chrono::milliseconds time_last_sms; // initialize!!
+    std::chrono::milliseconds timeout_wifi;  // initialize those!!
     std::chrono::milliseconds timeout_rfd;  // initialize those!!
     std::chrono::milliseconds timeout_sms;  // initialize those!!
 
@@ -149,6 +167,9 @@ class Vehicle {
     mavlink_message_t last_high_latency;
     bool last_high_latency_valid = false;
 
+    // TCP channel for wifi - independent stream for each vehicle that is
+    // why we have it here instead of in MAVLinkHandlerGround
+    mavio::MAVLinkTCPChannel tcp_cli_channel;
 };
 
 } // namespace mavio
