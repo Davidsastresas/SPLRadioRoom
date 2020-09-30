@@ -64,9 +64,9 @@ bool MAVLinkTCPServer::init(uint16_t port) {
 }
 
 bool MAVLinkTCPServer::connect() {
-  if (socket_fd > 0) {
-    ::close(socket_fd);
-  }
+
+  // gracefully close socket just in case
+  close();
 
   socket_fd = ::socket(AF_INET, SOCK_STREAM, 0);
 
@@ -96,7 +96,7 @@ bool MAVLinkTCPServer::connect() {
     return false;
   }
 
-  mavio::log(LOG_INFO,"TCP Server Socket set up succesfully, going to listen ..");
+  mavio::log(LOG_INFO,"TCP Server socket listening ..");
 
   listen(socket_fd , 3);
 
@@ -133,7 +133,7 @@ bool MAVLinkTCPServer::send_message(const mavlink_message_t& msg) {
   }
 
   if (!_socketconnected) {
-    connect();
+    return false;
   }
 
   if (msg.len == 0 && msg.msgid == 0) {
@@ -239,10 +239,13 @@ bool MAVLinkTCPServer::receive_message(mavlink_message_t& msg) {
     mavio::log(LOG_WARNING,
                "TCP Server >> Failed to receive MAVLink message from socket. %s",
                strerror(errno));
+    _socketconnected = false; 
+
   } else if (rc == 0) {
-    mavio::log(LOG_WARNING,
-               "TCP Server >> FAILED (The stream socket peer has performed an "
-               "orderly shutdown)");
+    mavio::log(LOG_INFO,
+               "TCP Server: connection closed by the client");
+    _socketconnected = false;
+  
   } else {
     if ( errno == EAGAIN ) {
       // just the socket in non blocking mode reporting resource temporarily unavailable
@@ -250,6 +253,10 @@ bool MAVLinkTCPServer::receive_message(mavlink_message_t& msg) {
     }
     mavio::log(LOG_WARNING, "TCP Server >> Failed to parse MAVLink message. %s",
                strerror(errno));
+
+    // close the socket and start again, just in case. It shouldn't fail to parse mavlink
+    // unless something is wrong
+    _socketconnected = false;
   }
 
   return false;

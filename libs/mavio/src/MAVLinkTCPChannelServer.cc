@@ -30,7 +30,7 @@ using timelib::sleep;
 
 constexpr size_t max_tcp_channnel_queue_size = 1024;
 
-const std::chrono::milliseconds tcp_channel_sleep_interval(1000);
+const std::chrono::milliseconds tcp_channel_sleep_interval(500);
 const std::chrono::milliseconds tcp_channel_send_interval(5);
 const std::chrono::milliseconds tcp_channel_receive_interval(5);
 
@@ -96,6 +96,13 @@ std::chrono::milliseconds MAVLinkTCPChannelServer::last_receive_time() {
 
 void MAVLinkTCPChannelServer::send_task() {
   while (running) {
+
+    if (!socket.get_connected()) {
+      sleep(tcp_channel_sleep_interval);
+      
+      continue;
+    }
+
     mavlink_message_t msg;
 
     if (send_queue.pop(msg)) {
@@ -113,6 +120,10 @@ void MAVLinkTCPChannelServer::send_task() {
 void MAVLinkTCPChannelServer::receive_task() {
   while (running) {
     mavlink_message_t msg;
+
+    if (!socket.get_connected()) {
+      socket.connect();
+    }
 
     if (socket.get_connected()) {
       if (socket.receive_message(msg)) {

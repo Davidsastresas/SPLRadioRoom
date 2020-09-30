@@ -82,11 +82,9 @@ class MAVLinkTCPServer {
 
   bool set_blocking(int fd, bool blcoking);
   
- private:
-  /**
-   * Connects to the TCP/IP socket specified by the init() call.
-   */
   bool connect();
+
+ private:
 
   std::atomic<bool> _socketconnected;
 
