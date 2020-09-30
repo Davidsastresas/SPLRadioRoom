@@ -150,6 +150,7 @@ bool MAVLinkHandlerAir::init() {
     wifi_initialized = false;
   } else {
     log(LOG_INFO, "TCP channel server initialization succesfull");
+    log(LOG_INFO, "TCP channel server port: %d", config.get_tcp_port());
     wifi_initialized = true;
   }
 
