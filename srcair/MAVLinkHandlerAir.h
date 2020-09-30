@@ -70,6 +70,10 @@ class MAVLinkHandlerAir {
 
   bool set_isbd_active();
 
+  bool set_wifi_active();
+
+  void handle_wifi_out();
+
   void handle_rfd_out();
 
   void handle_gsm_out();
@@ -87,7 +91,7 @@ class MAVLinkHandlerAir {
   mavio::MAVLinkSMSChannel gsm_channel;
   mavio::SystemManager system_manager;
   mavio::MAVLinkTCPChannelServer tcp_channel;
-
+  
   // timers
   timelib::Stopwatch timer_update_active;
   timelib::Stopwatch heartbeat_timer;
@@ -97,14 +101,21 @@ class MAVLinkHandlerAir {
 
 
   // active links
-  bool rfd_active;
-  bool gsm_active;
-  bool isbd_active;
+  bool rfd_active = false;
+  bool gsm_active = false;
+  bool isbd_active = false;
+  bool wifi_active = true;
+
+  bool rfd_active_message = false;
+  bool gsm_active_message = false;
+  bool isbd_active_message = false;
+  bool wifi_active_message = false;
 
   // links initialization
   bool radio_initialized = false;
   bool gsm_initialized = false;
   bool isbd_initialized = false;
+  bool wifi_initialized = false;
 
   // if false, first sms is sent to all 3 ground numbers
   bool ground_sms_all = false;
@@ -118,6 +129,7 @@ class MAVLinkHandlerAir {
   std::chrono::milliseconds time_last_sms;
 
   std::chrono::milliseconds timeout_rfd;
+  std::chrono::milliseconds timeout_wifi;
   std::chrono::milliseconds timeout_gsm;
 
   std::chrono::milliseconds period_autopilot_heartbeat;
