@@ -74,7 +74,7 @@ bool MAVLinkTCPChannel::init(const std::string address, uint16_t port) {
 }
 
 bool MAVLinkTCPChannel::init(const std::string address, uint16_t port, int instance) { 
-    bool ret = socket.init(address, port, instance);
+  bool ret = socket.init(address, port, instance);
 
   if (!running) {
     running = true;

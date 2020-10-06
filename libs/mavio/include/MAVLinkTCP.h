@@ -92,7 +92,7 @@ class MAVLinkTCP {
   std::string server_addr_str;   // this is the setting loaded from settings
   uint16_t server_port;          // this is the port setting loaded from settings
 
-  int uav_instance;
+  int uav_instance = 0;
 };
 
 }  // namespace mavio

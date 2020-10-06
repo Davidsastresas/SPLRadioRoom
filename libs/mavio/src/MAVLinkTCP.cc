@@ -41,7 +41,10 @@ namespace mavio {
 // TCP keepalive options values
 constexpr int so_keepalive_value  = 1;   // enabled
 
-MAVLinkTCP::MAVLinkTCP() : socket_fd(0) {}
+MAVLinkTCP::MAVLinkTCP() : socket_fd(0) {
+
+  _socketconnected = false;
+}
 
 MAVLinkTCP::~MAVLinkTCP() { close(); }
 
@@ -259,13 +262,23 @@ bool MAVLinkTCP::receive_message(mavlink_message_t& msg) {
   }
 
   if (rc > 0) {
+
+    if ( errno == EAGAIN ) {
+      // mavio::log(LOG_WARNING, "TCP Vehicle %d >> Failed. %s",
+      //          uav_instance, strerror(errno));
+
+      // just the socket in non blocking mode reporting resource temporarily unavailable
+      return false;
+    }
+    
     mavio::log(LOG_WARNING,
-               "TCP >> Failed to receive MAVLink message from socket. %s",
-               strerror(errno));
+               "TCP Vehicle %d >> Failed to receive MAVLink message from socket. %s",
+               uav_instance, strerror(errno));
                
     _socketconnected = false; 
 
   } else if (rc == 0) {
+    
     mavio::log(LOG_INFO,"TCP Vehicle %d: connection closed by the client", uav_instance);
 
     _socketconnected = false;
@@ -273,12 +286,15 @@ bool MAVLinkTCP::receive_message(mavlink_message_t& msg) {
   } else {
     
     if ( errno == EAGAIN ) {
+      // mavio::log(LOG_WARNING, "TCP Vehicle %d >> Failed. %s",
+      //          uav_instance, strerror(errno));
+
       // just the socket in non blocking mode reporting resource temporarily unavailable
       return false;
     }
 
-    mavio::log(LOG_WARNING, "TCP >> Failed to parse MAVLink message. %s",
-               strerror(errno));
+    mavio::log(LOG_WARNING, "TCP Vehicle %d >> Failed to parse MAVLink message. %s",
+               uav_instance, strerror(errno));
 
     // close the socket and start again, just in case. It shouldn't fail to parse mavlink
     // unless something is wrong
