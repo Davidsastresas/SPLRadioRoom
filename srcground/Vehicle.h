@@ -119,6 +119,7 @@ class Vehicle {
     bool _initialized = false;
     int _vehicle_index = 0;
     int _gsm_number = 0;
+    std::string _vehicle_id_str = "";
 
     // timers for state machine
 

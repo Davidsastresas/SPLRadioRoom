@@ -201,14 +201,20 @@ bool Vehicle::set_isbd_active() {
     gsm_rehook_sent = false;
 
     if ( !isbd_active_message ) {
-      log(LOG_INFO, "SBD active");
+      log(LOG_INFO, "Vehicle %d SBD active", _vehicle_index + 1);
       rfd_active_message = false;
       gsm_active_message = false;
       isbd_active_message = true;
       wifi_active_message = false;
+
+      char messageheader[15] = "Vehicle ";
+      strcat(messageheader, _vehicle_id_str.c_str());
+
+      char messageactive[15] = ": SBD active";
+      strcat(messageheader, messageactive);    
     
       mavlink_message_t status_msg;
-      mavlink_msg_statustext_pack(_mav_id, 1, &status_msg, MAV_SEVERITY_NOTICE, "SBD active", 0, 0);
+      mavlink_msg_statustext_pack(_mav_id, 1, &status_msg, MAV_SEVERITY_NOTICE, messageheader, 0, 0);
       _outgoing_queue_gcsmavmsg.push(status_msg);
     }    
 
@@ -228,14 +234,20 @@ bool Vehicle::set_gsm_active() {
     timer_sms_alive.reset();
 
     if ( !gsm_active_message ) {
-      log(LOG_INFO, "GSM active");
+      log(LOG_INFO, "Vehicle %d GSM active", _vehicle_index + 1);
       rfd_active_message = false;
       gsm_active_message = true;
       isbd_active_message = false;
       wifi_active_message = false;
+
+      char messageheader[15] = "Vehicle ";
+      strcat(messageheader, _vehicle_id_str.c_str());
+
+      char messageactive[15] = ": GSM active";
+      strcat(messageheader, messageactive);
     
       mavlink_message_t status_msg;
-      mavlink_msg_statustext_pack(_mav_id, 1, &status_msg, MAV_SEVERITY_NOTICE, "GSM active", 0, 0);
+      mavlink_msg_statustext_pack(_mav_id, 1, &status_msg, MAV_SEVERITY_NOTICE, messageheader, 0, 0);
       _outgoing_queue_gcsmavmsg.push(status_msg);
     }    
 
@@ -251,14 +263,21 @@ bool Vehicle::set_rfd_active() {
     _active_channel = RFD_ACTIVE;
 
     if ( !rfd_active_message ) {
-      log(LOG_INFO, "RFD active");
+      log(LOG_INFO, "Vehicle %d RFD active", _vehicle_index + 1);
       rfd_active_message = true;
       gsm_active_message = false;
       isbd_active_message = false;
       wifi_active_message = false;
 
+      char messageheader[15] = "Vehicle ";
+      strcat(messageheader, _vehicle_id_str.c_str());
+
+      char messageactive[15] = ": RFD active";
+      strcat(messageheader, messageactive);
+
+
       mavlink_message_t status_msg;
-      mavlink_msg_statustext_pack(_mav_id, 1, &status_msg, MAV_SEVERITY_NOTICE, "RFD active", 0, 0);
+      mavlink_msg_statustext_pack(_mav_id, 1, &status_msg, MAV_SEVERITY_NOTICE, messageheader, 0, 0);
       _outgoing_queue_gcsmavmsg.push(status_msg);
     }
 
@@ -276,14 +295,20 @@ bool Vehicle::set_wifi_active() {
     _active_channel = WIFI_ACTIVE;
 
     if ( !wifi_active_message ) {
-      log(LOG_INFO, "WIFI active");
+      log(LOG_INFO, "Vehicle %d WIFI active", _vehicle_index + 1);
       rfd_active_message = false;
       gsm_active_message = false;
       isbd_active_message = false;
       wifi_active_message = true;
 
+      char messageheader[15] = "Vehicle ";
+      strcat(messageheader, _vehicle_id_str.c_str());
+
+      char messageactive[15] = ": WIFI active";
+      strcat(messageheader, messageactive);
+
       mavlink_message_t status_msg;
-      mavlink_msg_statustext_pack(_mav_id, 1, &status_msg, MAV_SEVERITY_NOTICE, "WIFI active", 0, 0);
+      mavlink_msg_statustext_pack(_mav_id, 1, &status_msg, MAV_SEVERITY_NOTICE, messageheader, 0, 0);
       _outgoing_queue_gcsmavmsg.push(status_msg);
     }
 
@@ -331,7 +356,7 @@ void Vehicle::handle_gsm_out() {
 
 bool Vehicle::init(int instance) {
 
-  _vehicle_index = (instance - 1);                   
+  _vehicle_index = (instance - 1);  
       
   _enabled = radioroom::config.get_aircraftx_enabled(instance);
   
@@ -377,6 +402,8 @@ bool Vehicle::init(int instance) {
                      _vehicle_index, _mav_id);
           return false;
       }
+  
+      _vehicle_id_str = std::to_string(_mav_id);                 
   
       _initialized = true;
 
