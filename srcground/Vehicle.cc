@@ -536,6 +536,8 @@ void Vehicle::process_gcs_message(mavlink_message_t& msg) {
     return;
   }
 
+  bool send_message = true;
+
   if ( _active_channel != RFD_ACTIVE ) {
 
       switch (msg.msgid) {
@@ -552,6 +554,13 @@ void Vehicle::process_gcs_message(mavlink_message_t& msg) {
           mavlink_message_t ack_cmd_long;
           mavlink_command_ack_t ack_prep;
           ack_prep.command = mavlink_msg_command_long_get_command(&msg);
+
+          // ignore request autopilot capabilities and set streams
+          if (ack_prep.command == MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES || ack_prep.command == MAV_CMD_SET_MESSAGE_INTERVAL ) {
+            send_message = false;
+          }
+
+
           ack_prep.result = 0;
           mavlink_msg_command_ack_encode(_mav_id, 1, &ack_cmd_long, &ack_prep);
           _outgoing_queue_gcsmavmsg.push(ack_cmd_long);
@@ -629,12 +638,12 @@ void Vehicle::process_gcs_message(mavlink_message_t& msg) {
           break;
       }
     // refactor here the stuff
-    if ( _active_channel == GSM_ACTIVE ) {
+    if ( _active_channel == GSM_ACTIVE && send_message) {
             mavio::SMSmessage sms_msg(msg, last_aircraft_number);
             _outgoing_queue_smsmsg.push(sms_msg);
           }
 
-    if ( _active_channel == SBD_ACTIVE ) {
+    if ( _active_channel == SBD_ACTIVE && send_message) {
             mavio::SBDmessage sbd_msg(msg, _rock_address );
             _outgoing_queue_sbdmsg.push(sbd_msg);
     }
