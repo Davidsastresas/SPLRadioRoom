@@ -129,16 +129,17 @@ std::string MAVLinkSMSChannel::prepare_number_gsm(std::string number, bool pdu_e
 }
 
 void MAVLinkSMSChannel::close() {
-  if (running) {
-    running = false;
-    send_receive_thread.join();
-  }
-
   for (int i = 0; i < 3; i++) {
     if (sms[i].get_initialized()) {  
       sms[i].close();
     }
   }
+
+  if (running) {
+    running = false;
+    send_receive_thread.join();
+  }
+
 }
 
 bool MAVLinkSMSChannel::send_message(SMSmessage& msg) {

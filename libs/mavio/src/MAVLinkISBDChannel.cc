@@ -63,13 +63,13 @@ bool MAVLinkISBDChannel::init(std::string path, int speed,
 }
 
 void MAVLinkISBDChannel::close() {
+  isbd.close();
+
   if (running) {
     running = false;
 
     send_receive_thread.join();
   }
-
-  isbd.close();
 }
 
 bool MAVLinkISBDChannel::send_message(SBDmessage& msg) {

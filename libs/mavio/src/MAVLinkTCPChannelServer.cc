@@ -21,6 +21,8 @@ MAVIO MAVLink I/O library.
 */
 
 #include "MAVLinkTCPChannelServer.h"
+#include "MAVLinkLogger.h"
+
 
 #include "timelib.h"
 
@@ -70,7 +72,9 @@ void MAVLinkTCPChannelServer::close() {
     running = false;
 
     receive_thread.join();
+    log(LOG_INFO, "tcp channel server receive joined");
     send_thread.join();
+    log(LOG_INFO, "tcp channel server send joined");
   }
 }
 
