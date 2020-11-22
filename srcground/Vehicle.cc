@@ -556,7 +556,9 @@ void Vehicle::process_gcs_message(mavlink_message_t& msg) {
           ack_prep.command = mavlink_msg_command_long_get_command(&msg);
 
           // ignore request autopilot capabilities and set streams
-          if (ack_prep.command == MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES || ack_prep.command == MAV_CMD_SET_MESSAGE_INTERVAL ) {
+          if (ack_prep.command == MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES || 
+              ack_prep.command == MAV_CMD_SET_MESSAGE_INTERVAL ||
+              ack_prep.command == 519) { // Request protocol version
             send_message = false;
           }
 
