@@ -267,7 +267,7 @@ bool MAVLinkHandlerAir::loop() {
 
   send_heartbeat();
 
-  send_status_rfd();
+  // send_status_rfd();
 
   return sleep;
 }
@@ -295,7 +295,10 @@ void MAVLinkHandlerAir::update_active_channel() {
     }
   
   } else if ( gsm_active ) {
-    if ( time_current - rfd_channel.last_receive_time() < timeout_rfd ) {
+    if ( time_current - tcp_channel.last_receive_time() < timeout_wifi ) {
+      set_wifi_active();
+
+    } else if ( time_current - rfd_channel.last_receive_time() < timeout_rfd ) {
       set_rfd_active();
 
     } else if ( time_current - time_last_sms >= timeout_gsm ) {
@@ -303,8 +306,12 @@ void MAVLinkHandlerAir::update_active_channel() {
     }
 
   } else if ( isbd_active ) { 
-    if ( time_current - rfd_channel.last_receive_time() < timeout_rfd ) {
+    if ( time_current - tcp_channel.last_receive_time() < timeout_wifi ) {
+      set_wifi_active();
+
+    } else if ( time_current - rfd_channel.last_receive_time() < timeout_rfd ) {
       set_rfd_active();
+    
     } else if ( time_current - time_last_sms <= timeout_gsm ) {
       set_gsm_active();
     }
