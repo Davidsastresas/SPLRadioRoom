@@ -74,12 +74,12 @@ class MAVReport {
   uint16_t voltage_samples = 0;
 
   uint8_t  airspeed_av = 0;
-  uint16_t airspeed_acum = 0;
-  uint16_t airspeed_samples = 0;
+  float airspeed_acum = 0;
+  float airspeed_samples = 0;
   
   uint8_t  groundspeed_av = 0;
-  uint16_t groundspeed_acum = 0;
-  uint16_t groundspeed_samples = 0;
+  float groundspeed_acum = 0;
+  float groundspeed_samples = 0;
 
   timelib::Stopwatch timer_averages;
   std::chrono::milliseconds time_averages;

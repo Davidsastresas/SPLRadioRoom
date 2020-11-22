@@ -21,6 +21,7 @@
 */
 
 #include "MAVReport.h"
+#include "MAVLinkLogger.h"
 
 namespace radioroom {
 
@@ -96,9 +97,9 @@ void MAVReport::zero_averages() {
 
 
   if ( airspeed_samples > 1 ) {
-    airspeed_av = airspeed_acum / airspeed_samples;
+    airspeed_av = airspeed_acum / airspeed_samples * 5;
   } else {
-    airspeed_av = airspeed_acum;
+    airspeed_av = airspeed_acum * 5;
   }
   airspeed_acum = 0;
   airspeed_samples = 0;
@@ -107,15 +108,14 @@ void MAVReport::zero_averages() {
 
 
   if ( groundspeed_samples > 1 ) {
-    groundspeed_av = groundspeed_acum / groundspeed_samples;
+    groundspeed_av = groundspeed_acum / groundspeed_samples * 5;
   } else {
-    groundspeed_av = groundspeed_acum;
+    groundspeed_av = groundspeed_acum * 5;
   }
   groundspeed_acum = 0;
   groundspeed_samples = 0;
   report_sbd.groundspeed = groundspeed_av;
   report_sms.groundspeed = groundspeed_av;
-
 }
 
 /**
