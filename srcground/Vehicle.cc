@@ -478,7 +478,13 @@ bool Vehicle::init(int instance) {
 
       if ( !radioroom::config.get_gsm_enabled() ) {
         _gsm_initialized = false;
-      }      
+      }
+
+      if (_gsm_initialized) {
+        log(LOG_INFO, "Vehicle %d GSM initialized", instance);
+      } else {
+        log(LOG_INFO, "Vehicle %d GSM not initialized", instance);
+      }
 
       if ( !radioroom::config.get_isbd_enabled() ) {
         _isbd_initialized = false;
