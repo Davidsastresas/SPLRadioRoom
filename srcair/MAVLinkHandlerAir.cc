@@ -364,7 +364,11 @@ void MAVLinkHandlerAir::send_status_rfd() {
     mavlink_msg_radio_status_encode(_mav_id, 10, &radio_status, &radio_status_msg);
 
     // send message
-    rfd_channel.send_message(radio_status);
+    if (wifi_active) {
+      tcp_channel.send_message(radio_status);
+    } else {
+      rfd_channel.send_message(radio_status);
+    }
   }
 }
 
