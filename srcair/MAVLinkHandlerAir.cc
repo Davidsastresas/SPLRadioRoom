@@ -267,7 +267,7 @@ bool MAVLinkHandlerAir::loop() {
 
   send_heartbeat();
 
-  // send_status_rfd();
+  send_status_rfd();
 
   return sleep;
 }
