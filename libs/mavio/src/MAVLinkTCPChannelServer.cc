@@ -72,9 +72,7 @@ void MAVLinkTCPChannelServer::close() {
     running = false;
 
     receive_thread.join();
-    log(LOG_INFO, "tcp channel server receive joined");
     send_thread.join();
-    log(LOG_INFO, "tcp channel server send joined");
   }
 }
 

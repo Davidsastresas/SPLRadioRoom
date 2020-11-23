@@ -92,17 +92,13 @@ bool MAVLinkTCPChannel::init(const std::string address, uint16_t port, int insta
 }
 
 void MAVLinkTCPChannel::close() {
-  log(LOG_INFO, "tcp channel closing socket... ");
   socket.close();
-  log(LOG_INFO, "tcp channel socket closed");
 
   if (running) {
     running = false;
 
     receive_thread.join();
-    log(LOG_INFO, "tcp channel receive joined");
     send_thread.join();
-    log(LOG_INFO, "tcp channel send joined");
   }
 }
 
