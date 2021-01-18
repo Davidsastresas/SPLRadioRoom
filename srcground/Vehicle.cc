@@ -561,13 +561,19 @@ void Vehicle::process_gcs_message(mavlink_message_t& msg) {
           mavlink_command_ack_t ack_prep;
           ack_prep.command = mavlink_msg_command_long_get_command(&msg);
 
-          // ignore request autopilot capabilities and set streams
-          if (ack_prep.command == MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES || 
-              ack_prep.command == MAV_CMD_SET_MESSAGE_INTERVAL ||
-              ack_prep.command == 519) { // Request protocol version
-            send_message = false;
-          }
+          // // ignore request autopilot capabilities and set streams
+          // if (ack_prep.command == MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES || 
+          //     ack_prep.command == MAV_CMD_SET_MESSAGE_INTERVAL ||
+          //     ack_prep.command == 519) { // Request protocol version
+          //   send_message = false;
+          // }
 
+          // Update after "set to manual" crash. Only allow cmd long for 
+          // arm/disarm, set servo
+          if ( ack_prep.command != 400 && ack_prep.command != 183 ) {
+            send_message = false;
+            break;
+          }
 
           ack_prep.result = 0;
           mavlink_msg_command_ack_encode(_mav_id, 1, &ack_cmd_long, &ack_prep);
@@ -628,6 +634,16 @@ void Vehicle::process_gcs_message(mavlink_message_t& msg) {
 
           if ( timer_last_cmd_set_mode.elapsed_time() < cmd_timer_default ) {
             return;
+          }
+
+          // limit allowed flight modes
+          if ( mavlink_msg_set_mode_get_custom_mode(&msg) != 11 && // RTL 
+               mavlink_msg_set_mode_get_custom_mode(&msg) != 12 &&
+               mavlink_msg_set_mode_get_custom_mode(&msg) != 20 &&
+               mavlink_msg_set_mode_get_custom_mode(&msg) != 10 ) {
+
+            send_message = false;
+            break;
           }
 
           mavlink_message_t ack_cmd_set_current;
